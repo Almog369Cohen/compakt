@@ -76,7 +76,7 @@ export const defaultQuestions: Question[] = [
     questionType: "slider",
     sliderMin: 1,
     sliderMax: 5,
-    sliderLabels: ["רגוע 🧘", "קליל 🌊", "אנרגטי ⚡", "פרוע 🔥", "מטורף 💥"],
+    sliderLabels: ["רגוע 🧘", "זורם 🌊", "מקפיץ ⚡", "שיאים 🔥", "פסטיבל 💥"],
     isActive: true,
   },
   {

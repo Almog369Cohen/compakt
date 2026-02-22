@@ -191,6 +191,11 @@ export const useAdminStore = create<AdminStore>()(
 
             q1.options = merged;
           }
+
+          const q5 = state.questions.find((q) => q.id === "q5");
+          if (q5 && q5.questionType === "slider") {
+            q5.sliderLabels = ["רגוע 🧘", "זורם 🌊", "מקפיץ ⚡", "שיאים 🔥", "פסטיבל 💥"];
+          }
         }
       },
     }
