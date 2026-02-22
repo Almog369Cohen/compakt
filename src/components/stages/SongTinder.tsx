@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useEventStore } from "@/stores/eventStore";
 import { defaultSongs, reasonChips } from "@/data/songs";
 import { motion, useMotionValue, useTransform, animate, PanInfo } from "framer-motion";
@@ -56,6 +56,32 @@ export function SongTinder() {
     },
     [saveSwipe, trackEvent]
   );
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (isDone) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (showReasons) return;
+      switch (e.key) {
+        case "ArrowRight":
+          handleSwipe(currentSong.id, "like");
+          break;
+        case "ArrowLeft":
+          handleSwipe(currentSong.id, "dislike");
+          break;
+        case "ArrowUp":
+          handleSwipe(currentSong.id, "super_like");
+          break;
+        case "ArrowDown":
+        case " ":
+          e.preventDefault();
+          handleSwipe(currentSong.id, "unsure");
+          break;
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isDone, currentSong, handleSwipe, showReasons]);
 
   const handleReasonChip = useCallback(
     (chip: string) => {
