@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion } from "framer-motion";
@@ -16,7 +16,19 @@ import {
   HelpCircle,
   Sparkles,
   Download,
+  ListTodo,
+  X,
+  Plus,
+  Trash2,
 } from "lucide-react";
+
+type FixItem = {
+  id: string;
+  text: string;
+  done: boolean;
+};
+
+const FIXES_STORAGE_KEY = "compakt.admin.fixes";
 
 export function Dashboard() {
   const event = useEventStore((s) => s.event);
@@ -28,6 +40,30 @@ export function Dashboard() {
   const songs = useAdminStore((s) => s.songs);
   const questions = useAdminStore((s) => s.questions);
   const upsells = useAdminStore((s) => s.upsells);
+
+  const [showFixes, setShowFixes] = useState(false);
+  const [fixes, setFixes] = useState<FixItem[]>([]);
+  const [newFixText, setNewFixText] = useState("");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FIXES_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as FixItem[];
+        if (Array.isArray(parsed)) setFixes(parsed);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FIXES_STORAGE_KEY, JSON.stringify(fixes));
+    } catch {
+      // ignore
+    }
+  }, [fixes]);
 
   const stats = useMemo(() => {
     const likes = swipes.filter((s) => s.action === "like").length;
@@ -75,37 +111,171 @@ export function Dashboard() {
           <BarChart3 className="w-5 h-5 text-brand-blue" />
           דשבורד
         </h2>
-        {event && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              const data = {
-                event,
-                answers,
-                swipes: swipes.map((s) => ({
-                  ...s,
-                  songTitle: songs.find((song) => song.id === s.songId)?.title,
-                  songArtist: songs.find((song) => song.id === s.songId)?.artist,
-                })),
-                requests,
-                upsellClicks,
-                analytics,
-                exportedAt: new Date().toISOString(),
-              };
-              const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `compakt-brief-${event.magicToken?.slice(0, 8) || "draft"}.json`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }}
+            onClick={() => setShowFixes(true)}
             className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
           >
-            <Download className="w-4 h-4" />
-            ייצוא JSON
+            <ListTodo className="w-4 h-4" />
+            תיקונים
           </button>
-        )}
+
+          {event && (
+            <button
+              onClick={() => {
+                const data = {
+                  event,
+                  answers,
+                  swipes: swipes.map((s) => ({
+                    ...s,
+                    songTitle: songs.find((song) => song.id === s.songId)?.title,
+                    songArtist: songs.find((song) => song.id === s.songId)?.artist,
+                  })),
+                  requests,
+                  upsellClicks,
+                  analytics,
+                  exportedAt: new Date().toISOString(),
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `compakt-brief-${event.magicToken?.slice(0, 8) || "draft"}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
+            >
+              <Download className="w-4 h-4" />
+              ייצוא JSON
+            </button>
+          )}
+        </div>
       </div>
+
+      {showFixes && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center px-4"
+          onClick={() => setShowFixes(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="glass-card w-full max-w-lg p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <ListTodo className="w-5 h-5 text-brand-blue" />
+                <h3 className="font-bold">תיקונים</h3>
+                <span className="text-xs text-muted">({fixes.filter((f) => !f.done).length} פתוחים)</span>
+              </div>
+              <button
+                onClick={() => setShowFixes(false)}
+                className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
+                aria-label="סגור"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+              <input
+                value={newFixText}
+                onChange={(e) => setNewFixText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  const text = newFixText.trim();
+                  if (!text) return;
+                  setFixes((prev) => [
+                    { id: crypto.randomUUID(), text, done: false },
+                    ...prev,
+                  ]);
+                  setNewFixText("");
+                }}
+                placeholder="הוסף תיקון…"
+                className="flex-1 px-3 py-2.5 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors"
+              />
+              <button
+                onClick={() => {
+                  const text = newFixText.trim();
+                  if (!text) return;
+                  setFixes((prev) => [
+                    { id: crypto.randomUUID(), text, done: false },
+                    ...prev,
+                  ]);
+                  setNewFixText("");
+                }}
+                className="btn-primary text-sm flex items-center gap-1.5 py-2.5 px-4"
+              >
+                <Plus className="w-4 h-4" />
+                הוסף
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-[55vh] overflow-auto pr-1">
+              {fixes.length === 0 ? (
+                <div className="text-sm text-muted text-center py-10">
+                  אין תיקונים עדיין
+                </div>
+              ) : (
+                fixes.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-glass"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={item.done}
+                      onChange={() =>
+                        setFixes((prev) =>
+                          prev.map((f) =>
+                            f.id === item.id ? { ...f, done: !f.done } : f
+                          )
+                        )
+                      }
+                      className="w-4 h-4"
+                    />
+                    <span
+                      className={`text-sm flex-1 ${item.done ? "line-through text-muted" : ""}`}
+                    >
+                      {item.text}
+                    </span>
+                    <button
+                      onClick={() => setFixes((prev) => prev.filter((f) => f.id !== item.id))}
+                      className="p-2 rounded-lg text-muted hover:text-accent-danger transition-colors"
+                      aria-label="מחק"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {fixes.length > 0 && (
+              <div className="flex items-center justify-between mt-4 gap-2">
+                <button
+                  onClick={() => setFixes((prev) => prev.filter((f) => !f.done))}
+                  className="text-xs text-secondary hover:text-foreground transition-colors"
+                >
+                  נקה שבוצעו
+                </button>
+                <button
+                  onClick={() => {
+                    if (!confirm("למחוק את כל הרשימה?")) return;
+                    setFixes([]);
+                  }}
+                  className="text-xs"
+                  style={{ color: "var(--accent-danger)" }}
+                >
+                  מחק הכל
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
