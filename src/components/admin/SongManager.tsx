@@ -13,6 +13,8 @@ import {
   EyeOff,
   Music,
   Upload,
+  Monitor,
+  Link as LinkIcon,
 } from "lucide-react";
 import type { Song, SongCategory } from "@/lib/types";
 
@@ -40,6 +42,8 @@ export function SongManager() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showSpotifyImport, setShowSpotifyImport] = useState(false);
 
   const filtered = songs.filter((s) => {
     const matchSearch =
@@ -60,6 +64,20 @@ export function SongManager() {
           ספריית שירים ({songs.length})
         </h2>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPreview(true)}
+            className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
+          >
+            <Monitor className="w-4 h-4" />
+            תצוגה מקדימה
+          </button>
+          <button
+            onClick={() => setShowSpotifyImport(true)}
+            className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
+          >
+            <LinkIcon className="w-4 h-4" />
+            Spotify
+          </button>
           <a
             href="/songs-template.csv"
             download
@@ -275,7 +293,227 @@ export function SongManager() {
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showPreview && (
+          <PreviewModal
+            songs={songs}
+            onClose={() => setShowPreview(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSpotifyImport && (
+          <SpotifyImportModal
+            existingSongs={songs}
+            onAdd={(data) => addSong(data)}
+            onClose={() => setShowSpotifyImport(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function PreviewModal({
+  songs,
+  onClose,
+}: {
+  songs: Song[];
+  onClose: () => void;
+}) {
+  const active = songs.filter((s) => s.isActive);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.97, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.97, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass-card p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-4"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-lg">תצוגה מקדימה (כמו אצל הלקוח)</h3>
+            <p className="text-xs text-muted">מציג רק שירים פעילים ({active.length})</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-1 text-muted hover:text-foreground">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {active.map((song) => (
+            <div key={song.id} className="glass-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl overflow-hidden bg-brand-gray/30 flex-shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={song.coverUrl}
+                    alt={song.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm truncate">{song.title}</p>
+                  <p className="text-xs text-muted truncate">{song.artist}</p>
+                  <p className="text-[10px] text-secondary mt-1">{"⚡".repeat(song.energy)}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {active.length === 0 && (
+          <div className="text-sm text-muted text-center py-10">
+            אין שירים פעילים כרגע
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function SpotifyImportModal({
+  existingSongs,
+  onAdd,
+  onClose,
+}: {
+  existingSongs: Song[];
+  onAdd: (song: Omit<Song, "id" | "sortOrder">) => void;
+  onClose: () => void;
+}) {
+  const [playlistUrl, setPlaylistUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null);
+
+  const handleImport = async () => {
+    const url = playlistUrl.trim();
+    if (!url) return;
+    setImporting(true);
+    setResult(null);
+
+    try {
+      const res = await fetch(`/api/spotify/playlist?url=${encodeURIComponent(url)}`);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Import failed");
+      }
+
+      const data = (await res.json()) as {
+        songs: Array<{
+          title: string;
+          artist: string;
+          coverUrl: string;
+          externalLink?: string;
+        }>;
+      };
+
+      let imported = 0;
+      let skipped = 0;
+
+      for (const s of data.songs) {
+        const already = existingSongs.some(
+          (e) =>
+            e.title.toLowerCase() === s.title.toLowerCase() &&
+            e.artist.toLowerCase() === s.artist.toLowerCase()
+        );
+        if (already) {
+          skipped++;
+          continue;
+        }
+
+        onAdd({
+          title: s.title,
+          artist: s.artist,
+          tags: ["Spotify"],
+          category: "dancing",
+          energy: 3,
+          language: "other",
+          coverUrl: s.coverUrl,
+          previewUrl: "",
+          externalLink: s.externalLink,
+          isSafe: true,
+          isActive: true,
+        });
+        imported++;
+      }
+
+      setResult({ imported, skipped });
+    } catch (e) {
+      alert(`שגיאה בייבוא Spotify: ${e instanceof Error ? e.message : ""}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.97, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.97, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass-card p-6 w-full max-w-lg space-y-4"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-lg">ייבוא פלייליסט מ-Spotify</h3>
+            <p className="text-xs text-muted">דורש הגדרת משתני סביבה ב-Netlify: SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-1 text-muted hover:text-foreground">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div>
+          <label className="block text-xs text-muted mb-1">לינק פלייליסט</label>
+          <input
+            type="url"
+            value={playlistUrl}
+            onChange={(e) => setPlaylistUrl(e.target.value)}
+            dir="ltr"
+            placeholder="https://open.spotify.com/playlist/..."
+            className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+          />
+        </div>
+
+        {result && (
+          <div className="text-sm">
+            <p className="text-brand-green font-medium">יובאו: {result.imported}</p>
+            <p className="text-xs text-muted">דולגו (כבר קיימים): {result.skipped}</p>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={importing || !playlistUrl.trim()}
+            className={`btn-primary flex-1 ${importing || !playlistUrl.trim() ? "opacity-60 cursor-not-allowed" : ""}`}
+          >
+            {importing ? "מייבא..." : "ייבא"}
+          </button>
+          <button type="button" onClick={onClose} className="btn-secondary flex-1">
+            סגור
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

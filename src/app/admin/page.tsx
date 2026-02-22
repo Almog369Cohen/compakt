@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3 } from "lucide-react";
+import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Eye, EyeOff } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useEventStore } from "@/stores/eventStore";
 import { SongManager } from "@/components/admin/SongManager";
@@ -25,6 +25,7 @@ export default function AdminPage() {
   const login = useAdminStore((s) => s.login);
   const logout = useAdminStore((s) => s.logout);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const theme = useEventStore((s) => s.theme);
@@ -59,15 +60,30 @@ export default function AdminPage() {
           <h1 className="text-xl font-bold mb-1">Compakt Admin</h1>
           <p className="text-sm text-secondary mb-6">הכניסו סיסמה כדי להיכנס</p>
 
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="סיסמה"
-            className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm text-foreground placeholder:text-muted focus:outline-none transition-colors mb-4 ${error ? "border-accent-danger" : "border-glass focus:border-brand-blue"
-              }`}
-            autoFocus
-          />
+          <div className="relative mb-4">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="סיסמה"
+              className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm text-foreground placeholder:text-muted focus:outline-none transition-colors pr-11 ${error ? "border-accent-danger" : "border-glass focus:border-brand-blue"
+                }`}
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+              aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+              title={showPassword ? "הסתר" : "הצג"}
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
 
           {error && (
             <p className="text-xs mb-3" style={{ color: "var(--accent-danger)" }}>
