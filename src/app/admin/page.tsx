@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft } from "lucide-react";
+import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3 } from "lucide-react";
 import { SongManager } from "@/components/admin/SongManager";
 import { QuestionManager } from "@/components/admin/QuestionManager";
 import { UpsellManager } from "@/components/admin/UpsellManager";
+import { Dashboard } from "@/components/admin/Dashboard";
 
-type AdminTab = "songs" | "questions" | "upsells";
+type AdminTab = "dashboard" | "songs" | "questions" | "upsells";
 
 const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
+  { id: "dashboard", label: "דשבורד", icon: <BarChart3 className="w-4 h-4" /> },
   { id: "songs", label: "שירים", icon: <Music className="w-4 h-4" /> },
   { id: "questions", label: "שאלות", icon: <HelpCircle className="w-4 h-4" /> },
   { id: "upsells", label: "שדרוגים", icon: <Sparkles className="w-4 h-4" /> },
@@ -22,7 +24,7 @@ export default function AdminPage() {
   const logout = useAdminStore((s) => s.logout);
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
-  const [activeTab, setActiveTab] = useState<AdminTab>("songs");
+  const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,9 +57,8 @@ export default function AdminPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="סיסמה"
-            className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm text-foreground placeholder:text-muted focus:outline-none transition-colors mb-4 ${
-              error ? "border-accent-danger" : "border-glass focus:border-brand-blue"
-            }`}
+            className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm text-foreground placeholder:text-muted focus:outline-none transition-colors mb-4 ${error ? "border-accent-danger" : "border-glass focus:border-brand-blue"
+              }`}
             autoFocus
           />
 
@@ -95,11 +96,10 @@ export default function AdminPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    activeTab === tab.id
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
                       ? "bg-brand-blue text-white"
                       : "text-secondary hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   {tab.icon}
                   <span className="hidden sm:inline">{tab.label}</span>
@@ -121,6 +121,16 @@ export default function AdminPage() {
       {/* Content */}
       <main className="max-w-5xl mx-auto px-4 py-6">
         <AnimatePresence mode="wait">
+          {activeTab === "dashboard" && (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <Dashboard />
+            </motion.div>
+          )}
           {activeTab === "songs" && (
             <motion.div
               key="songs"

@@ -52,10 +52,31 @@ html {
 body {
   color: var(--text-primary);
   background: var(--bg-primary);
-  font-family: "Heebo", sans-serif;
+  font-family: var(--font-heebo), "Heebo", sans-serif;
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+/* Prevent pull-to-refresh during swipe */
+.touch-none {
+  touch-action: none;
+}
+
+.touch-pan-y {
+  touch-action: pan-y;
+}
+
+/* Smooth scrolling for stage content */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Select dropdown fix for dark themes */
+select option {
+  background: #1f1f21;
+  color: #ffffff;
 }
 
 @layer components {
@@ -71,6 +92,7 @@ body {
   .glass-card-hover {
     transition: background 0.2s ease, box-shadow 0.2s ease;
   }
+
   .glass-card-hover:hover {
     background: var(--bg-surface-hover);
   }
@@ -83,9 +105,11 @@ body {
     padding: 12px 24px;
     transition: opacity 0.2s ease, transform 0.1s ease;
   }
+
   .btn-primary:hover {
     opacity: 0.9;
   }
+
   .btn-primary:active {
     transform: scale(0.98);
   }
@@ -99,6 +123,7 @@ body {
     padding: 10px 20px;
     transition: background 0.2s ease;
   }
+
   .btn-secondary:hover {
     background: rgba(5, 156, 192, 0.1);
   }
@@ -115,10 +140,12 @@ body {
     transition: all 0.2s ease;
     cursor: pointer;
   }
+
   .chip:hover {
     border-color: var(--accent-primary);
     color: var(--accent-primary);
   }
+
   .chip.active {
     background: var(--accent-primary);
     border-color: var(--accent-primary);
@@ -132,11 +159,13 @@ body {
     background: var(--text-muted);
     transition: all 0.3s ease;
   }
+
   .progress-dot.active {
     background: var(--accent-primary);
     width: 24px;
     border-radius: 4px;
   }
+
   .progress-dot.done {
     background: var(--accent-secondary);
   }
@@ -146,13 +175,17 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
   .gradient-hero {
     background: var(--gradient-hero);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

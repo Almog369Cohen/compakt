@@ -279,7 +279,7 @@ function SwipeCard({
       dragElastic={0.8}
       onDragEnd={handleDragEnd}
       style={{ x, rotate }}
-      className="absolute inset-0 glass-card rounded-swipe overflow-hidden cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 glass-card rounded-swipe overflow-hidden cursor-grab active:cursor-grabbing touch-none"
     >
       {/* Swipe Indicators */}
       <motion.div
@@ -313,7 +313,7 @@ function SwipeCard({
                 e.stopPropagation();
                 onTogglePlay();
               }}
-              className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute inset-0 flex items-center justify-center bg-black/40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
               aria-label={isPlaying ? "השהה" : "נגן"}
             >
               {isPlaying ? (

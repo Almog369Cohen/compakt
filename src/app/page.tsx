@@ -8,9 +8,10 @@ import { DreamsRequests } from "@/components/stages/DreamsRequests";
 import { MusicBrief } from "@/components/stages/MusicBrief";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { StageNav } from "@/components/ui/StageNav";
+import { HydrationGuard } from "@/components/ui/HydrationGuard";
 import { useEffect } from "react";
 
-export default function Home() {
+function JourneyApp() {
   const event = useEventStore((s) => s.event);
   const theme = useEventStore((s) => s.theme);
   const currentStage = event?.currentStage ?? 0;
@@ -54,5 +55,13 @@ export default function Home() {
         {renderStage()}
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <HydrationGuard>
+      <JourneyApp />
+    </HydrationGuard>
   );
 }
