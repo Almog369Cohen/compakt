@@ -56,6 +56,11 @@ export function SongTinder() {
       setIsPlaying(false);
       setCurrentIndex((i) => i + 1);
       trackEvent("song_swipe", { songId, action });
+
+      // Haptic feedback on mobile
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate(action === "super_like" ? [30, 50, 30] : 15);
+      }
     },
     [saveSwipe, trackEvent]
   );
@@ -230,6 +235,14 @@ export function SongTinder() {
         >
           <Heart className="w-6 h-6" fill="var(--accent-secondary)" />
         </motion.button>
+      </div>
+
+      {/* Keyboard Hints (desktop only) */}
+      <div className="hidden sm:flex items-center justify-center gap-6 mt-2 text-[10px] text-muted">
+        <span>← לא</span>
+        <span>↓ לא בטוח</span>
+        <span>↑ סופר</span>
+        <span>→ אהבתי</span>
       </div>
 
       {/* Reason Chips Overlay */}
