@@ -789,6 +789,34 @@ function SongModal({
   const [isSafe, setIsSafe] = useState(song?.isSafe ?? true);
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
+  const [uploadingKind, setUploadingKind] = useState<"audio" | "cover" | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const uploadFile = async (kind: "audio" | "cover", file: File) => {
+    setUploadingKind(kind);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.set("kind", kind);
+      form.set("file", file);
+      const res = await fetch("/api/uploads", {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error((text || "Upload failed").trim());
+      }
+      const data = (await res.json()) as { url?: string };
+      if (!data.url) throw new Error("Upload failed");
+      if (kind === "cover") setCoverUrl(data.url);
+      if (kind === "audio") setPreviewUrl(data.url);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "שגיאה לא ידועה");
+    } finally {
+      setUploadingKind(null);
+    }
+  };
 
   const handleAutoFill = async () => {
     const url = previewUrl.trim();
@@ -899,6 +927,29 @@ function SongModal({
             placeholder="https://..."
             className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
           />
+          <div className="flex items-center justify-between mt-2 gap-2">
+            <label className={`btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 cursor-pointer ${uploadingKind ? "opacity-60 cursor-not-allowed" : ""}`}>
+              <Upload className="w-3.5 h-3.5" />
+              {uploadingKind === "cover" ? "מעלה..." : "העלה תמונה"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={!!uploadingKind}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  void uploadFile("cover", f);
+                }}
+              />
+            </label>
+            {uploadError && (
+              <span className="text-[11px]" style={{ color: "var(--accent-danger)" }}>
+                {uploadError}
+              </span>
+            )}
+          </div>
         </div>
 
         <div>
@@ -912,6 +963,22 @@ function SongModal({
             className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
           />
           <div className="flex items-center justify-between mt-2 gap-2">
+            <label className={`btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 cursor-pointer ${uploadingKind ? "opacity-60 cursor-not-allowed" : ""}`}>
+              <Upload className="w-3.5 h-3.5" />
+              {uploadingKind === "audio" ? "מעלה..." : "העלה אודיו"}
+              <input
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                disabled={!!uploadingKind}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  void uploadFile("audio", f);
+                }}
+              />
+            </label>
             <button
               type="button"
               onClick={handleAutoFill}
