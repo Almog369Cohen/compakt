@@ -8,6 +8,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, SkipForward, Home, Shield } from "lucide-react";
 import type { Question } from "@/lib/types";
 
+const ETHNIC_MUSIC_Q_ID = "ethnic_music";
+const ETHNIC_MUSIC_TEXT_ID = "ethnic_music_edah";
+
 export function QuestionFlow() {
   const router = useRouter();
   const event = useEventStore((s) => s.event);
@@ -17,12 +20,33 @@ export function QuestionFlow() {
   const trackEvent = useEventStore((s) => s.trackEvent);
 
   const adminQuestions = useAdminStore((s) => s.questions);
-  const questions = adminQuestions.filter(
-    (q) => q.isActive && q.eventType === (event?.eventType || "wedding")
-  );
+  const baseQuestions = adminQuestions
+    .filter((q) => q.isActive && q.eventType === (event?.eventType || "wedding"))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const ethnicMusicQuestion: Question = {
+    id: ETHNIC_MUSIC_Q_ID,
+    eventType: event?.eventType || "wedding",
+    sortOrder: 10_000,
+    questionHe: "רוצים לשלב גם מוזיקת עדות?",
+    questionType: "single_select",
+    options: [
+      { label: "כן", value: "yes" },
+      { label: "לא", value: "no" },
+    ],
+    isActive: true,
+  };
+
+  const questions = [...baseQuestions, ethnicMusicQuestion];
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [showEthnicModal, setShowEthnicModal] = useState(false);
+  const [ethnicText, setEthnicText] = useState(
+    typeof getAnswer(ETHNIC_MUSIC_TEXT_ID)?.answerValue === "string"
+      ? (getAnswer(ETHNIC_MUSIC_TEXT_ID)?.answerValue as string)
+      : ""
+  );
 
   const question = questions[currentIndex];
   const total = questions.length;
@@ -115,14 +139,41 @@ export function QuestionFlow() {
             question={question}
             existingValue={existingAnswer?.answerValue}
             onAnswer={(value) => {
-              saveAnswer(question.id, value);
-              if (question.questionType !== "text") {
-                setTimeout(goNext, 400);
+              if (question.id === ETHNIC_MUSIC_Q_ID) {
+                if (value === "yes") {
+                  saveAnswer(ETHNIC_MUSIC_Q_ID, "yes");
+                  setShowEthnicModal(true);
+                  trackEvent("ethnic_music_yes", {});
+                  return;
+                }
+                saveAnswer(ETHNIC_MUSIC_Q_ID, "no");
+                saveAnswer(ETHNIC_MUSIC_TEXT_ID, "");
+                trackEvent("ethnic_music_no", {});
+                setTimeout(goNext, 300);
+                return;
               }
+
+              saveAnswer(question.id, value);
+              if (question.questionType !== "text") setTimeout(goNext, 400);
             }}
             onSubmitText={() => goNext()}
           />
         </motion.div>
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showEthnicModal && (
+          <EthnicMusicModal
+            value={ethnicText}
+            onChange={setEthnicText}
+            onClose={() => setShowEthnicModal(false)}
+            onSave={() => {
+              saveAnswer(ETHNIC_MUSIC_TEXT_ID, ethnicText.trim());
+              setShowEthnicModal(false);
+              setTimeout(goNext, 200);
+            }}
+          />
+        )}
       </AnimatePresence>
 
       {/* Navigation */}
@@ -154,6 +205,58 @@ export function QuestionFlow() {
         )}
       </div>
     </div>
+  );
+}
+
+function EthnicMusicModal({
+  value,
+  onChange,
+  onClose,
+  onSave,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass-card p-6 w-full max-w-md space-y-4"
+      >
+        <div>
+          <h3 className="font-bold text-lg">מה העדה שלכם?</h3>
+          <p className="text-xs text-muted">אפשר לכתוב חופשי (למשל: מרוקאי/תימני/בוכרי/רוסי/מעורב וכו׳)</p>
+        </div>
+
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          placeholder="...כתבו כאן"
+          className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-brand-blue transition-colors resize-none"
+        />
+
+        <div className="flex gap-2">
+          <button type="button" onClick={onSave} className="btn-primary flex-1">
+            שמור
+          </button>
+          <button type="button" onClick={onClose} className="btn-secondary flex-1">
+            ביטול
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
