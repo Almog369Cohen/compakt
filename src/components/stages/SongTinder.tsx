@@ -7,6 +7,8 @@ import { reasonChips } from "@/data/songs";
 import { motion, useMotionValue, useTransform, animate, PanInfo } from "framer-motion";
 import { Heart, X, Star, HelpCircle, Play, Pause, Volume2 } from "lucide-react";
 import type { SwipeAction, Song } from "@/lib/types";
+import { SwipeTutorial, useSwipeTutorial } from "@/components/ui/SwipeTutorial";
+import { AnimatePresence } from "framer-motion";
 
 const SWIPE_THRESHOLD = 100;
 const MIN_SWIPES = 10;
@@ -31,6 +33,7 @@ export function SongTinder() {
   const [lastAction, setLastAction] = useState<SwipeAction | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showSuperBurst, setShowSuperBurst] = useState(false);
+  const { showTutorial, dismissTutorial } = useSwipeTutorial();
 
   const likeCount = swipes.filter((s) => s.action === "like" || s.action === "super_like").length;
   const currentSong = availableSongs[currentIndex];
@@ -139,6 +142,11 @@ export function SongTinder() {
 
   return (
     <div className="w-full max-w-md mx-auto relative">
+      {/* Swipe Tutorial */}
+      <AnimatePresence>
+        {showTutorial && <SwipeTutorial onDismiss={dismissTutorial} />}
+      </AnimatePresence>
+
       {/* Counters */}
       <div className="flex justify-between items-center mb-4 px-2">
         <div className="flex items-center gap-1 text-sm">

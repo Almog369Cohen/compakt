@@ -9,6 +9,7 @@ import { MusicBrief } from "@/components/stages/MusicBrief";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { StageNav } from "@/components/ui/StageNav";
 import { HydrationGuard } from "@/components/ui/HydrationGuard";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { RotateCcw } from "lucide-react";
@@ -112,7 +113,9 @@ function JourneyApp() {
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="w-full"
           >
-            {renderStage()}
+            <ErrorBoundary>
+              {renderStage()}
+            </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
       </div>

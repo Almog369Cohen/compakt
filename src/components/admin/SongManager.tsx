@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
   Music,
+  Upload,
 } from "lucide-react";
 import type { Song, SongCategory } from "@/lib/types";
 
@@ -58,13 +59,70 @@ export function SongManager() {
           <Music className="w-5 h-5 text-brand-blue" />
           ספריית שירים ({songs.length})
         </h2>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
-        >
-          <Plus className="w-4 h-4" />
-          הוסף שיר
-        </button>
+        <div className="flex items-center gap-2">
+          <label className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4 cursor-pointer">
+            <Upload className="w-4 h-4" />
+            CSV ייבוא
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  const text = ev.target?.result as string;
+                  const lines = text.split("\n").filter((l) => l.trim());
+                  if (lines.length < 2) return alert("קובץ ריק");
+                  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+                  const titleIdx = headers.indexOf("title");
+                  const artistIdx = headers.indexOf("artist");
+                  if (titleIdx === -1 || artistIdx === -1) {
+                    return alert("CSV חייב לכלול עמודות title ו-artist");
+                  }
+                  const tagsIdx = headers.indexOf("tags");
+                  const categoryIdx = headers.indexOf("category");
+                  const energyIdx = headers.indexOf("energy");
+                  const langIdx = headers.indexOf("language");
+                  const coverIdx = headers.indexOf("cover");
+                  const previewIdx = headers.indexOf("preview");
+
+                  let count = 0;
+                  for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(",").map((c) => c.trim());
+                    const title = cols[titleIdx];
+                    const artist = cols[artistIdx];
+                    if (!title || !artist) continue;
+                    addSong({
+                      title,
+                      artist,
+                      tags: tagsIdx >= 0 ? cols[tagsIdx]?.split("|").filter(Boolean) || [] : [],
+                      category: (categoryIdx >= 0 ? cols[categoryIdx] : "dancing") as SongCategory,
+                      energy: energyIdx >= 0 ? Math.min(5, Math.max(1, parseInt(cols[energyIdx]) || 3)) : 3,
+                      language: langIdx >= 0 ? cols[langIdx] || "hebrew" : "hebrew",
+                      coverUrl: coverIdx >= 0 ? cols[coverIdx] || "" : "",
+                      previewUrl: previewIdx >= 0 ? cols[previewIdx] || "" : "",
+                      isSafe: true,
+                      isActive: true,
+                    });
+                    count++;
+                  }
+                  alert(`${count} שירים יובאו בהצלחה!`);
+                };
+                reader.readAsText(file);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
+          >
+            <Plus className="w-4 h-4" />
+            הוסף שיר
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
