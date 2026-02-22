@@ -298,6 +298,7 @@ export function SongManager() {
         {showPreview && (
           <PreviewModal
             songs={songs}
+            onToggleActive={(id, isActive) => updateSong(id, { isActive })}
             onClose={() => setShowPreview(false)}
           />
         )}
@@ -318,12 +319,19 @@ export function SongManager() {
 
 function PreviewModal({
   songs,
+  onToggleActive,
   onClose,
 }: {
   songs: Song[];
+  onToggleActive: (id: string, isActive: boolean) => void;
   onClose: () => void;
 }) {
-  const active = songs.filter((s) => s.isActive);
+  const [showAll, setShowAll] = useState(false);
+  const [index, setIndex] = useState(0);
+  const list = (showAll ? songs : songs.filter((s) => s.isActive)).sort(
+    (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)
+  );
+  const current = list[index];
 
   return (
     <motion.div
@@ -343,36 +351,123 @@ function PreviewModal({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-bold text-lg">תצוגה מקדימה (כמו אצל הלקוח)</h3>
-            <p className="text-xs text-muted">מציג רק שירים פעילים ({active.length})</p>
+            <p className="text-xs text-muted">דק כרטיסים בסגנון Song Tinder</p>
           </div>
           <button type="button" onClick={onClose} className="p-1 text-muted hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {active.map((song) => (
-            <div key={song.id} className="glass-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl overflow-hidden bg-brand-gray/30 flex-shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={song.coverUrl}
-                    alt={song.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm truncate">{song.title}</p>
-                  <p className="text-xs text-muted truncate">{song.artist}</p>
-                  <p className="text-[10px] text-secondary mt-1">{"⚡".repeat(song.energy)}</p>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <button
+            onClick={() => {
+              setShowAll((v) => !v);
+              setIndex(0);
+            }}
+            className={`chip text-xs ${showAll ? "active" : ""}`}
+          >
+            {showAll ? "כל השירים" : "רק פעילים"}
+          </button>
+          <div className="text-xs text-muted" dir="ltr">
+            {list.length === 0 ? "0 / 0" : `${index + 1} / ${list.length}`}
+          </div>
         </div>
 
-        {active.length === 0 && (
+        {list.length > 0 && current && (
+          <div className="flex items-center justify-center py-2">
+            <div className="relative w-full max-w-sm h-[520px]">
+              {list
+                .slice(index, index + 3)
+                .reverse()
+                .map((song, i, arr) => {
+                  const depth = arr.length - 1 - i;
+                  const scale = 1 - depth * 0.035;
+                  const y = depth * 10;
+                  const opacity = 1 - depth * 0.08;
+
+                  return (
+                    <motion.div
+                      key={song.id}
+                      initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                      animate={{ opacity, y, scale }}
+                      transition={{ type: "spring", stiffness: 260, damping: 28 }}
+                      className="absolute inset-0 glass-card p-5"
+                      style={{
+                        borderImage: depth === 0 ? "linear-gradient(135deg, #059cc0, #03b28c) 1" : undefined,
+                        borderWidth: depth === 0 ? "1px" : undefined,
+                        borderStyle: depth === 0 ? "solid" : undefined,
+                      }}
+                    >
+                      <div className="flex flex-col items-center text-center h-full">
+                        <div className="w-52 h-52 rounded-2xl overflow-hidden shadow-xl mb-5 bg-brand-gray/30">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={song.coverUrl}
+                            alt={song.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        <h4 className="text-lg font-bold leading-tight">{song.title}</h4>
+                        <p className="text-sm text-secondary mb-2">{song.artist}</p>
+
+                        <div className="flex items-center justify-center gap-2 flex-wrap mb-4">
+                          <span className="chip text-xs">{"⚡".repeat(song.energy)}</span>
+                          <span className="chip text-xs">
+                            {categories.find((c) => c.value === song.category)?.label}
+                          </span>
+                          {!song.isSafe && (
+                            <span className="chip text-xs" style={{ borderColor: "var(--accent-danger)", color: "var(--accent-danger)" }}>
+                              לא בטוח
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-auto w-full space-y-2">
+                          <button
+                            onClick={() => onToggleActive(song.id, !song.isActive)}
+                            className="btn-secondary w-full text-sm"
+                          >
+                            {song.isActive ? "הפוך ללא פעיל" : "הפוך לפעיל"}
+                          </button>
+                          {song.externalLink && (
+                            <a
+                              href={song.externalLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-brand-blue hover:underline block"
+                              dir="ltr"
+                            >
+                              {song.externalLink}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={() => setIndex((i) => Math.max(0, i - 1))}
+            disabled={index === 0 || list.length === 0}
+            className={`btn-secondary flex-1 ${index === 0 || list.length === 0 ? "opacity-60 cursor-not-allowed" : ""}`}
+          >
+            הקודם
+          </button>
+          <button
+            onClick={() => setIndex((i) => Math.min(list.length - 1, i + 1))}
+            disabled={list.length === 0 || index >= list.length - 1}
+            className={`btn-primary flex-1 ${list.length === 0 || index >= list.length - 1 ? "opacity-60 cursor-not-allowed" : ""}`}
+          >
+            הבא
+          </button>
+        </div>
+
+        {list.length === 0 && (
           <div className="text-sm text-muted text-center py-10">
             אין שירים פעילים כרגע
           </div>
