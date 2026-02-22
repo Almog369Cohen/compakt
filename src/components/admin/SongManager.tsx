@@ -15,6 +15,9 @@ import {
   Upload,
   Monitor,
   Link as LinkIcon,
+  LogIn,
+  ListMusic,
+  Wand2,
 } from "lucide-react";
 import type { Song, SongCategory } from "@/lib/types";
 
@@ -490,6 +493,11 @@ function SpotifyImportModal({
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [playlists, setPlaylists] = useState<
+    Array<{ id: string; name: string; tracksTotal: number; imageUrl?: string }>
+  >([]);
 
   const handleImport = async () => {
     const url = playlistUrl.trim();
@@ -562,6 +570,84 @@ function SpotifyImportModal({
     }
   };
 
+  const loadPlaylists = async () => {
+    setPlaylistsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/spotify/me/playlists", { cache: "no-store" });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Failed");
+      }
+      const data = (await res.json()) as {
+        connected: boolean;
+        playlists: Array<{ id: string; name: string; tracksTotal: number; imageUrl?: string }>;
+      };
+      setConnected(!!data.connected);
+      setPlaylists(Array.isArray(data.playlists) ? data.playlists : []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "שגיאה לא ידועה");
+    } finally {
+      setPlaylistsLoading(false);
+    }
+  };
+
+  const importPlaylistById = async (id: string) => {
+    setImporting(true);
+    setResult(null);
+    setError(null);
+    try {
+      const res = await fetch(`/api/spotify/import/playlist?id=${encodeURIComponent(id)}`, { cache: "no-store" });
+      if (!res.ok) {
+        const text = await res.text();
+        const msg = (text || "Import failed").trim();
+        if (res.status === 401) {
+          throw new Error("לא מחובר ל-Spotify. לחצו על 'התחבר עם Spotify'");
+        }
+        throw new Error(msg);
+      }
+
+      const data = (await res.json()) as {
+        songs: Array<{ title: string; artist: string; coverUrl: string; externalLink?: string }>;
+      };
+
+      let imported = 0;
+      let skipped = 0;
+      for (const s of data.songs) {
+        const already = existingSongs.some(
+          (song) =>
+            song.title.toLowerCase() === s.title.toLowerCase() &&
+            song.artist.toLowerCase() === s.artist.toLowerCase()
+        );
+        if (already) {
+          skipped++;
+          continue;
+        }
+
+        onAdd({
+          title: s.title,
+          artist: s.artist,
+          tags: ["Spotify"],
+          category: "dancing",
+          energy: 3,
+          language: "other",
+          coverUrl: s.coverUrl,
+          previewUrl: "",
+          externalLink: s.externalLink,
+          isSafe: true,
+          isActive: true,
+        });
+        imported++;
+      }
+
+      setResult({ imported, skipped });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "שגיאה לא ידועה");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -586,6 +672,55 @@ function SpotifyImportModal({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href={`/api/spotify/connect?returnTo=${encodeURIComponent("/admin")}`}
+            className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
+          >
+            <LogIn className="w-4 h-4" />
+            התחבר עם Spotify
+          </a>
+          <button
+            type="button"
+            onClick={loadPlaylists}
+            className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
+            disabled={playlistsLoading}
+          >
+            <ListMusic className="w-4 h-4" />
+            {playlistsLoading ? "טוען..." : "טען פלייליסטים"}
+          </button>
+          {connected && (
+            <span className="text-xs text-brand-green">מחובר</span>
+          )}
+        </div>
+
+        {playlists.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs text-muted">בחר פלייליסט לייבוא (דרך החשבון שלך):</p>
+            <div className="max-h-48 overflow-auto space-y-2 pr-1">
+              {playlists.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => importPlaylistById(p.id)}
+                  className="w-full text-right px-3 py-2 rounded-xl border border-glass hover:border-brand-blue/50 transition-colors flex items-center gap-3"
+                >
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-brand-gray/30 flex-shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {p.imageUrl ? (
+                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{p.name}</p>
+                    <p className="text-[11px] text-muted">{p.tracksTotal} שירים</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs text-muted mb-1">לינק פלייליסט</label>
@@ -652,6 +787,44 @@ function SongModal({
   const [energy, setEnergy] = useState(song?.energy || 3);
   const [language, setLanguage] = useState(song?.language || "hebrew");
   const [isSafe, setIsSafe] = useState(song?.isSafe ?? true);
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [metaError, setMetaError] = useState<string | null>(null);
+
+  const handleAutoFill = async () => {
+    const url = previewUrl.trim();
+    if (!url) return;
+    setMetaLoading(true);
+    setMetaError(null);
+    try {
+      const res = await fetch(`/api/youtube/oembed?url=${encodeURIComponent(url)}`, { cache: "no-store" });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "YouTube lookup failed");
+      }
+      const data = (await res.json()) as {
+        title?: string;
+        thumbnailUrl?: string;
+      };
+
+      if (data.title && !title.trim()) {
+        // naive parse: "Song - Artist" or "Artist - Song"
+        const parts = data.title.split("-").map((p) => p.trim());
+        if (parts.length >= 2 && !artist.trim()) {
+          setArtist(parts[0]);
+          setTitle(parts.slice(1).join(" - "));
+        } else {
+          setTitle(data.title);
+        }
+      }
+      if (data.thumbnailUrl && !coverUrl.trim()) {
+        setCoverUrl(data.thumbnailUrl);
+      }
+    } catch (e) {
+      setMetaError(e instanceof Error ? e.message : "שגיאה לא ידועה");
+    } finally {
+      setMetaLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -738,6 +911,22 @@ function SongModal({
             placeholder="https://www.youtube.com/watch?v=..."
             className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
           />
+          <div className="flex items-center justify-between mt-2 gap-2">
+            <button
+              type="button"
+              onClick={handleAutoFill}
+              disabled={metaLoading || !previewUrl.trim()}
+              className={`btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 ${metaLoading || !previewUrl.trim() ? "opacity-60 cursor-not-allowed" : ""}`}
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              {metaLoading ? "ממלא..." : "מלא פרטים מיוטיוב"}
+            </button>
+            {metaError && (
+              <span className="text-[11px]" style={{ color: "var(--accent-danger)" }}>
+                {metaError}
+              </span>
+            )}
+          </div>
         </div>
 
         <div>
