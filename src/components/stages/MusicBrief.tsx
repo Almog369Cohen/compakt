@@ -42,7 +42,8 @@ export function MusicBrief() {
   const answers = useEventStore((s) => s.answers);
   const requests = useEventStore((s) => s.requests);
   const briefRef = useRef<HTMLDivElement>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
   const [showCelebration, setShowCelebration] = useState(true);
 
   useEffect(() => {
@@ -145,8 +146,8 @@ export function MusicBrief() {
   const handleCopyLink = () => {
     const url = `${window.location.origin}?token=${event?.magicToken}`;
     navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const handleDownloadPDF = async () => {
@@ -164,7 +165,7 @@ export function MusicBrief() {
         .from(briefRef.current)
         .save();
     } catch {
-      alert("שגיאה בייצוא PDF — נסו שוב");
+      alert("ייצוא PDF נכשל (לעיתים קורה בדפדפנים במובייל). אפשר להשתמש ב'העתק סיכום' ולשלוח בוואטסאפ.");
     }
   };
 
@@ -209,9 +210,11 @@ export function MusicBrief() {
   const handleCopyText = async () => {
     const text = buildTextSummary();
     await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedText(true);
+    setTimeout(() => setCopiedText(false), 2000);
   };
+
+  const isEmpty = swipes.length === 0 && answers.length === 0 && requests.length === 0;
 
   return (
     <div className="w-full max-w-lg mx-auto space-y-4">
@@ -245,15 +248,15 @@ export function MusicBrief() {
           onClick={handleCopyLink}
           className="btn-secondary text-sm flex items-center gap-2 py-2 px-4"
         >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copied ? "הועתק!" : "העתק לינק"}
+          {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copiedLink ? "הועתק!" : "העתק לינק"}
         </button>
         <button
           onClick={handleCopyText}
           className="btn-secondary text-sm flex items-center gap-2 py-2 px-4"
         >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copied ? "הועתק!" : "העתק סיכום"}
+          {copiedText ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copiedText ? "הועתק!" : "העתק סיכום"}
         </button>
         <button
           onClick={handleShareWhatsApp}
@@ -266,6 +269,19 @@ export function MusicBrief() {
 
       {/* Brief Content */}
       <div ref={briefRef} className="space-y-4">
+        {isEmpty && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-5 text-center"
+          >
+            <p className="text-sm font-medium mb-1">אין עדיין מספיק נתונים לסיכום</p>
+            <p className="text-xs text-secondary">
+              חזרו לשלבים הקודמים, ענו על כמה שאלות וסמנו שירים — ואז ה-Music Brief יתמלא.
+            </p>
+          </motion.div>
+        )}
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

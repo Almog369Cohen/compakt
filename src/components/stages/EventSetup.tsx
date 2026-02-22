@@ -29,8 +29,16 @@ export function EventSetup() {
   const [showLink, setShowLink] = useState(false);
   const [copied, setCopied] = useState(false);
   const [magicToken, setMagicToken] = useState(event?.magicToken || "");
+  const [nameHint, setNameHint] = useState(false);
 
   const handleStart = () => {
+    if (!coupleNameA.trim() && !coupleNameB.trim()) {
+      setNameHint(true);
+      setTimeout(() => setNameHint(false), 1600);
+      const ok = confirm("רוצים להמשיך בלי שמות? אפשר גם להוסיף אחר כך");
+      if (!ok) return;
+    }
+
     if (event) {
       updateEvent({
         eventType: selectedType,
@@ -112,8 +120,8 @@ export function EventSetup() {
                       key={et.type}
                       onClick={() => setSelectedType(et.type)}
                       className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${selectedType === et.type
-                          ? "border-brand-blue bg-brand-blue/10 text-brand-blue"
-                          : "border-glass text-secondary hover:border-brand-blue/50"
+                        ? "border-brand-blue bg-brand-blue/10 text-brand-blue"
+                        : "border-glass text-secondary hover:border-brand-blue/50"
                         }`}
                     >
                       {et.icon}
@@ -132,7 +140,8 @@ export function EventSetup() {
                     value={coupleNameA}
                     onChange={(e) => setCoupleNameA(e.target.value)}
                     placeholder="דנה"
-                    className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                    className={`w-full px-3 py-2.5 rounded-xl bg-transparent border text-foreground placeholder:text-muted text-sm focus:outline-none transition-colors ${nameHint ? "border-accent-danger" : "border-glass focus:border-brand-blue"
+                      }`}
                   />
                 </div>
                 <div>
@@ -142,10 +151,17 @@ export function EventSetup() {
                     value={coupleNameB}
                     onChange={(e) => setCoupleNameB(e.target.value)}
                     placeholder="אלון"
-                    className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                    className={`w-full px-3 py-2.5 rounded-xl bg-transparent border text-foreground placeholder:text-muted text-sm focus:outline-none transition-colors ${nameHint ? "border-accent-danger" : "border-glass focus:border-brand-blue"
+                      }`}
                   />
                 </div>
               </div>
+
+              {nameHint && (
+                <p className="text-xs" style={{ color: "var(--accent-danger)" }}>
+                  מומלץ להוסיף לפחות שם אחד (אפשר גם אחר כך)
+                </p>
+              )}
 
               {/* Date */}
               <div>

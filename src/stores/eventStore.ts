@@ -41,6 +41,8 @@ interface EventStore {
   saveSwipe: (songId: string, action: SwipeAction, reasonChips?: string[]) => void;
   getSwipe: (songId: string) => SongSwipe | undefined;
   getSwipedSongIds: () => string[];
+  removeSwipe: (songId: string) => void;
+  setSwipes: (swipes: SongSwipe[]) => void;
 
   // Requests
   addRequest: (request: Omit<EventRequest, "id" | "eventId" | "createdAt">) => void;
@@ -162,6 +164,14 @@ export const useEventStore = create<EventStore>()(
 
       getSwipedSongIds: () => {
         return get().swipes.map((s) => s.songId);
+      },
+
+      removeSwipe: (songId) => {
+        set({ swipes: get().swipes.filter((s) => s.songId !== songId) });
+      },
+
+      setSwipes: (swipes) => {
+        set({ swipes });
       },
 
       addRequest: (request) => {

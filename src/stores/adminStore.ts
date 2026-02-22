@@ -148,6 +148,16 @@ export const useAdminStore = create<AdminStore>()(
     }),
     {
       name: "compakt-admin",
+      partialize: (state) => ({
+        songs: state.songs,
+        questions: state.questions,
+        upsells: state.upsells,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isAuthenticated = false;
+        }
+      },
     }
   )
 );

@@ -4,11 +4,10 @@ import { useState, useCallback, useEffect } from "react";
 import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { reasonChips } from "@/data/songs";
-import { motion, useMotionValue, useTransform, animate, PanInfo } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate, PanInfo } from "framer-motion";
 import { Heart, X, Star, HelpCircle, Play, Pause, Volume2 } from "lucide-react";
-import type { SwipeAction, Song } from "@/lib/types";
+import type { SwipeAction, Song, SongSwipe } from "@/lib/types";
 import { SwipeTutorial, useSwipeTutorial } from "@/components/ui/SwipeTutorial";
-import { AnimatePresence } from "framer-motion";
 
 const SWIPE_THRESHOLD = 100;
 const MIN_SWIPES = 10;
@@ -19,6 +18,8 @@ export function SongTinder() {
   const swipes = useEventStore((s) => s.swipes);
   const setStage = useEventStore((s) => s.setStage);
   const trackEvent = useEventStore((s) => s.trackEvent);
+
+  const setSwipes = useEventStore((s) => s.setSwipes);
 
   const adminSongs = useAdminStore((s) => s.songs);
 
@@ -35,12 +36,20 @@ export function SongTinder() {
   const [showSuperBurst, setShowSuperBurst] = useState(false);
   const { showTutorial, dismissTutorial } = useSwipeTutorial();
 
+  const [lastUndo, setLastUndo] = useState<{
+    songId: string;
+    prevSwipe?: { action: SwipeAction; reasonChips: string[] };
+    prevIndex: number;
+    prevSwipes: SongSwipe[];
+  } | null>(null);
+
   const likeCount = swipes.filter((s) => s.action === "like" || s.action === "super_like").length;
   const currentSong = availableSongs[currentIndex];
   const isDone = !currentSong;
 
   const handleSwipe = useCallback(
     (songId: string, action: SwipeAction) => {
+      const existing = swipes.find((s) => s.songId === songId);
       setLastSwipedSongId(songId);
       setLastAction(action);
 
@@ -56,6 +65,14 @@ export function SongTinder() {
         }
       }
 
+      // Prepare undo snapshot (one-level)
+      setLastUndo({
+        songId,
+        prevSwipe: existing ? { action: existing.action, reasonChips: existing.reasonChips } : undefined,
+        prevIndex: currentIndex,
+        prevSwipes: swipes,
+      });
+
       setIsPlaying(false);
       setCurrentIndex((i) => i + 1);
       trackEvent("song_swipe", { songId, action });
@@ -65,13 +82,32 @@ export function SongTinder() {
         navigator.vibrate(action === "super_like" ? [30, 50, 30] : 15);
       }
     },
-    [saveSwipe, trackEvent]
+    [saveSwipe, trackEvent, swipes, currentIndex]
   );
+
+  const handleUndo = useCallback(() => {
+    if (!lastUndo) return;
+
+    setSwipes(lastUndo.prevSwipes);
+
+    setShowReasons(false);
+    setLastSwipedSongId(null);
+    setLastAction(null);
+    setIsPlaying(false);
+    setCurrentIndex(lastUndo.prevIndex);
+    trackEvent("song_undo", { songId: lastUndo.songId });
+    setLastUndo(null);
+  }, [lastUndo, setSwipes, trackEvent]);
 
   // Keyboard shortcuts
   useEffect(() => {
     if (isDone) return;
     const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showReasons) {
+        setShowReasons(false);
+        setLastSwipedSongId(null);
+        return;
+      }
       if (showReasons) return;
       switch (e.key) {
         case "ArrowRight":
@@ -153,8 +189,18 @@ export function SongTinder() {
           <Heart className="w-4 h-4 text-brand-green" fill="var(--accent-secondary)" />
           <span className="text-brand-green font-bold">{likeCount}</span>
         </div>
+        <button
+          onClick={handleUndo}
+          disabled={!lastUndo}
+          className={`text-xs px-2 py-1 rounded-lg transition-colors ${lastUndo ? "glass-card text-muted hover:text-brand-blue" : "opacity-40 cursor-not-allowed"
+            }`}
+          aria-label="בטל פעולה אחרונה"
+          title="בטל"
+        >
+          ↩
+        </button>
         <span className="text-xs text-muted">
-          {swipes.length} / {adminSongs.length}
+          {swipes.length} / {adminSongs.filter((s) => s.isActive).length}
         </span>
         {swipes.length >= MIN_SWIPES && (
           <button
@@ -289,15 +335,26 @@ export function SongTinder() {
 }
 
 function SongCardStatic({ song }: { song: Song }) {
+  const [imgError, setImgError] = useState(false);
   return (
     <div className="h-full flex flex-col items-center justify-center p-6">
-      <div className="w-48 h-48 rounded-2xl overflow-hidden shadow-lg mb-4 bg-brand-gray/30">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={song.coverUrl}
-          alt={`${song.title} - ${song.artist}`}
-          className="w-full h-full object-cover"
-        />
+      <div className="w-48 h-48 rounded-2xl overflow-hidden shadow-lg mb-4 bg-brand-gray/30 flex items-center justify-center">
+        {!imgError ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={song.coverUrl}
+            alt={`${song.title} - ${song.artist}`}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, rgba(5,156,192,0.25), rgba(3,178,140,0.18))" }}
+          >
+            <span className="text-4xl">🎵</span>
+          </div>
+        )}
       </div>
       <h3 className="text-lg font-bold">{song.title}</h3>
       <p className="text-secondary text-sm">{song.artist}</p>
@@ -316,6 +373,7 @@ function SwipeCard({
   isPlaying: boolean;
   onTogglePlay: () => void;
 }) {
+  const [imgError, setImgError] = useState(false);
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 0, 300], [-15, 0, 15]);
   const likeOpacity = useTransform(x, [0, 100], [0, 1]);
@@ -393,12 +451,22 @@ function SwipeCard({
       <div className="h-full flex flex-col items-center justify-center p-6 relative">
         {/* Cover Art */}
         <div className="w-52 h-52 rounded-2xl overflow-hidden shadow-xl mb-5 relative group">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={song.coverUrl}
-            alt={`${song.title} - ${song.artist}`}
-            className="w-full h-full object-cover"
-          />
+          {!imgError ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={song.coverUrl}
+              alt={`${song.title} - ${song.artist}`}
+              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(5,156,192,0.25), rgba(3,178,140,0.18))" }}
+            >
+              <span className="text-5xl">🎵</span>
+            </div>
+          )}
           {/* Play overlay */}
           {youtubeId && (
             <button

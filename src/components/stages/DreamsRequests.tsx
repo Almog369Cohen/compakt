@@ -82,6 +82,14 @@ export function DreamsRequests() {
         <p className="text-secondary text-sm">
           ספרו לנו על הרגעים המיוחדים, בקשות וחלומות
         </p>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.7 }}
+          transition={{ delay: 0.4 }}
+          className="sm:hidden mt-3 text-xs text-muted"
+        >
+          גללו למטה ↓
+        </motion.div>
       </motion.div>
 
       {/* Special Moments */}

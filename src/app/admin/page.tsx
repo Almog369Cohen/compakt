@@ -98,7 +98,7 @@ export default function AdminPage() {
 
           <div className="flex items-center gap-2">
             {/* Tabs */}
-            <nav className="flex gap-1">
+            <nav className="flex gap-1 overflow-x-auto max-w-[60vw] sm:max-w-none">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}

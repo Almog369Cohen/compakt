@@ -74,10 +74,10 @@ body {
   scroll-behavior: smooth;
 }
 
-/* Select dropdown fix for dark themes */
+/* Select dropdown options */
 select option {
-  background: #1f1f21;
-  color: #ffffff;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 @layer components {
@@ -180,7 +180,6 @@ select option {
   .gradient-hero {
     background: var(--gradient-hero);
     position: relative;
-    overflow: hidden;
   }
 
   .gradient-hero::before {

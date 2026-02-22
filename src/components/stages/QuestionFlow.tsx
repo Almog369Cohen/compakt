@@ -41,7 +41,8 @@ export function QuestionFlow() {
       setDirection(-1);
       setCurrentIndex((i) => i - 1);
     } else {
-      setStage(0);
+      const ok = confirm("לחזור להגדרות האירוע? אפשר תמיד לחזור אחר כך");
+      if (ok) setStage(0);
     }
   }, [currentIndex, setStage]);
 
@@ -160,8 +161,8 @@ function QuestionCard({
               whileTap={{ scale: 0.97 }}
               onClick={() => onAnswer(opt.value)}
               className={`w-full text-right px-4 py-3 rounded-xl border transition-all ${existingValue === opt.value
-                  ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
-                  : "border-glass text-secondary hover:border-brand-blue/50"
+                ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
+                : "border-glass text-secondary hover:border-brand-blue/50"
                 }`}
             >
               {opt.label}
@@ -187,8 +188,8 @@ function QuestionCard({
                   onAnswer(updated);
                 }}
                 className={`w-full text-right px-4 py-3 rounded-xl border transition-all ${isSelected
-                    ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
-                    : "border-glass text-secondary hover:border-brand-blue/50"
+                  ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
+                  : "border-glass text-secondary hover:border-brand-blue/50"
                   }`}
               >
                 <span className="flex items-center gap-2">
@@ -235,8 +236,8 @@ function QuestionCard({
                 <span
                   key={i}
                   className={`transition-colors ${i + (question.sliderMin || 1) === sliderValue
-                      ? "text-brand-blue font-bold text-sm"
-                      : ""
+                    ? "text-brand-blue font-bold text-sm"
+                    : ""
                     }`}
                 >
                   {label}
