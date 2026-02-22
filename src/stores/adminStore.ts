@@ -156,6 +156,23 @@ export const useAdminStore = create<AdminStore>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.isAuthenticated = false;
+
+          const q1 = state.questions.find((q) => q.id === "q1");
+          if (q1 && Array.isArray(q1.options)) {
+            const labelByValue: Record<string, string> = {
+              nostalgic: "חפלה - נסרין המוזמנת הראשית",
+              party: "אפטר של החיים",
+              elegant: "אווירה של מיאמי",
+              classic_israeli: "ישראלי קלאסי - שלמה ארצי והחברים",
+            };
+
+            q1.options = q1.options
+              .filter((o) => o.value !== "mix")
+              .map((o) => ({
+                ...o,
+                label: labelByValue[o.value] ?? o.label,
+              }));
+          }
         }
       },
     }
