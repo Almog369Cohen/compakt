@@ -1,0 +1,18 @@
+{
+  "name": "Compakt — המסע המוזיקלי שלכם",
+  "short_name": "Compakt",
+  "description": "תאמו את המוזיקה לאירוע שלכם בצורה כיפית ופשוטה",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#059cc0",
+  "dir": "rtl",
+  "lang": "he",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

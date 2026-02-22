@@ -13,6 +13,12 @@ export const metadata: Metadata = {
   title: "Compakt — המסע המוזיקלי שלכם",
   description: "תאמו את המוזיקה לאירוע שלכם בצורה כיפית ופשוטה",
   icons: { icon: "/favicon.svg" },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Compakt",
+  },
 };
 
 export const viewport: Viewport = {

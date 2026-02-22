@@ -15,6 +15,7 @@ import {
   Clock,
   HelpCircle,
   Sparkles,
+  Download,
 } from "lucide-react";
 
 export function Dashboard() {
@@ -69,10 +70,42 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold flex items-center gap-2">
-        <BarChart3 className="w-5 h-5 text-brand-blue" />
-        דשבורד
-      </h2>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-brand-blue" />
+          דשבורד
+        </h2>
+        {event && (
+          <button
+            onClick={() => {
+              const data = {
+                event,
+                answers,
+                swipes: swipes.map((s) => ({
+                  ...s,
+                  songTitle: songs.find((song) => song.id === s.songId)?.title,
+                  songArtist: songs.find((song) => song.id === s.songId)?.artist,
+                })),
+                requests,
+                upsellClicks,
+                analytics,
+                exportedAt: new Date().toISOString(),
+              };
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `compakt-brief-${event.magicToken?.slice(0, 8) || "draft"}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
+          >
+            <Download className="w-4 h-4" />
+            ייצוא JSON
+          </button>
+        )}
+      </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -121,12 +154,12 @@ export function Dashboard() {
                 {event.eventType === "wedding"
                   ? "חתונה 💍"
                   : event.eventType === "bar_mitzvah"
-                  ? "בר/בת מצווה 🎉"
-                  : event.eventType === "private"
-                  ? "אירוע פרטי 🎈"
-                  : event.eventType === "corporate"
-                  ? "עסקי 🏢"
-                  : "אחר"}
+                    ? "בר/בת מצווה 🎉"
+                    : event.eventType === "private"
+                      ? "אירוע פרטי 🎈"
+                      : event.eventType === "corporate"
+                        ? "עסקי 🏢"
+                        : "אחר"}
               </p>
             </div>
             {(event.coupleNameA || event.coupleNameB) && (
