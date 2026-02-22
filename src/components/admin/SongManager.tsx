@@ -394,18 +394,30 @@ function SpotifyImportModal({
   const [playlistUrl, setPlaylistUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleImport = async () => {
     const url = playlistUrl.trim();
     if (!url) return;
     setImporting(true);
     setResult(null);
+    setError(null);
 
     try {
       const res = await fetch(`/api/spotify/playlist?url=${encodeURIComponent(url)}`);
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "Import failed");
+        const msg = (text || "Import failed").trim();
+        if (msg.includes("Missing SPOTIFY_CLIENT_ID")) {
+          throw new Error("חסרים מפתחות Spotify ב-Netlify (SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET)");
+        }
+        if (msg.includes("Invalid spotify url") || msg.includes("Invalid playlist url")) {
+          throw new Error("הלינק לא מזוהה. נסו להדביק לינק של playlist/track מ-open.spotify.com או spotify.link");
+        }
+        if (msg.includes("No tracks found")) {
+          throw new Error("לא נמצאו שירים בלינק הזה");
+        }
+        throw new Error(msg);
       }
 
       const data = (await res.json()) as {
@@ -449,7 +461,7 @@ function SpotifyImportModal({
 
       setResult({ imported, skipped });
     } catch (e) {
-      alert(`שגיאה בייבוא Spotify: ${e instanceof Error ? e.message : ""}`);
+      setError(e instanceof Error ? e.message : "שגיאה לא ידועה");
     } finally {
       setImporting(false);
     }
@@ -490,7 +502,16 @@ function SpotifyImportModal({
             placeholder="https://open.spotify.com/playlist/..."
             className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
           />
+          <p className="text-[11px] text-muted mt-2" dir="ltr">
+            Examples: open.spotify.com/playlist/... | open.spotify.com/track/... | spotify:playlist:... | spotify.link/...
+          </p>
         </div>
+
+        {error && (
+          <div className="text-sm p-3 rounded-xl border" style={{ borderColor: "var(--accent-danger)", color: "var(--accent-danger)" }}>
+            {error}
+          </div>
+        )}
 
         {result && (
           <div className="text-sm">

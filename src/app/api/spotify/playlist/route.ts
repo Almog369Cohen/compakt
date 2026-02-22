@@ -1,24 +1,58 @@
 import { NextResponse } from "next/server";
 
-function extractPlaylistId(input: string): string | null {
+type SpotifyEntity =
+  | { type: "playlist"; id: string }
+  | { type: "track"; id: string };
+
+function normalizeInput(input: string): string {
+  const trimmed = input.trim();
+  // Remove surrounding quotes
+  return trimmed.replace(/^['\"]+/, "").replace(/['\"]+$/, "");
+}
+
+async function resolveShortLink(input: string): Promise<string> {
   try {
     const url = new URL(input);
-    // https://open.spotify.com/playlist/<id>?...
-    const parts = url.pathname.split("/").filter(Boolean);
-    const idx = parts.indexOf("playlist");
-    if (idx >= 0 && parts[idx + 1]) return parts[idx + 1];
-
-    // spotify:playlist:<id>
-    if (input.startsWith("spotify:playlist:")) {
-      const id = input.split(":")[2];
-      return id || null;
-    }
+    if (url.hostname !== "spotify.link") return input;
+    const res = await fetch(input, { method: "GET", redirect: "follow", cache: "no-store" });
+    return res.url || input;
   } catch {
-    // fallthrough
+    return input;
+  }
+}
+
+function extractEntity(input: string): SpotifyEntity | null {
+  // spotify:playlist:<id>
+  if (input.startsWith("spotify:playlist:")) {
+    const id = input.split(":")[2];
+    return id ? { type: "playlist", id } : null;
   }
 
-  // Accept raw id
-  if (/^[A-Za-z0-9]{10,}$/.test(input)) return input;
+  // spotify:track:<id>
+  if (input.startsWith("spotify:track:")) {
+    const id = input.split(":")[2];
+    return id ? { type: "track", id } : null;
+  }
+
+  try {
+    const url = new URL(input);
+    const parts = url.pathname.split("/").filter(Boolean);
+
+    const playlistIdx = parts.indexOf("playlist");
+    if (playlistIdx >= 0 && parts[playlistIdx + 1]) {
+      return { type: "playlist", id: parts[playlistIdx + 1] };
+    }
+
+    const trackIdx = parts.indexOf("track");
+    if (trackIdx >= 0 && parts[trackIdx + 1]) {
+      return { type: "track", id: parts[trackIdx + 1] };
+    }
+  } catch {
+    // ignore
+  }
+
+  // Accept raw IDs (default to playlist)
+  if (/^[A-Za-z0-9]{10,}$/.test(input)) return { type: "playlist", id: input };
   return null;
 }
 
@@ -54,11 +88,13 @@ async function getAccessToken(): Promise<string> {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const url = searchParams.get("url") || "";
+  const raw = searchParams.get("url") || "";
+  const normalized = normalizeInput(raw);
+  const resolved = await resolveShortLink(normalized);
 
-  const playlistId = extractPlaylistId(url.trim());
-  if (!playlistId) {
-    return new NextResponse("Invalid playlist url", { status: 400 });
+  const entity = extractEntity(resolved);
+  if (!entity) {
+    return new NextResponse("Invalid spotify url", { status: 400 });
   }
 
   try {
@@ -71,44 +107,73 @@ export async function GET(req: Request) {
       externalLink?: string;
     }> = [];
 
-    let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
-
-    while (nextUrl) {
-      const res = await fetch(nextUrl, {
+    if (entity.type === "track") {
+      const res = await fetch(`https://api.spotify.com/v1/tracks/${entity.id}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
 
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
-        throw new Error(`Spotify playlist fetch failed (${res.status}): ${txt}`);
+        throw new Error(`Spotify track fetch failed (${res.status}): ${txt}`);
       }
 
-      const json = (await res.json()) as {
-        items: Array<{
-          track?: {
-            name: string;
-            artists: Array<{ name: string }>;
-            album?: { images?: Array<{ url: string }> };
-            external_urls?: { spotify?: string };
-          };
-        }>;
-        next: string | null;
+      const t = (await res.json()) as {
+        name: string;
+        artists: Array<{ name: string }>;
+        album?: { images?: Array<{ url: string }> };
+        external_urls?: { spotify?: string };
       };
 
-      for (const item of json.items) {
-        const t = item.track;
-        if (!t) continue;
-        const title = t.name;
-        const artist = t.artists?.[0]?.name || "";
-        if (!title || !artist) continue;
-        const coverUrl = t.album?.images?.[0]?.url || "";
-        const externalLink = t.external_urls?.spotify;
+      const title = t.name;
+      const artist = t.artists?.[0]?.name || "";
+      const coverUrl = t.album?.images?.[0]?.url || "";
+      const externalLink = t.external_urls?.spotify;
+      if (title && artist) songs.push({ title, artist, coverUrl, externalLink });
+    } else {
+      let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${entity.id}/tracks?limit=100`;
 
-        songs.push({ title, artist, coverUrl, externalLink });
+      while (nextUrl) {
+        const res = await fetch(nextUrl, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error(`Spotify playlist fetch failed (${res.status}): ${txt}`);
+        }
+
+        const json = (await res.json()) as {
+          items: Array<{
+            track?: {
+              name: string;
+              artists: Array<{ name: string }>;
+              album?: { images?: Array<{ url: string }> };
+              external_urls?: { spotify?: string };
+            };
+          }>;
+          next: string | null;
+        };
+
+        for (const item of json.items) {
+          const t = item.track;
+          if (!t) continue;
+          const title = t.name;
+          const artist = t.artists?.[0]?.name || "";
+          if (!title || !artist) continue;
+          const coverUrl = t.album?.images?.[0]?.url || "";
+          const externalLink = t.external_urls?.spotify;
+
+          songs.push({ title, artist, coverUrl, externalLink });
+        }
+
+        nextUrl = json.next;
       }
+    }
 
-      nextUrl = json.next;
+    if (songs.length === 0) {
+      return new NextResponse("No tracks found", { status: 404 });
     }
 
     return NextResponse.json({ songs });
