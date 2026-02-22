@@ -60,6 +60,13 @@ export function SongManager() {
           ספריית שירים ({songs.length})
         </h2>
         <div className="flex items-center gap-2">
+          <a
+            href="/songs-template.csv"
+            download
+            className="text-[10px] text-muted underline hover:text-brand-blue transition-colors"
+          >
+            תבנית CSV
+          </a>
           <label className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4 cursor-pointer">
             <Upload className="w-4 h-4" />
             CSV ייבוא

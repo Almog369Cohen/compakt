@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3 } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useEventStore } from "@/stores/eventStore";
 import { SongManager } from "@/components/admin/SongManager";
 import { QuestionManager } from "@/components/admin/QuestionManager";
 import { UpsellManager } from "@/components/admin/UpsellManager";
@@ -25,6 +27,11 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+  const theme = useEventStore((s) => s.theme);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,8 +104,8 @@ export default function AdminPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
-                      ? "bg-brand-blue text-white"
-                      : "text-secondary hover:text-foreground"
+                    ? "bg-brand-blue text-white"
+                    : "text-secondary hover:text-foreground"
                     }`}
                 >
                   {tab.icon}
@@ -107,6 +114,7 @@ export default function AdminPage() {
               ))}
             </nav>
 
+            <ThemeToggle />
             <button
               onClick={logout}
               className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"

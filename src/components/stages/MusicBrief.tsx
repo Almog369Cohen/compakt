@@ -168,10 +168,49 @@ export function MusicBrief() {
     }
   };
 
-  const handleShareWhatsApp = () => {
+  const buildTextSummary = () => {
+    const lines: string[] = [];
+    lines.push(`🎵 Music Brief — ${eventTitle}`);
+    if (event?.eventDate) lines.push(`📅 ${event.eventDate}`);
+    if (event?.venue) lines.push(`📍 ${event.venue}`);
+    lines.push("");
+
+    if (superLiked.length > 0) {
+      lines.push("⭐ חובה:");
+      superLiked.forEach((s) => s && lines.push(`  • ${s.title} — ${s.artist}`));
+      lines.push("");
+    }
+    if (liked.length > 0) {
+      lines.push(`💚 אהבנו (${liked.length}):`);
+      liked.slice(0, 8).forEach((s) => s && lines.push(`  • ${s.title} — ${s.artist}`));
+      if (liked.length > 8) lines.push(`  ...ועוד ${liked.length - 8}`);
+      lines.push("");
+    }
+    if (doRequests.length > 0) {
+      lines.push("✅ כן בבקשה:");
+      doRequests.forEach((r) => lines.push(`  • ${r.content}`));
+      lines.push("");
+    }
+    if (dontRequests.length > 0) {
+      lines.push("❌ בלי:");
+      dontRequests.forEach((r) => lines.push(`  • ${r.content}`));
+      lines.push("");
+    }
     const url = `${window.location.origin}?token=${event?.magicToken}`;
-    const text = `🎵 Music Brief — ${eventTitle}\n${url}`;
+    lines.push(`🔗 ${url}`);
+    return lines.join("\n");
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = buildTextSummary();
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  const handleCopyText = async () => {
+    const text = buildTextSummary();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -208,6 +247,13 @@ export function MusicBrief() {
         >
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           {copied ? "הועתק!" : "העתק לינק"}
+        </button>
+        <button
+          onClick={handleCopyText}
+          className="btn-secondary text-sm flex items-center gap-2 py-2 px-4"
+        >
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? "הועתק!" : "העתק סיכום"}
         </button>
         <button
           onClick={handleShareWhatsApp}
