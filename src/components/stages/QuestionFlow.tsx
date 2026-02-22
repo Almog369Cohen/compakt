@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, SkipForward, Home } from "lucide-react";
+import { ChevronRight, ChevronLeft, SkipForward, Home, Shield } from "lucide-react";
 import type { Question } from "@/lib/types";
 
 export function QuestionFlow() {
+  const router = useRouter();
   const event = useEventStore((s) => s.event);
   const saveAnswer = useEventStore((s) => s.saveAnswer);
   const getAnswer = useEventStore((s) => s.getAnswer);
@@ -56,17 +58,32 @@ export function QuestionFlow() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="flex items-center justify-between mb-3 px-1">
-        <button
-          onClick={() => {
-            const ok = confirm("לחזור למסך הבית? אפשר תמיד לחזור לשאלות אחר כך");
-            if (ok) setStage(0);
-          }}
-          className="glass-card p-2 rounded-full transition-all hover:scale-110 active:scale-95"
-          aria-label="חזרה למסך הבית"
-          title="בית"
-        >
-          <Home className="w-4 h-4 text-muted" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              trackEvent("navigate_home", { from: "questions" });
+              setStage(0);
+              router.push("/");
+            }}
+            className="glass-card p-2 rounded-full transition-all hover:scale-110 active:scale-95"
+            aria-label="חזרה למסך הבית"
+            title="בית"
+          >
+            <Home className="w-4 h-4 text-muted" />
+          </button>
+
+          <button
+            onClick={() => {
+              trackEvent("navigate_admin", { from: "questions" });
+              router.push("/admin");
+            }}
+            className="glass-card p-2 rounded-full transition-all hover:scale-110 active:scale-95"
+            aria-label="כניסה ל-DJ"
+            title="DJ"
+          >
+            <Shield className="w-4 h-4 text-muted" />
+          </button>
+        </div>
         <div className="text-xs text-muted" />
       </div>
 
