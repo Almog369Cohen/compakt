@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Compakt — המסע המוזיקלי שלכם
 
-## Getting Started
+Mobile-first Hebrew RTL web app for DJ clients (weddings/events) to coordinate music through a fun guided journey.
 
-First, run the development server:
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # → http://localhost:3000
+npm run build      # production build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Routes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Route | Description |
+|-------|-------------|
+| `/` | Client journey (Event Setup → Questions → Song Tinder → Dreams → Music Brief) |
+| `/admin` | Back-office (Song Library, Questions, Upsells). Password: `compakt2024` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Stack
 
-## Learn More
+- **Next.js 14** (App Router) + TypeScript
+- **Tailwind CSS** + CSS custom properties (glassmorphism themes)
+- **Framer Motion** (swipe physics, modal transitions)
+- **Zustand** (persisted state — localStorage)
+- **Lucide React** (icons)
 
-To learn more about Next.js, take a look at the following resources:
+## Themes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Night Glass** (dark premium) — default
+- **Day Glass** (light premium)
+- Toggle via sun/moon button (top-left)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+src/
+├── app/
+│   ├── page.tsx              # Main client journey
+│   ├── admin/page.tsx        # Admin back-office
+│   ├── layout.tsx            # RTL Hebrew layout
+│   └── globals.css           # Theme tokens + glass utilities
+├── components/
+│   ├── stages/
+│   │   ├── EventSetup.tsx    # Stage 0: Event creation + magic link
+│   │   ├── QuestionFlow.tsx  # Stage 1: One-question-per-card modal
+│   │   ├── SongTinder.tsx    # Stage 2: Swipe cards + reason chips
+│   │   ├── DreamsRequests.tsx# Stage 3: Requests, do/don't, links, upsells
+│   │   └── MusicBrief.tsx    # Stage 4: Summary + PDF export
+│   ├── admin/
+│   │   ├── SongManager.tsx   # CRUD songs table + modal
+│   │   ├── QuestionManager.tsx # CRUD questions + type templates
+│   │   └── UpsellManager.tsx # CRUD upsell cards
+│   └── ui/
+│       ├── ThemeToggle.tsx   # Night/Day switch
+│       └── StageNav.tsx      # Progress navigation
+├── data/
+│   ├── songs.ts              # Mock song library (12 songs)
+│   ├── questions.ts          # Default wedding questions (7)
+│   └── upsells.ts            # Sample upsell offerings (4)
+├── stores/
+│   ├── eventStore.ts         # Client journey state (persisted)
+│   └── adminStore.ts         # Admin CRUD state (persisted)
+└── lib/
+    ├── types.ts              # TypeScript interfaces
+    └── utils.ts              # cn(), generateMagicToken(), formatDate()
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Brand Colors
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Color | Hex | Usage |
+|-------|-----|-------|
+| Blue | `#059cc0` | Primary accent, CTAs |
+| Green | `#03b28c` | Success, likes |
+| Gray | `#1f1f21` | Dark surfaces |
+| White | `#ffffff` | Light surfaces |
+
+## Phase Plan
+
+- **Phase 1 (current)**: Full client flow + admin + mock data
+- **Phase 2**: Supabase DB + multi-DJ SaaS + Spotify embeds
+- **Phase 3**: Billing (Stripe) + AI taste analysis

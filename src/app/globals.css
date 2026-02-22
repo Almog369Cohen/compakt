@@ -2,26 +2,159 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Theme A: Night Glass (Dark Premium) — default */
+:root,
+[data-theme="night"] {
+  --bg-primary: #0a0a0f;
+  --bg-surface: rgba(31, 31, 33, 0.85);
+  --bg-surface-hover: rgba(31, 31, 33, 0.95);
+  --glass-border: rgba(5, 156, 192, 0.15);
+  --glass-blur: 20px;
+
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.75);
+  --text-muted: rgba(255, 255, 255, 0.50);
+
+  --accent-primary: #059cc0;
+  --accent-secondary: #03b28c;
+  --accent-danger: #ff4466;
+  --accent-gold: #f5c542;
+
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --gradient-hero: linear-gradient(135deg, #0a0a0f 0%, #0d1b2a 50%, #0a0a0f 100%);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Theme B: Day Glass (Light Premium) */
+[data-theme="day"] {
+  --bg-primary: #f5f7fa;
+  --bg-surface: rgba(255, 255, 255, 0.80);
+  --bg-surface-hover: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(5, 156, 192, 0.20);
+  --glass-blur: 16px;
+
+  --text-primary: #1f1f21;
+  --text-secondary: rgba(31, 31, 33, 0.75);
+  --text-muted: rgba(31, 31, 33, 0.50);
+
+  --accent-primary: #059cc0;
+  --accent-secondary: #03b28c;
+  --accent-danger: #e53e5c;
+  --accent-gold: #d4a017;
+
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --gradient-hero: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 50%, #f5f7fa 100%);
+}
+
+html {
+  direction: rtl;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-family: "Heebo", sans-serif;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+  .glass-card {
+    background: var(--bg-surface);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+  }
+
+  .glass-card-hover {
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+  }
+  .glass-card-hover:hover {
+    background: var(--bg-surface-hover);
+  }
+
+  .btn-primary {
+    background: var(--accent-primary);
+    color: #ffffff;
+    border-radius: 12px;
+    font-weight: 700;
+    padding: 12px 24px;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+  }
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent-primary);
+    border: 1.5px solid var(--accent-primary);
+    border-radius: 12px;
+    font-weight: 600;
+    padding: 10px 20px;
+    transition: background 0.2s ease;
+  }
+  .btn-secondary:hover {
+    background: rgba(5, 156, 192, 0.1);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1.5px solid var(--glass-border);
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  .chip:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+  .chip.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #ffffff;
+  }
+
+  .progress-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: all 0.3s ease;
+  }
+  .progress-dot.active {
+    background: var(--accent-primary);
+    width: 24px;
+    border-radius: 4px;
+  }
+  .progress-dot.done {
+    background: var(--accent-secondary);
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
