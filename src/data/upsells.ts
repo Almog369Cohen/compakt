@@ -13,9 +13,9 @@ export const defaultUpsells: Upsell[] = [
   },
   {
     id: "u2",
-    titleHe: "סט סגירות רחבה",
-    descriptionHe: "בלוק אנרגטי מותאם אישית — 15 דקות של שיא שמביאות את כולם לרחבה",
-    priceHint: "החל מ-₪500",
+    titleHe: "תאורה סינכרונית למוזיקה",
+    descriptionHe: "מערכת תאורה שמגיבה בזמן אמת לקצב המוזיקה — אפקטים מדויקים שמעלים את האווירה לרמה אחרת",
+    priceHint: "החל מ-₪1,500",
     ctaTextHe: "ספרו לי עוד",
     placement: "stage_4",
     sortOrder: 2,
