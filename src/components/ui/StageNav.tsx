@@ -1,6 +1,7 @@
 "use client";
 
 import { useEventStore } from "@/stores/eventStore";
+import { Check } from "lucide-react";
 
 const stages = [
   { id: 1, label: "שאלות" },
@@ -15,34 +16,42 @@ export function StageNav() {
   const currentStage = event?.currentStage ?? 0;
 
   return (
-    <div className="flex items-center gap-2 justify-center">
-      {stages.map((stage, i) => (
-        <div key={stage.id} className="flex items-center gap-2">
-          <button
-            onClick={() => setStage(stage.id)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
-              currentStage === stage.id
-                ? "bg-brand-blue text-white"
-                : currentStage > stage.id
-                ? "bg-brand-green/20 text-brand-green"
-                : "glass-card text-muted"
-            }`}
-          >
-            {stage.label}
-          </button>
-          {i < stages.length - 1 && (
-            <div
-              className="w-6 h-0.5 rounded-full"
-              style={{
-                background:
-                  currentStage > stage.id
+    <div className="flex items-center gap-1.5 sm:gap-2 justify-center">
+      {stages.map((stage, i) => {
+        const isCurrent = currentStage === stage.id;
+        const isDone = currentStage > stage.id;
+        const isFuture = currentStage < stage.id;
+
+        return (
+          <div key={stage.id} className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              onClick={() => {
+                if (!isFuture) setStage(stage.id);
+              }}
+              disabled={isFuture}
+              className={`text-[11px] sm:text-xs font-medium px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full transition-all flex items-center gap-1 ${isCurrent
+                  ? "bg-brand-blue text-white shadow-sm"
+                  : isDone
+                    ? "bg-brand-green/20 text-brand-green cursor-pointer"
+                    : "glass-card text-muted opacity-60 cursor-default"
+                }`}
+            >
+              {isDone && <Check className="w-3 h-3" />}
+              {stage.label}
+            </button>
+            {i < stages.length - 1 && (
+              <div
+                className="w-4 sm:w-6 h-0.5 rounded-full flex-shrink-0"
+                style={{
+                  background: isDone
                     ? "var(--accent-secondary)"
                     : "var(--glass-border)",
-              }}
-            />
-          )}
-        </div>
-      ))}
+                }}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

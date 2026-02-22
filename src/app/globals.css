@@ -57,6 +57,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 /* Prevent pull-to-refresh during swipe */
