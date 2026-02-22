@@ -162,12 +162,12 @@ export const useAdminStore = create<AdminStore>()(
             q1.questionType = "multi_select";
 
             const desiredOptions = [
-              { label: "חפלה - נסרין המוזמנת הראשית", value: "party" },
-              { label: "אפטר של החיים", value: "after" },
-              { label: "מיינסטרים של מיאמי", value: "miami_mainstream" },
-              { label: "היפ הופ שחורה / R&B (בשחורהה)", value: "black_rb" },
-              { label: "80s funky שלמה ארצי והחברים", value: "shlomo_funky_80s" },
-              { label: "שלב את הכל", value: "mix" },
+              { label: "חפלה - נסרין המוזמנת הראשית 🪘", value: "party" },
+              { label: "אפטר של החיים 😎", value: "after" },
+              { label: "מיינסטרים של מיאמי 🏖️🍹", value: "miami_mainstream" },
+              { label: "היפ הופ שחורה / R&B (בשחורהה) 💿", value: "black_rb" },
+              { label: "80s funky שלמה ארצי והחברים 🪩", value: "shlomo_funky_80s" },
+              { label: "שלב את הכל 🔀", value: "mix" },
             ];
 
             const valueMap: Record<string, string> = {
