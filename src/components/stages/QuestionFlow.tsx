@@ -137,7 +137,7 @@ function QuestionCard({
   onSubmitText: () => void;
 }) {
   const [multiSelected, setMultiSelected] = useState<string[]>(
-    Array.isArray(existingValue) ? existingValue : []
+    Array.isArray(existingValue) ? existingValue : typeof existingValue === "string" ? [existingValue] : []
   );
   const [textValue, setTextValue] = useState(
     typeof existingValue === "string" ? existingValue : ""

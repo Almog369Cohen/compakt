@@ -158,20 +158,38 @@ export const useAdminStore = create<AdminStore>()(
           state.isAuthenticated = false;
 
           const q1 = state.questions.find((q) => q.id === "q1");
-          if (q1 && Array.isArray(q1.options)) {
-            const labelByValue: Record<string, string> = {
-              nostalgic: "חפלה - נסרין המוזמנת הראשית",
-              party: "אפטר של החיים",
-              elegant: "אווירה של מיאמי",
-              classic_israeli: "ישראלי קלאסי - שלמה ארצי והחברים",
+          if (q1) {
+            q1.questionType = "multi_select";
+
+            const desiredOptions = [
+              { label: "חפלה - נסרין המוזמנת הראשית", value: "party" },
+              { label: "אפטר של החיים", value: "after" },
+              { label: "מיינסטרים של מיאמי", value: "miami_mainstream" },
+              { label: "היפ הופ שחורה / R&B (בשחורהה)", value: "black_rb" },
+              { label: "80s funky שלמה ארצי והחברים", value: "shlomo_funky_80s" },
+              { label: "שלב את הכל", value: "mix" },
+            ];
+
+            const valueMap: Record<string, string> = {
+              nostalgic: "party",
+              elegant: "miami_mainstream",
+              classic_israeli: "shlomo_funky_80s",
             };
 
-            q1.options = q1.options
-              .filter((o) => o.value !== "mix")
+            const existing = Array.isArray(q1.options) ? q1.options : [];
+            const normalizedExisting = existing
               .map((o) => ({
                 ...o,
-                label: labelByValue[o.value] ?? o.label,
-              }));
+                value: valueMap[o.value] ?? o.value,
+              }))
+              .filter((o) => desiredOptions.some((d) => d.value === o.value));
+
+            const merged = desiredOptions.map((d) => {
+              const found = normalizedExisting.find((o) => o.value === d.value);
+              return found ? { ...found, label: d.label, value: d.value } : d;
+            });
+
+            q1.options = merged;
           }
         }
       },
