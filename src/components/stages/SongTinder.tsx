@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useEventStore } from "@/stores/eventStore";
-import { defaultSongs, reasonChips } from "@/data/songs";
+import { useAdminStore } from "@/stores/adminStore";
+import { reasonChips } from "@/data/songs";
 import { motion, useMotionValue, useTransform, animate, PanInfo } from "framer-motion";
 import { Heart, X, Star, HelpCircle, Play, Pause, Volume2 } from "lucide-react";
 import type { SwipeAction, Song } from "@/lib/types";
@@ -17,8 +18,10 @@ export function SongTinder() {
   const setStage = useEventStore((s) => s.setStage);
   const trackEvent = useEventStore((s) => s.trackEvent);
 
+  const adminSongs = useAdminStore((s) => s.songs);
+
   const swipedIds = getSwipedSongIds();
-  const availableSongs = defaultSongs.filter(
+  const availableSongs = adminSongs.filter(
     (s) => s.isActive && !swipedIds.includes(s.id)
   );
 
@@ -138,7 +141,7 @@ export function SongTinder() {
           <span className="text-brand-green font-bold">{likeCount}</span>
         </div>
         <span className="text-xs text-muted">
-          {swipes.length} / {defaultSongs.length}
+          {swipes.length} / {adminSongs.length}
         </span>
         {swipes.length >= MIN_SWIPES && (
           <button

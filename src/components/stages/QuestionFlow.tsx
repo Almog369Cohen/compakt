@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useEventStore } from "@/stores/eventStore";
-import { defaultQuestions } from "@/data/questions";
+import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, SkipForward } from "lucide-react";
 import type { Question } from "@/lib/types";
@@ -14,7 +14,8 @@ export function QuestionFlow() {
   const setStage = useEventStore((s) => s.setStage);
   const trackEvent = useEventStore((s) => s.trackEvent);
 
-  const questions = defaultQuestions.filter(
+  const adminQuestions = useAdminStore((s) => s.questions);
+  const questions = adminQuestions.filter(
     (q) => q.isActive && q.eventType === (event?.eventType || "wedding")
   );
 
@@ -58,9 +59,8 @@ export function QuestionFlow() {
         {questions.map((_, i) => (
           <div
             key={i}
-            className={`progress-dot ${
-              i === currentIndex ? "active" : i < currentIndex ? "done" : ""
-            }`}
+            className={`progress-dot ${i === currentIndex ? "active" : i < currentIndex ? "done" : ""
+              }`}
           />
         ))}
       </div>
@@ -159,11 +159,10 @@ function QuestionCard({
               key={opt.value}
               whileTap={{ scale: 0.97 }}
               onClick={() => onAnswer(opt.value)}
-              className={`w-full text-right px-4 py-3 rounded-xl border transition-all ${
-                existingValue === opt.value
+              className={`w-full text-right px-4 py-3 rounded-xl border transition-all ${existingValue === opt.value
                   ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
                   : "border-glass text-secondary hover:border-brand-blue/50"
-              }`}
+                }`}
             >
               {opt.label}
             </motion.button>
@@ -187,17 +186,15 @@ function QuestionCard({
                   setMultiSelected(updated);
                   onAnswer(updated);
                 }}
-                className={`w-full text-right px-4 py-3 rounded-xl border transition-all ${
-                  isSelected
+                className={`w-full text-right px-4 py-3 rounded-xl border transition-all ${isSelected
                     ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
                     : "border-glass text-secondary hover:border-brand-blue/50"
-                }`}
+                  }`}
               >
                 <span className="flex items-center gap-2">
                   <span
-                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                      isSelected ? "border-brand-blue bg-brand-blue" : "border-glass"
-                    }`}
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? "border-brand-blue bg-brand-blue" : "border-glass"
+                      }`}
                   >
                     {isSelected && (
                       <motion.span
@@ -237,11 +234,10 @@ function QuestionCard({
               {question.sliderLabels.map((label, i) => (
                 <span
                   key={i}
-                  className={`transition-colors ${
-                    i + (question.sliderMin || 1) === sliderValue
+                  className={`transition-colors ${i + (question.sliderMin || 1) === sliderValue
                       ? "text-brand-blue font-bold text-sm"
                       : ""
-                  }`}
+                    }`}
                 >
                   {label}
                 </span>

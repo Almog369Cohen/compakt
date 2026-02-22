@@ -2,8 +2,7 @@
 
 import { useMemo, useRef, useEffect } from "react";
 import { useEventStore } from "@/stores/eventStore";
-import { defaultSongs } from "@/data/songs";
-import { defaultQuestions } from "@/data/questions";
+import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Download,
@@ -51,11 +50,14 @@ export function MusicBrief() {
     return () => clearTimeout(timer);
   }, []);
 
+  const adminSongs = useAdminStore((s) => s.songs);
+  const adminQuestions = useAdminStore((s) => s.questions);
+
   const songMap = useMemo(() => {
-    const map = new Map<string, (typeof defaultSongs)[0]>();
-    defaultSongs.forEach((s) => map.set(s.id, s));
+    const map = new Map<string, (typeof adminSongs)[0]>();
+    adminSongs.forEach((s) => map.set(s.id, s));
     return map;
-  }, []);
+  }, [adminSongs]);
 
   const superLiked = useMemo(
     () =>
@@ -98,7 +100,7 @@ export function MusicBrief() {
 
   const questionAnswerPairs = useMemo(() => {
     return answers.map((a) => {
-      const question = defaultQuestions.find((q) => q.id === a.questionId);
+      const question = adminQuestions.find((q) => q.id === a.questionId);
       let displayValue = "";
       if (Array.isArray(a.answerValue)) {
         displayValue = a.answerValue
@@ -119,7 +121,7 @@ export function MusicBrief() {
         answer: displayValue,
       };
     });
-  }, [answers]);
+  }, [answers, adminQuestions]);
 
   const doRequests = requests.filter((r) => r.requestType === "do");
   const dontRequests = requests.filter((r) => r.requestType === "dont");

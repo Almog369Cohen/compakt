@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useEventStore } from "@/stores/eventStore";
-import { defaultUpsells } from "@/data/upsells";
+import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -68,7 +68,8 @@ export function DreamsRequests() {
     setStage(4);
   };
 
-  const upsells = defaultUpsells.filter((u) => u.isActive && u.placement === "stage_4");
+  const adminUpsells = useAdminStore((s) => s.upsells);
+  const upsells = adminUpsells.filter((u) => u.isActive && u.placement === "stage_4");
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
