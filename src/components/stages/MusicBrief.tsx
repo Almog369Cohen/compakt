@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { useEventStore } from "@/stores/eventStore";
 import { defaultSongs } from "@/data/songs";
 import { defaultQuestions } from "@/data/questions";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Download,
   Share2,
@@ -21,6 +21,22 @@ import {
 import { useState } from "react";
 import { formatDate } from "@/lib/utils";
 
+const CELEBRATION_EMOJIS = ["🎉", "🎵", "🎶", "✨", "💫", "🎧", "🎤", "💃", "🕺", "🌟"];
+
+function CelebrationParticle({ emoji, delay, x }: { emoji: string; delay: number; x: number }) {
+  return (
+    <motion.div
+      initial={{ y: 0, x, opacity: 1, scale: 1 }}
+      animate={{ y: -300, opacity: 0, scale: 0.5, rotate: Math.random() * 360 }}
+      transition={{ duration: 2 + Math.random(), delay, ease: "easeOut" }}
+      className="fixed bottom-0 text-2xl pointer-events-none z-50"
+      style={{ left: `${x}%` }}
+    >
+      {emoji}
+    </motion.div>
+  );
+}
+
 export function MusicBrief() {
   const event = useEventStore((s) => s.event);
   const swipes = useEventStore((s) => s.swipes);
@@ -28,6 +44,12 @@ export function MusicBrief() {
   const requests = useEventStore((s) => s.requests);
   const briefRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowCelebration(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const songMap = useMemo(() => {
     const map = new Map<string, (typeof defaultSongs)[0]>();
@@ -152,6 +174,19 @@ export function MusicBrief() {
 
   return (
     <div className="w-full max-w-lg mx-auto space-y-4">
+      {/* Celebration Particles */}
+      <AnimatePresence>
+        {showCelebration &&
+          Array.from({ length: 15 }).map((_, i) => (
+            <CelebrationParticle
+              key={i}
+              emoji={CELEBRATION_EMOJIS[i % CELEBRATION_EMOJIS.length]}
+              delay={i * 0.12}
+              x={5 + Math.random() * 90}
+            />
+          ))}
+      </AnimatePresence>
+
       {/* Actions Bar */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -367,76 +402,76 @@ export function MusicBrief() {
           dontRequests.length > 0 ||
           linkRequests.length > 0 ||
           momentRequests.length > 0) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass-card p-5"
-          >
-            <h3 className="font-bold text-sm mb-3">בקשות מיוחדות</h3>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="glass-card p-5"
+            >
+              <h3 className="font-bold text-sm mb-3">בקשות מיוחדות</h3>
 
-            {momentRequests.length > 0 && (
-              <div className="mb-3">
-                <p className="text-xs text-muted mb-1">רגעים מיוחדים:</p>
-                {momentRequests.map((r) => (
-                  <p key={r.id} className="text-sm">
-                    ✨ {r.content}
+              {momentRequests.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs text-muted mb-1">רגעים מיוחדים:</p>
+                  {momentRequests.map((r) => (
+                    <p key={r.id} className="text-sm">
+                      ✨ {r.content}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {doRequests.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs text-brand-green mb-1">חובה:</p>
+                  {doRequests.map((r) => (
+                    <p key={r.id} className="text-sm text-brand-green">✅ {r.content}</p>
+                  ))}
+                </div>
+              )}
+
+              {dontRequests.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs mb-1" style={{ color: "var(--accent-danger)" }}>
+                    קו אדום:
                   </p>
-                ))}
-              </div>
-            )}
+                  {dontRequests.map((r) => (
+                    <p key={r.id} className="text-sm" style={{ color: "var(--accent-danger)" }}>
+                      ❌ {r.content}
+                    </p>
+                  ))}
+                </div>
+              )}
 
-            {doRequests.length > 0 && (
-              <div className="mb-2">
-                <p className="text-xs text-brand-green mb-1">חובה:</p>
-                {doRequests.map((r) => (
-                  <p key={r.id} className="text-sm text-brand-green">✅ {r.content}</p>
-                ))}
-              </div>
-            )}
+              {freeRequests.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs text-muted mb-1">בקשות:</p>
+                  {freeRequests.map((r) => (
+                    <p key={r.id} className="text-sm">{r.content}</p>
+                  ))}
+                </div>
+              )}
 
-            {dontRequests.length > 0 && (
-              <div className="mb-2">
-                <p className="text-xs mb-1" style={{ color: "var(--accent-danger)" }}>
-                  קו אדום:
-                </p>
-                {dontRequests.map((r) => (
-                  <p key={r.id} className="text-sm" style={{ color: "var(--accent-danger)" }}>
-                    ❌ {r.content}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            {freeRequests.length > 0 && (
-              <div className="mb-2">
-                <p className="text-xs text-muted mb-1">בקשות:</p>
-                {freeRequests.map((r) => (
-                  <p key={r.id} className="text-sm">{r.content}</p>
-                ))}
-              </div>
-            )}
-
-            {linkRequests.length > 0 && (
-              <div>
-                <p className="text-xs text-muted mb-1">לינקים:</p>
-                {linkRequests.map((r) => (
-                  <a
-                    key={r.id}
-                    href={r.content}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-brand-blue hover:underline"
-                    dir="ltr"
-                  >
-                    <LinkIcon className="w-3 h-3" />
-                    {r.content}
-                  </a>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
+              {linkRequests.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted mb-1">לינקים:</p>
+                  {linkRequests.map((r) => (
+                    <a
+                      key={r.id}
+                      href={r.content}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-sm text-brand-blue hover:underline"
+                      dir="ltr"
+                    >
+                      <LinkIcon className="w-3 h-3" />
+                      {r.content}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
       </div>
     </div>
   );

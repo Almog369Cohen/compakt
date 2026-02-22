@@ -111,11 +111,10 @@ export function EventSetup() {
                     <button
                       key={et.type}
                       onClick={() => setSelectedType(et.type)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
-                        selectedType === et.type
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${selectedType === et.type
                           ? "border-brand-blue bg-brand-blue/10 text-brand-blue"
                           : "border-glass text-secondary hover:border-brand-blue/50"
-                      }`}
+                        }`}
                     >
                       {et.icon}
                       <span className="text-xs font-medium">{et.label}</span>
@@ -177,6 +176,15 @@ export function EventSetup() {
               >
                 ← יאללה מתחילים
               </button>
+
+              <div className="text-center mt-4">
+                <a
+                  href="/admin"
+                  className="text-xs text-muted hover:text-brand-blue transition-colors"
+                >
+                  כניסת DJ →
+                </a>
+              </div>
             </div>
           </motion.div>
         ) : (

@@ -27,6 +27,7 @@ export function SongTinder() {
   const [lastSwipedSongId, setLastSwipedSongId] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<SwipeAction | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showSuperBurst, setShowSuperBurst] = useState(false);
 
   const likeCount = swipes.filter((s) => s.action === "like" || s.action === "super_like").length;
   const currentSong = availableSongs[currentIndex];
@@ -43,6 +44,10 @@ export function SongTinder() {
       } else {
         saveSwipe(songId, action, []);
         setShowReasons(false);
+        if (action === "super_like") {
+          setShowSuperBurst(true);
+          setTimeout(() => setShowSuperBurst(false), 1200);
+        }
       }
 
       setIsPlaying(false);
@@ -119,11 +124,29 @@ export function SongTinder() {
         )}
       </div>
 
+      {/* Super Like Burst */}
+      {showSuperBurst && (
+        <motion.div
+          initial={{ scale: 0.5, opacity: 1 }}
+          animate={{ scale: 3, opacity: 0 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+        >
+          <div className="text-6xl">⭐</div>
+        </motion.div>
+      )}
+
       {/* Card Stack */}
       <div className="relative h-[480px] w-full">
-        {/* Next card preview */}
+        {/* Third card (deepest) */}
+        {availableSongs[currentIndex + 2] && (
+          <div className="absolute inset-0 glass-card rounded-swipe overflow-hidden scale-[0.90] opacity-30 translate-y-2">
+            <SongCardStatic song={availableSongs[currentIndex + 2]} />
+          </div>
+        )}
+        {/* Second card */}
         {availableSongs[currentIndex + 1] && (
-          <div className="absolute inset-0 glass-card rounded-swipe overflow-hidden scale-[0.95] opacity-50">
+          <div className="absolute inset-0 glass-card rounded-swipe overflow-hidden scale-[0.95] opacity-50 translate-y-1">
             <SongCardStatic song={availableSongs[currentIndex + 1]} />
           </div>
         )}
