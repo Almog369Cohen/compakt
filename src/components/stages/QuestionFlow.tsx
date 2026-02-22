@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, SkipForward } from "lucide-react";
+import { ChevronRight, ChevronLeft, SkipForward, Home } from "lucide-react";
 import type { Question } from "@/lib/types";
 
 export function QuestionFlow() {
@@ -55,6 +55,21 @@ export function QuestionFlow() {
 
   return (
     <div className="w-full max-w-md mx-auto">
+      <div className="flex items-center justify-between mb-3 px-1">
+        <button
+          onClick={() => {
+            const ok = confirm("לחזור למסך הבית? אפשר תמיד לחזור לשאלות אחר כך");
+            if (ok) setStage(0);
+          }}
+          className="glass-card p-2 rounded-full transition-all hover:scale-110 active:scale-95"
+          aria-label="חזרה למסך הבית"
+          title="בית"
+        >
+          <Home className="w-4 h-4 text-muted" />
+        </button>
+        <div className="text-xs text-muted" />
+      </div>
+
       {/* Progress */}
       <div className="flex items-center justify-center gap-1.5 mb-6">
         {questions.map((_, i) => (
