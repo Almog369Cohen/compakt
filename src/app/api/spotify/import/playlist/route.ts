@@ -7,12 +7,14 @@ type SpotifyCookie = {
 };
 
 function parseCookie(req: Request): SpotifyCookie | null {
-  const raw = req.headers
+  const prefix = "compakt_spotify=";
+  const entry = req.headers
     .get("cookie")
     ?.split(";")
     .map((c) => c.trim())
-    .find((c) => c.startsWith("compakt_spotify="))
-    ?.split("=")[1];
+    .find((c) => c.startsWith(prefix));
+  if (!entry) return null;
+  const raw = entry.substring(prefix.length);
   if (!raw) return null;
   try {
     const json = Buffer.from(raw, "base64").toString("utf8");

@@ -5,9 +5,13 @@ const SCOPES = [
   "playlist-read-collaborative",
 ].join(" ");
 
-function getOrigin(req: Request) {
+function getRedirectUri(req: Request): string {
+  if (process.env.SPOTIFY_REDIRECT_URI) return process.env.SPOTIFY_REDIRECT_URI;
+  if (process.env.URL) return `${process.env.URL}/api/spotify/callback`;
   const url = new URL(req.url);
-  return url.origin;
+  const host = req.headers.get("host") || url.host;
+  const isLocal = host.startsWith("localhost") || host.startsWith("127.0.0.1");
+  return `${isLocal ? "http" : "https"}://${host}/api/spotify/callback`;
 }
 
 export async function GET(req: Request) {
@@ -23,8 +27,19 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const returnTo = searchParams.get("returnTo") || "/admin";
 
-  const origin = getOrigin(req);
-  const redirectUri = process.env.SPOTIFY_REDIRECT_URI || `${origin}/api/spotify/callback`;
+  const debug = searchParams.get("debug") === "1";
+
+  const redirectUri = getRedirectUri(req);
+
+  if (debug) {
+    return NextResponse.json({
+      redirectUri,
+      netlifyUrlEnv: process.env.URL || null,
+      spotifyRedirectUriEnv: process.env.SPOTIFY_REDIRECT_URI || null,
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+    });
+  }
   const state = crypto.randomUUID();
 
   const authUrl = new URL("https://accounts.spotify.com/authorize");
