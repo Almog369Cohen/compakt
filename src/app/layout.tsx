@@ -12,7 +12,7 @@ const heebo = Heebo({
 export const metadata: Metadata = {
   title: "Compakt — המסע המוזיקלי שלכם",
   description: "תאמו את המוזיקה לאירוע שלכם בצורה כיפית ופשוטה",
-  icons: { icon: "/favicon.ico" },
+  icons: { icon: "/favicon.svg" },
 };
 
 export const viewport: Viewport = {

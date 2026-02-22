@@ -247,6 +247,26 @@ function SwipeCard({
   const rotate = useTransform(x, [-300, 0, 300], [-15, 0, 15]);
   const likeOpacity = useTransform(x, [0, 100], [0, 1]);
   const dislikeOpacity = useTransform(x, [-100, 0], [1, 0]);
+  const borderColor = useTransform(
+    x,
+    [-150, -50, 0, 50, 150],
+    [
+      "rgba(255,68,102,0.6)",
+      "rgba(255,68,102,0.2)",
+      "rgba(5,156,192,0.15)",
+      "rgba(3,178,140,0.2)",
+      "rgba(3,178,140,0.6)",
+    ]
+  );
+  const boxShadowColor = useTransform(
+    x,
+    [-150, 0, 150],
+    [
+      "0 0 30px rgba(255,68,102,0.3)",
+      "0 8px 32px rgba(0,0,0,0.4)",
+      "0 0 30px rgba(3,178,140,0.3)",
+    ]
+  );
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     const offset = info.offset.x;
@@ -278,8 +298,8 @@ function SwipeCard({
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.8}
       onDragEnd={handleDragEnd}
-      style={{ x, rotate }}
-      className="absolute inset-0 glass-card rounded-swipe overflow-hidden cursor-grab active:cursor-grabbing touch-none"
+      style={{ x, rotate, borderColor, boxShadow: boxShadowColor, background: "var(--bg-surface)", backdropFilter: "blur(var(--glass-blur))" }}
+      className="absolute inset-0 rounded-swipe overflow-hidden cursor-grab active:cursor-grabbing touch-none border-2"
     >
       {/* Swipe Indicators */}
       <motion.div
