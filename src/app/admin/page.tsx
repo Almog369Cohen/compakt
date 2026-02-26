@@ -3,18 +3,20 @@
 import { useState, useEffect } from "react";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Eye, EyeOff } from "lucide-react";
+import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Eye, EyeOff, User } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useEventStore } from "@/stores/eventStore";
 import { SongManager } from "@/components/admin/SongManager";
 import { QuestionManager } from "@/components/admin/QuestionManager";
 import { UpsellManager } from "@/components/admin/UpsellManager";
 import { Dashboard } from "@/components/admin/Dashboard";
+import { ProfileSettings } from "@/components/admin/ProfileSettings";
 
-type AdminTab = "dashboard" | "songs" | "questions" | "upsells";
+type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile";
 
 const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "dashboard", label: "דשבורד", icon: <BarChart3 className="w-4 h-4" /> },
+  { id: "profile", label: "פרופיל", icon: <User className="w-4 h-4" /> },
   { id: "songs", label: "שירים", icon: <Music className="w-4 h-4" /> },
   { id: "questions", label: "שאלות", icon: <HelpCircle className="w-4 h-4" /> },
   { id: "upsells", label: "שדרוגים", icon: <Sparkles className="w-4 h-4" /> },
@@ -113,6 +115,18 @@ export default function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab("profile")}
+              className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "profile"
+                ? "bg-brand-blue text-white"
+                : "text-secondary hover:text-foreground"
+                }`}
+              aria-label="עריכת פרופיל"
+              title="פרופיל"
+            >
+              <User className="w-4 h-4" />
+              פרופיל
+            </button>
             {/* Tabs */}
             <nav className="flex gap-1 overflow-x-auto max-w-[60vw] sm:max-w-none">
               {tabs.map((tab) => (
@@ -145,6 +159,16 @@ export default function AdminPage() {
       {/* Content */}
       <main className="max-w-5xl mx-auto px-4 py-6">
         <AnimatePresence mode="wait">
+          {activeTab === "profile" && (
+            <motion.div
+              key="profile"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <ProfileSettings />
+            </motion.div>
+          )}
           {activeTab === "dashboard" && (
             <motion.div
               key="dashboard"

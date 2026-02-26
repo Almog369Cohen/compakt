@@ -16,3 +16,18 @@ export function formatDate(date: string | Date): string {
     year: "numeric",
   }).format(new Date(date));
 }
+
+export function getSafeOrigin(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (appUrl) return appUrl.replace(/\/$/, "");
+
+  if (typeof window === "undefined") return "";
+  const { protocol, hostname, host } = window.location;
+  if (
+    (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") &&
+    protocol === "https:"
+  ) {
+    return `http://${host}`;
+  }
+  return window.location.origin;
+}
