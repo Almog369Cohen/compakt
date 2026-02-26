@@ -7,6 +7,7 @@ export async function GET() {
     ok: true,
     service: "compakt",
     env: process.env.NODE_ENV ?? "unknown",
+    sha: process.env.NEXT_PUBLIC_GIT_SHA ?? process.env.GITHUB_SHA ?? null,
     timestamp: new Date().toISOString(),
   });
 }
