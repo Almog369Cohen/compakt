@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
+import { useProfileStore } from "@/stores/profileStore";
 import { motion } from "framer-motion";
 import {
   BarChart3,
@@ -20,6 +21,12 @@ import {
   X,
   Plus,
   Trash2,
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
+  RefreshCw,
+  Loader2,
+  CheckCircle,
 } from "lucide-react";
 
 type FixItem = {
@@ -29,6 +36,19 @@ type FixItem = {
 };
 
 const FIXES_STORAGE_KEY = "compakt.admin.fixes";
+
+interface HealthCheck {
+  name: string;
+  status: "pass" | "fail" | "warn";
+  detail: string;
+  count?: number;
+}
+
+interface HealthResult {
+  healthy: boolean;
+  summary: { pass: number; warn: number; fail: number };
+  checks: HealthCheck[];
+}
 
 export function Dashboard() {
   const event = useEventStore((s) => s.event);
@@ -40,10 +60,33 @@ export function Dashboard() {
   const songs = useAdminStore((s) => s.songs);
   const questions = useAdminStore((s) => s.questions);
   const upsells = useAdminStore((s) => s.upsells);
+  const profileId = useProfileStore((s) => s.profileId);
 
   const [showFixes, setShowFixes] = useState(false);
   const [fixes, setFixes] = useState<FixItem[]>([]);
   const [newFixText, setNewFixText] = useState("");
+
+  // DB Health
+  const [health, setHealth] = useState<HealthResult | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [showAllChecks, setShowAllChecks] = useState(false);
+
+  const loadHealth = useCallback(async () => {
+    setHealthLoading(true);
+    try {
+      const url = profileId
+        ? `/api/admin/db-health?profileId=${profileId}`
+        : "/api/admin/db-health";
+      const res = await fetch(url);
+      const data = await res.json();
+      if (res.ok) setHealth(data);
+    } catch { /* silent */ }
+    setHealthLoading(false);
+  }, [profileId]);
+
+  useEffect(() => {
+    loadHealth();
+  }, [loadHealth]);
 
   useEffect(() => {
     try {
@@ -304,6 +347,111 @@ export function Dashboard() {
           color="#059cc0"
         />
       </div>
+
+      {/* DB Health Status */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="glass-card p-5"
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-sm flex items-center gap-2">
+            {health?.healthy ? (
+              <ShieldCheck className="w-4 h-4 text-brand-green" />
+            ) : health && !health.healthy ? (
+              <ShieldAlert className="w-4 h-4" style={{ color: "var(--accent-danger)" }} />
+            ) : (
+              <ShieldCheck className="w-4 h-4 text-muted" />
+            )}
+            בריאות DB
+          </h3>
+          <button
+            onClick={loadHealth}
+            disabled={healthLoading}
+            className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
+            title="רענן"
+          >
+            {healthLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+
+        {health ? (
+          <>
+            <div className="flex gap-3 mb-3">
+              <span className="flex items-center gap-1 text-xs text-brand-green">
+                <CheckCircle className="w-3.5 h-3.5" /> {health.summary.pass} תקין
+              </span>
+              {health.summary.warn > 0 && (
+                <span className="flex items-center gap-1 text-xs" style={{ color: "var(--accent-gold)" }}>
+                  <AlertTriangle className="w-3.5 h-3.5" /> {health.summary.warn} אזהרות
+                </span>
+              )}
+              {health.summary.fail > 0 && (
+                <span className="flex items-center gap-1 text-xs" style={{ color: "var(--accent-danger)" }}>
+                  <ShieldAlert className="w-3.5 h-3.5" /> {health.summary.fail} בעיות
+                </span>
+              )}
+            </div>
+
+            {/* Show failed/warned checks */}
+            {health.checks.filter((c) => c.status !== "pass").length > 0 && (
+              <div className="space-y-1.5 mb-2">
+                {health.checks
+                  .filter((c) => c.status !== "pass")
+                  .map((c) => (
+                    <div
+                      key={c.name}
+                      className="flex items-start gap-2 text-xs p-2 rounded-lg border border-glass"
+                    >
+                      {c.status === "fail" ? (
+                        <ShieldAlert className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "var(--accent-danger)" }} />
+                      ) : (
+                        <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "var(--accent-gold)" }} />
+                      )}
+                      <span className="text-secondary">{c.detail}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {/* Toggle all checks */}
+            <button
+              onClick={() => setShowAllChecks(!showAllChecks)}
+              className="text-xs text-secondary hover:text-foreground transition-colors"
+            >
+              {showAllChecks ? "הסתר פירוט" : `הצג את כל ${health.checks.length} הבדיקות`}
+            </button>
+
+            {showAllChecks && (
+              <div className="space-y-1 mt-2">
+                {health.checks.map((c) => (
+                  <div key={c.name} className="flex items-center gap-2 text-xs">
+                    {c.status === "pass" ? (
+                      <CheckCircle className="w-3 h-3 text-brand-green shrink-0" />
+                    ) : c.status === "fail" ? (
+                      <ShieldAlert className="w-3 h-3 shrink-0" style={{ color: "var(--accent-danger)" }} />
+                    ) : (
+                      <AlertTriangle className="w-3 h-3 shrink-0" style={{ color: "var(--accent-gold)" }} />
+                    )}
+                    <span className="text-muted">{c.detail}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : healthLoading ? (
+          <div className="text-xs text-muted flex items-center gap-2">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> בודק...
+          </div>
+        ) : (
+          <div className="text-xs text-muted">לא ניתן לטעון בדיקת בריאות</div>
+        )}
+      </motion.div>
 
       {/* Current Event */}
       {event ? (

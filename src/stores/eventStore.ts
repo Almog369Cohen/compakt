@@ -108,7 +108,9 @@ export const useEventStore = create<EventStore>()(
               venue: event.venue || "",
               current_stage: 0,
             })
-            .then(() => { });
+            .then(({ error }) => {
+              if (error) console.error("[DB Write] events.insert failed:", error.message);
+            });
         }
 
         return token;
@@ -161,7 +163,9 @@ export const useEventStore = create<EventStore>()(
         trackEvent("stage_change", { stage });
 
         if (supabase) {
-          supabase.from("events").update({ current_stage: stage }).eq("id", event.id).then(() => { });
+          supabase.from("events").update({ current_stage: stage }).eq("id", event.id).then(({ error }) => {
+            if (error) console.error("[DB Write] events.update stage failed:", error.message);
+          });
         }
       },
 
@@ -197,7 +201,9 @@ export const useEventStore = create<EventStore>()(
               },
               { onConflict: "id" }
             )
-            .then(() => { });
+            .then(({ error }) => {
+              if (error) console.error("[DB Write] answers.upsert failed:", error.message);
+            });
         }
       },
 
@@ -239,7 +245,9 @@ export const useEventStore = create<EventStore>()(
               },
               { onConflict: "id" }
             )
-            .then(() => { });
+            .then(({ error }) => {
+              if (error) console.error("[DB Write] swipes.upsert failed:", error.message);
+            });
         }
       },
 
@@ -255,7 +263,9 @@ export const useEventStore = create<EventStore>()(
         const swipe = get().swipes.find((s) => s.songId === songId);
         set({ swipes: get().swipes.filter((s) => s.songId !== songId) });
         if (supabase && swipe) {
-          supabase.from("swipes").delete().eq("id", swipe.id).then(() => { });
+          supabase.from("swipes").delete().eq("id", swipe.id).then(({ error }) => {
+            if (error) console.error("[DB Write] swipes.delete failed:", error.message);
+          });
         }
       },
 
@@ -286,14 +296,18 @@ export const useEventStore = create<EventStore>()(
               content: request.content,
               moment_type: request.momentType || null,
             })
-            .then(() => { });
+            .then(({ error }) => {
+              if (error) console.error("[DB Write] requests.insert failed:", error.message);
+            });
         }
       },
 
       removeRequest: (id) => {
         set({ requests: get().requests.filter((r) => r.id !== id) });
         if (supabase) {
-          supabase.from("requests").delete().eq("id", id).then(() => { });
+          supabase.from("requests").delete().eq("id", id).then(({ error }) => {
+            if (error) console.error("[DB Write] requests.delete failed:", error.message);
+          });
         }
       },
 

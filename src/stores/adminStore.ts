@@ -307,6 +307,8 @@ export const useAdminStore = create<AdminStore>()(
       },
 
       // Load all DJ content from Supabase
+      // CRITICAL: Always set state from DB result, even if empty.
+      // Never keep mock/localStorage data when DB returns 0 rows.
       loadContentFromDB: async (profileId: string) => {
         if (!supabase) return;
 
@@ -316,56 +318,114 @@ export const useAdminStore = create<AdminStore>()(
           supabase.from("upsells").select("*").eq("dj_id", profileId).order("sort_order"),
         ]);
 
-        const patch: Partial<{ songs: Song[]; questions: Question[]; upsells: Upsell[] }> = {};
+        // Map DB rows to app types (empty array if no data)
+        const dbSongs: Song[] = (songsRes.data || []).map((s) => ({
+          id: s.id,
+          title: s.title,
+          artist: s.artist,
+          coverUrl: s.cover_url ?? "",
+          previewUrl: s.preview_url ?? "",
+          externalLink: s.external_link ?? "",
+          category: s.category ?? "dancing",
+          tags: Array.isArray(s.tags) ? s.tags : (typeof s.tags === "string" ? JSON.parse(s.tags) : []),
+          energy: s.energy ?? 3,
+          language: s.language ?? "hebrew",
+          isSafe: s.is_safe ?? true,
+          isActive: s.is_active ?? true,
+          sortOrder: s.sort_order ?? 0,
+        })) as Song[];
 
-        if (songsRes.data && songsRes.data.length > 0) {
-          patch.songs = songsRes.data.map((s) => ({
-            id: s.id,
-            title: s.title,
-            artist: s.artist,
-            coverUrl: s.cover_url ?? "",
-            previewUrl: s.preview_url ?? "",
-            externalLink: s.external_link ?? "",
-            category: s.category ?? "dancing",
-            tags: Array.isArray(s.tags) ? s.tags : (typeof s.tags === "string" ? JSON.parse(s.tags) : []),
-            energy: s.energy ?? 3,
-            language: s.language ?? "hebrew",
-            isSafe: s.is_safe ?? true,
-            isActive: s.is_active ?? true,
-            sortOrder: s.sort_order ?? 0,
-          })) as Song[];
-        }
+        const dbQuestions: Question[] = (questionsRes.data || []).map((q) => ({
+          id: q.id,
+          questionHe: q.question_he,
+          questionType: q.question_type ?? "single_select",
+          eventType: q.event_type ?? "wedding",
+          options: Array.isArray(q.options) ? q.options : (typeof q.options === "string" ? JSON.parse(q.options) : []),
+          sliderMin: q.slider_min,
+          sliderMax: q.slider_max,
+          sliderLabels: q.slider_labels ? (Array.isArray(q.slider_labels) ? q.slider_labels : JSON.parse(q.slider_labels)) : undefined,
+          isActive: q.is_active ?? true,
+          sortOrder: q.sort_order ?? 0,
+        })) as Question[];
 
-        if (questionsRes.data && questionsRes.data.length > 0) {
-          patch.questions = questionsRes.data.map((q) => ({
-            id: q.id,
-            questionHe: q.question_he,
-            questionType: q.question_type ?? "single_select",
-            eventType: q.event_type ?? "wedding",
-            options: Array.isArray(q.options) ? q.options : (typeof q.options === "string" ? JSON.parse(q.options) : []),
-            sliderMin: q.slider_min,
-            sliderMax: q.slider_max,
-            sliderLabels: q.slider_labels ? (Array.isArray(q.slider_labels) ? q.slider_labels : JSON.parse(q.slider_labels)) : undefined,
-            isActive: q.is_active ?? true,
-            sortOrder: q.sort_order ?? 0,
-          })) as Question[];
-        }
+        const dbUpsells: Upsell[] = (upsellsRes.data || []).map((u) => ({
+          id: u.id,
+          titleHe: u.title_he,
+          descriptionHe: u.description_he ?? "",
+          priceHint: u.price_hint ?? "",
+          ctaTextHe: u.cta_text_he ?? "",
+          placement: u.placement ?? "stage_4",
+          isActive: u.is_active ?? true,
+          sortOrder: u.sort_order ?? 0,
+        })) as Upsell[];
 
-        if (upsellsRes.data && upsellsRes.data.length > 0) {
-          patch.upsells = upsellsRes.data.map((u) => ({
-            id: u.id,
-            titleHe: u.title_he,
-            descriptionHe: u.description_he ?? "",
-            priceHint: u.price_hint ?? "",
-            ctaTextHe: u.cta_text_he ?? "",
-            placement: u.placement ?? "stage_4",
-            isActive: u.is_active ?? true,
-            sortOrder: u.sort_order ?? 0,
-          })) as Upsell[];
-        }
+        // Always overwrite local state with DB truth
+        set({ songs: dbSongs, questions: dbQuestions, upsells: dbUpsells });
 
-        if (Object.keys(patch).length > 0) {
-          set(patch);
+        // If DB is empty, auto-bootstrap defaults
+        const needsBootstrap = dbSongs.length === 0 || dbQuestions.length === 0;
+        if (needsBootstrap) {
+          console.warn("[DB Health] Empty content detected for DJ — triggering bootstrap", {
+            songs: dbSongs.length,
+            questions: dbQuestions.length,
+            upsells: dbUpsells.length,
+          });
+
+          try {
+            const res = await fetch("/api/admin/ensure-defaults", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ profileId }),
+            });
+            const result = await res.json();
+
+            if (result.seeded && result.seeded.length > 0) {
+              console.log("[DB Health] Bootstrap seeded:", result.seeded);
+              // Reload from DB after seeding
+              const [s2, q2, u2] = await Promise.all([
+                supabase.from("songs").select("*").eq("dj_id", profileId).order("sort_order"),
+                supabase.from("questions").select("*").eq("dj_id", profileId).order("sort_order"),
+                supabase.from("upsells").select("*").eq("dj_id", profileId).order("sort_order"),
+              ]);
+              if (s2.data && s2.data.length > 0) {
+                set({
+                  songs: s2.data.map((s) => ({
+                    id: s.id, title: s.title, artist: s.artist,
+                    coverUrl: s.cover_url ?? "", previewUrl: s.preview_url ?? "",
+                    externalLink: s.external_link ?? "", category: s.category ?? "dancing",
+                    tags: Array.isArray(s.tags) ? s.tags : [], energy: s.energy ?? 3,
+                    language: s.language ?? "hebrew", isSafe: s.is_safe ?? true,
+                    isActive: s.is_active ?? true, sortOrder: s.sort_order ?? 0,
+                  })) as Song[],
+                });
+              }
+              if (q2.data && q2.data.length > 0) {
+                set({
+                  questions: q2.data.map((q) => ({
+                    id: q.id, questionHe: q.question_he,
+                    questionType: q.question_type ?? "single_select",
+                    eventType: q.event_type ?? "wedding",
+                    options: Array.isArray(q.options) ? q.options : [],
+                    sliderMin: q.slider_min, sliderMax: q.slider_max,
+                    sliderLabels: q.slider_labels ? (Array.isArray(q.slider_labels) ? q.slider_labels : []) : undefined,
+                    isActive: q.is_active ?? true, sortOrder: q.sort_order ?? 0,
+                  })) as Question[],
+                });
+              }
+              if (u2.data && u2.data.length > 0) {
+                set({
+                  upsells: u2.data.map((u) => ({
+                    id: u.id, titleHe: u.title_he, descriptionHe: u.description_he ?? "",
+                    priceHint: u.price_hint ?? "", ctaTextHe: u.cta_text_he ?? "",
+                    placement: u.placement ?? "stage_4", isActive: u.is_active ?? true,
+                    sortOrder: u.sort_order ?? 0,
+                  })) as Upsell[],
+                });
+              }
+            }
+          } catch (e) {
+            console.error("[DB Health] Bootstrap failed:", e);
+          }
         }
       },
     }),
