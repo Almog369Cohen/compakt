@@ -31,23 +31,23 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const phone = normalizePhone(body.phone || "");
-    const eventId = body.eventId;
+    const eventIdOrToken = body.eventId;
 
     if (!phone || phone.length < 10) {
       return NextResponse.json({ error: "מספר טלפון לא תקין" }, { status: 400 });
     }
-    if (!eventId) {
+    if (!eventIdOrToken) {
       return NextResponse.json({ error: "Missing eventId" }, { status: 400 });
     }
 
     const supabase = getServiceSupabase();
 
-    // Check if event exists
+    // Check if event exists by id OR magic_token (couple links use magic_token)
     const { data: event, error: eventErr } = await supabase
       .from("events")
       .select("id")
-      .eq("id", eventId)
-      .single();
+      .or(`id.eq.${eventIdOrToken},magic_token.eq.${eventIdOrToken}`)
+      .maybeSingle();
 
     if (eventErr || !event) {
       return NextResponse.json({ error: "אירוע לא נמצא" }, { status: 404 });
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       .from("event_sessions")
       .upsert(
         {
-          event_id: eventId,
+          event_id: event.id,
           phone_number: phone,
           otp_code: otp,
           otp_expires_at: expiresAt,
