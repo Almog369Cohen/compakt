@@ -4,15 +4,22 @@ import type { Song, Question, Upsell } from "@/lib/types";
 import { defaultSongs } from "@/data/songs";
 import { defaultQuestions } from "@/data/questions";
 import { defaultUpsells } from "@/data/upsells";
+import { supabase } from "@/lib/supabase";
 
 interface AdminStore {
   isAuthenticated: boolean;
+  userId: string | null;
+  authError: string | null;
   songs: Song[];
   questions: Question[];
   upsells: Upsell[];
 
   // Auth
   login: (password: string) => boolean;
+  loginWithEmail: (email: string, password: string) => Promise<boolean>;
+  signUp: (email: string, password: string) => Promise<boolean>;
+  loginWithOAuth: (provider: "google" | "apple" | "facebook") => Promise<void>;
+  checkSession: () => Promise<void>;
   logout: () => void;
 
   // Songs
@@ -31,6 +38,9 @@ interface AdminStore {
   addUpsell: (upsell: Omit<Upsell, "id" | "sortOrder">) => void;
   updateUpsell: (id: string, data: Partial<Upsell>) => void;
   deleteUpsell: (id: string) => void;
+
+  // DB sync
+  loadContentFromDB: (profileId: string) => Promise<void>;
 }
 
 const ADMIN_PASSWORD = "compakt2024";
@@ -39,39 +49,137 @@ export const useAdminStore = create<AdminStore>()(
   persist(
     (set, get) => ({
       isAuthenticated: false,
+      userId: null,
+      authError: null,
       songs: defaultSongs,
       questions: defaultQuestions,
       upsells: defaultUpsells,
 
       login: (password) => {
         if (password === ADMIN_PASSWORD) {
-          set({ isAuthenticated: true });
+          set({ isAuthenticated: true, authError: null });
           return true;
         }
+        set({ authError: null });
         return false;
       },
 
-      logout: () => set({ isAuthenticated: false }),
+      loginWithEmail: async (email, password) => {
+        if (!supabase) {
+          set({ authError: "Supabase is not configured" });
+          return false;
+        }
+        set({ authError: null });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          set({ authError: error.message });
+          return false;
+        }
+        set({ isAuthenticated: true, userId: data.user?.id ?? null, authError: null });
+        return true;
+      },
+
+      loginWithOAuth: async (provider) => {
+        if (!supabase) {
+          set({ authError: "Supabase is not configured" });
+          return;
+        }
+        set({ authError: null });
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: typeof window !== "undefined" ? `${window.location.origin}/admin` : undefined,
+          },
+        });
+        if (error) {
+          set({ authError: error.message });
+        }
+      },
+
+      signUp: async (email, password) => {
+        if (!supabase) {
+          set({ authError: "Supabase is not configured" });
+          return false;
+        }
+        set({ authError: null });
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+          set({ authError: error.message });
+          return false;
+        }
+        if (data.user) {
+          set({ isAuthenticated: true, userId: data.user.id, authError: null });
+        }
+        return true;
+      },
+
+      checkSession: async () => {
+        if (!supabase) return;
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          set({ isAuthenticated: true, userId: data.session.user.id });
+        }
+      },
+
+      logout: () => {
+        if (supabase) {
+          supabase.auth.signOut().then(() => { });
+        }
+        set({ isAuthenticated: false, userId: null, authError: null });
+      },
 
       // Songs
       addSong: (song) => {
-        const { songs } = get();
-        set({
-          songs: [
-            ...songs,
-            { ...song, id: crypto.randomUUID(), sortOrder: songs.length + 1 },
-          ],
-        });
+        const { songs, userId } = get();
+        const id = crypto.randomUUID();
+        const newSong = { ...song, id, sortOrder: songs.length + 1 };
+        set({ songs: [...songs, newSong] });
+
+        if (supabase && userId) {
+          supabase.from("profiles").select("id").eq("user_id", userId).single().then(({ data: profile }) => {
+            if (!profile) return;
+            supabase!.from("songs").insert({
+              id, dj_id: profile.id, title: song.title, artist: song.artist,
+              cover_url: song.coverUrl || "", preview_url: song.previewUrl || "",
+              external_link: song.externalLink || "", category: song.category,
+              tags: JSON.stringify(song.tags), energy: song.energy,
+              language: song.language, is_safe: song.isSafe, is_active: song.isActive,
+              sort_order: songs.length + 1,
+            }).then(() => { });
+          });
+        }
       },
 
       updateSong: (id, data) => {
         set({
           songs: get().songs.map((s) => (s.id === id ? { ...s, ...data } : s)),
         });
+
+        if (supabase) {
+          const row: Record<string, unknown> = {};
+          if (data.title !== undefined) row.title = data.title;
+          if (data.artist !== undefined) row.artist = data.artist;
+          if (data.coverUrl !== undefined) row.cover_url = data.coverUrl;
+          if (data.previewUrl !== undefined) row.preview_url = data.previewUrl;
+          if (data.externalLink !== undefined) row.external_link = data.externalLink;
+          if (data.category !== undefined) row.category = data.category;
+          if (data.tags !== undefined) row.tags = JSON.stringify(data.tags);
+          if (data.energy !== undefined) row.energy = data.energy;
+          if (data.language !== undefined) row.language = data.language;
+          if (data.isSafe !== undefined) row.is_safe = data.isSafe;
+          if (data.isActive !== undefined) row.is_active = data.isActive;
+          if (data.sortOrder !== undefined) row.sort_order = data.sortOrder;
+          if (Object.keys(row).length > 0) {
+            supabase!.from("songs").update(row).eq("id", id).then(() => { });
+          }
+        }
       },
 
       deleteSong: (id) => {
         set({ songs: get().songs.filter((s) => s.id !== id) });
+        if (supabase) {
+          supabase!.from("songs").delete().eq("id", id).then(() => { });
+        }
       },
 
       reorderSongs: (ids) => {
@@ -87,17 +195,24 @@ export const useAdminStore = create<AdminStore>()(
 
       // Questions
       addQuestion: (question) => {
-        const { questions } = get();
-        set({
-          questions: [
-            ...questions,
-            {
-              ...question,
-              id: `q${Date.now()}`,
-              sortOrder: questions.length + 1,
-            },
-          ],
-        });
+        const { questions, userId } = get();
+        const id = `q${Date.now()}`;
+        const newQ = { ...question, id, sortOrder: questions.length + 1 };
+        set({ questions: [...questions, newQ] });
+
+        if (supabase && userId) {
+          supabase.from("profiles").select("id").eq("user_id", userId).single().then(({ data: profile }) => {
+            if (!profile) return;
+            supabase!.from("questions").insert({
+              id, dj_id: profile.id, question_he: question.questionHe,
+              question_type: question.questionType, event_type: question.eventType,
+              options: JSON.stringify(question.options || []),
+              slider_min: question.sliderMin, slider_max: question.sliderMax,
+              slider_labels: question.sliderLabels ? JSON.stringify(question.sliderLabels) : null,
+              is_active: question.isActive, sort_order: questions.length + 1,
+            }).then(() => { });
+          });
+        }
       },
 
       updateQuestion: (id, data) => {
@@ -106,10 +221,29 @@ export const useAdminStore = create<AdminStore>()(
             q.id === id ? { ...q, ...data } : q
           ),
         });
+
+        if (supabase) {
+          const row: Record<string, unknown> = {};
+          if (data.questionHe !== undefined) row.question_he = data.questionHe;
+          if (data.questionType !== undefined) row.question_type = data.questionType;
+          if (data.eventType !== undefined) row.event_type = data.eventType;
+          if (data.options !== undefined) row.options = JSON.stringify(data.options);
+          if (data.sliderMin !== undefined) row.slider_min = data.sliderMin;
+          if (data.sliderMax !== undefined) row.slider_max = data.sliderMax;
+          if (data.sliderLabels !== undefined) row.slider_labels = JSON.stringify(data.sliderLabels);
+          if (data.isActive !== undefined) row.is_active = data.isActive;
+          if (data.sortOrder !== undefined) row.sort_order = data.sortOrder;
+          if (Object.keys(row).length > 0) {
+            supabase!.from("questions").update(row).eq("id", id).then(() => { });
+          }
+        }
       },
 
       deleteQuestion: (id) => {
         set({ questions: get().questions.filter((q) => q.id !== id) });
+        if (supabase) {
+          supabase!.from("questions").delete().eq("id", id).then(() => { });
+        }
       },
 
       reorderQuestions: (ids) => {
@@ -125,13 +259,22 @@ export const useAdminStore = create<AdminStore>()(
 
       // Upsells
       addUpsell: (upsell) => {
-        const { upsells } = get();
-        set({
-          upsells: [
-            ...upsells,
-            { ...upsell, id: crypto.randomUUID(), sortOrder: upsells.length + 1 },
-          ],
-        });
+        const { upsells, userId } = get();
+        const id = crypto.randomUUID();
+        const newUpsell = { ...upsell, id, sortOrder: upsells.length + 1 };
+        set({ upsells: [...upsells, newUpsell] });
+
+        if (supabase && userId) {
+          supabase.from("profiles").select("id").eq("user_id", userId).single().then(({ data: profile }) => {
+            if (!profile) return;
+            supabase!.from("upsells").insert({
+              id, dj_id: profile.id, title_he: upsell.titleHe,
+              description_he: upsell.descriptionHe, price_hint: upsell.priceHint || "",
+              cta_text_he: upsell.ctaTextHe, placement: upsell.placement,
+              is_active: upsell.isActive, sort_order: upsells.length + 1,
+            }).then(() => { });
+          });
+        }
       },
 
       updateUpsell: (id, data) => {
@@ -140,10 +283,90 @@ export const useAdminStore = create<AdminStore>()(
             u.id === id ? { ...u, ...data } : u
           ),
         });
+
+        if (supabase) {
+          const row: Record<string, unknown> = {};
+          if (data.titleHe !== undefined) row.title_he = data.titleHe;
+          if (data.descriptionHe !== undefined) row.description_he = data.descriptionHe;
+          if (data.priceHint !== undefined) row.price_hint = data.priceHint;
+          if (data.ctaTextHe !== undefined) row.cta_text_he = data.ctaTextHe;
+          if (data.placement !== undefined) row.placement = data.placement;
+          if (data.isActive !== undefined) row.is_active = data.isActive;
+          if (data.sortOrder !== undefined) row.sort_order = data.sortOrder;
+          if (Object.keys(row).length > 0) {
+            supabase.from("upsells").update(row).eq("id", id).then(() => { });
+          }
+        }
       },
 
       deleteUpsell: (id) => {
         set({ upsells: get().upsells.filter((u) => u.id !== id) });
+        if (supabase) {
+          supabase.from("upsells").delete().eq("id", id).then(() => { });
+        }
+      },
+
+      // Load all DJ content from Supabase
+      loadContentFromDB: async (profileId: string) => {
+        if (!supabase) return;
+
+        const [songsRes, questionsRes, upsellsRes] = await Promise.all([
+          supabase.from("songs").select("*").eq("dj_id", profileId).order("sort_order"),
+          supabase.from("questions").select("*").eq("dj_id", profileId).order("sort_order"),
+          supabase.from("upsells").select("*").eq("dj_id", profileId).order("sort_order"),
+        ]);
+
+        const patch: Partial<{ songs: Song[]; questions: Question[]; upsells: Upsell[] }> = {};
+
+        if (songsRes.data && songsRes.data.length > 0) {
+          patch.songs = songsRes.data.map((s) => ({
+            id: s.id,
+            title: s.title,
+            artist: s.artist,
+            coverUrl: s.cover_url ?? "",
+            previewUrl: s.preview_url ?? "",
+            externalLink: s.external_link ?? "",
+            category: s.category ?? "dancing",
+            tags: Array.isArray(s.tags) ? s.tags : (typeof s.tags === "string" ? JSON.parse(s.tags) : []),
+            energy: s.energy ?? 3,
+            language: s.language ?? "hebrew",
+            isSafe: s.is_safe ?? true,
+            isActive: s.is_active ?? true,
+            sortOrder: s.sort_order ?? 0,
+          })) as Song[];
+        }
+
+        if (questionsRes.data && questionsRes.data.length > 0) {
+          patch.questions = questionsRes.data.map((q) => ({
+            id: q.id,
+            questionHe: q.question_he,
+            questionType: q.question_type ?? "single_select",
+            eventType: q.event_type ?? "wedding",
+            options: Array.isArray(q.options) ? q.options : (typeof q.options === "string" ? JSON.parse(q.options) : []),
+            sliderMin: q.slider_min,
+            sliderMax: q.slider_max,
+            sliderLabels: q.slider_labels ? (Array.isArray(q.slider_labels) ? q.slider_labels : JSON.parse(q.slider_labels)) : undefined,
+            isActive: q.is_active ?? true,
+            sortOrder: q.sort_order ?? 0,
+          })) as Question[];
+        }
+
+        if (upsellsRes.data && upsellsRes.data.length > 0) {
+          patch.upsells = upsellsRes.data.map((u) => ({
+            id: u.id,
+            titleHe: u.title_he,
+            descriptionHe: u.description_he ?? "",
+            priceHint: u.price_hint ?? "",
+            ctaTextHe: u.cta_text_he ?? "",
+            placement: u.placement ?? "stage_4",
+            isActive: u.is_active ?? true,
+            sortOrder: u.sort_order ?? 0,
+          })) as Upsell[];
+        }
+
+        if (Object.keys(patch).length > 0) {
+          set(patch);
+        }
       },
     }),
     {

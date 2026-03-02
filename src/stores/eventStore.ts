@@ -10,6 +10,7 @@ import type {
   SwipeAction,
 } from "@/lib/types";
 import { generateMagicToken } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 interface AnalyticsEvent {
   eventName: string;
@@ -92,12 +93,59 @@ export const useEventStore = create<EventStore>()(
           createdAt: new Date().toISOString(),
         };
         set({ event, answers: [], swipes: [], requests: [], upsellClicks: [], analytics: [] });
+
+        // Sync to Supabase in background
+        if (supabase) {
+          supabase
+            .from("events")
+            .insert({
+              id: event.id,
+              magic_token: token,
+              event_type: event.eventType,
+              couple_name_a: event.coupleNameA || "",
+              couple_name_b: event.coupleNameB || "",
+              event_date: event.eventDate || "",
+              venue: event.venue || "",
+              current_stage: 0,
+            })
+            .then(() => { });
+        }
+
         return token;
       },
 
       loadEvent: (token) => {
         const { event } = get();
-        return event?.magicToken === token;
+        if (event?.magicToken === token) return true;
+
+        // Try loading from Supabase if not in localStorage
+        if (supabase) {
+          supabase
+            .from("events")
+            .select("*")
+            .eq("magic_token", token)
+            .single()
+            .then(({ data }) => {
+              if (data) {
+                set({
+                  event: {
+                    id: data.id,
+                    magicToken: data.magic_token,
+                    eventType: data.event_type,
+                    coupleNameA: data.couple_name_a,
+                    coupleNameB: data.couple_name_b,
+                    eventDate: data.event_date,
+                    venue: data.venue,
+                    currentStage: data.current_stage ?? 0,
+                    theme: "night",
+                    createdAt: data.created_at,
+                  },
+                });
+              }
+            });
+        }
+
+        return false;
       },
 
       updateEvent: (data) => {
@@ -111,6 +159,10 @@ export const useEventStore = create<EventStore>()(
         if (!event) return;
         set({ event: { ...event, currentStage: stage } });
         trackEvent("stage_change", { stage });
+
+        if (supabase) {
+          supabase.from("events").update({ current_stage: stage }).eq("id", event.id).then(() => { });
+        }
       },
 
       saveAnswer: (questionId, value) => {
@@ -130,6 +182,22 @@ export const useEventStore = create<EventStore>()(
           set({ answers: updated });
         } else {
           set({ answers: [...answers, answer] });
+        }
+
+        // Sync to Supabase
+        if (supabase) {
+          supabase
+            .from("answers")
+            .upsert(
+              {
+                id: answer.id,
+                event_id: event.id,
+                question_id: questionId,
+                answer_value: JSON.stringify(value),
+              },
+              { onConflict: "id" }
+            )
+            .then(() => { });
         }
       },
 
@@ -156,6 +224,23 @@ export const useEventStore = create<EventStore>()(
         } else {
           set({ swipes: [...swipes, swipe] });
         }
+
+        // Sync to Supabase
+        if (supabase) {
+          supabase
+            .from("swipes")
+            .upsert(
+              {
+                id: swipe.id,
+                event_id: event.id,
+                song_id: songId,
+                action,
+                reason_chips: JSON.stringify(reasonChips),
+              },
+              { onConflict: "id" }
+            )
+            .then(() => { });
+        }
       },
 
       getSwipe: (songId) => {
@@ -167,7 +252,11 @@ export const useEventStore = create<EventStore>()(
       },
 
       removeSwipe: (songId) => {
+        const swipe = get().swipes.find((s) => s.songId === songId);
         set({ swipes: get().swipes.filter((s) => s.songId !== songId) });
+        if (supabase && swipe) {
+          supabase.from("swipes").delete().eq("id", swipe.id).then(() => { });
+        }
       },
 
       setSwipes: (swipes) => {
@@ -177,21 +266,35 @@ export const useEventStore = create<EventStore>()(
       addRequest: (request) => {
         const { event, requests } = get();
         if (!event) return;
-        set({
-          requests: [
-            ...requests,
-            {
-              ...request,
-              id: crypto.randomUUID(),
-              eventId: event.id,
-              createdAt: new Date().toISOString(),
-            },
-          ],
-        });
+        const id = crypto.randomUUID();
+        const newRequest = {
+          ...request,
+          id,
+          eventId: event.id,
+          createdAt: new Date().toISOString(),
+        };
+        set({ requests: [...requests, newRequest] });
+
+        // Sync to Supabase
+        if (supabase) {
+          supabase
+            .from("requests")
+            .insert({
+              id,
+              event_id: event.id,
+              request_type: request.requestType,
+              content: request.content,
+              moment_type: request.momentType || null,
+            })
+            .then(() => { });
+        }
       },
 
       removeRequest: (id) => {
         set({ requests: get().requests.filter((r) => r.id !== id) });
+        if (supabase) {
+          supabase.from("requests").delete().eq("id", id).then(() => { });
+        }
       },
 
       trackUpsellClick: (upsellId) => {

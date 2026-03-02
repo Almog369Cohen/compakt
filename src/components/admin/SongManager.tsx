@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAdminStore } from "@/stores/adminStore";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -49,10 +50,12 @@ export function SongManager() {
   const [showSpotifyImport, setShowSpotifyImport] = useState(false);
 
   const filtered = songs.filter((s) => {
+    const q = search.toLowerCase();
     const matchSearch =
-      s.title.includes(search) ||
-      s.artist.includes(search) ||
-      s.tags.some((t) => t.includes(search));
+      !q ||
+      s.title.toLowerCase().includes(q) ||
+      s.artist.toLowerCase().includes(q) ||
+      s.tags.some((t) => t.toLowerCase().includes(q));
     const matchCategory =
       filterCategory === "all" || s.category === filterCategory;
     return matchSearch && matchCategory;
@@ -666,7 +669,7 @@ function SpotifyImportModal({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-bold text-lg">ייבוא פלייליסט מ-Spotify</h3>
-            <p className="text-xs text-muted">דורש הגדרת משתני סביבה ב-Netlify: SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET</p>
+            <p className="text-xs text-muted">דורש הגדרת משתני סביבה: SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET</p>
           </div>
           <button type="button" onClick={onClose} className="p-1 text-muted hover:text-foreground">
             <X className="w-5 h-5" />
@@ -707,9 +710,14 @@ function SpotifyImportModal({
                   className="w-full text-right px-3 py-2 rounded-xl border border-glass hover:border-brand-blue/50 transition-colors flex items-center gap-3"
                 >
                   <div className="w-10 h-10 rounded-lg overflow-hidden bg-brand-gray/30 flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     {p.imageUrl ? (
-                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                      <Image
+                        src={p.imageUrl}
+                        alt={p.name}
+                        width={40}
+                        height={40}
+                        className="w-full h-full object-cover"
+                      />
                     ) : null}
                   </div>
                   <div className="min-w-0 flex-1">

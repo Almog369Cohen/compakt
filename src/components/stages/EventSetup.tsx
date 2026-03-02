@@ -5,6 +5,7 @@ import { useEventStore } from "@/stores/eventStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { Music, PartyPopper, Briefcase, Star, Heart, Copy, Check, Share2 } from "lucide-react";
 import type { EventType } from "@/lib/types";
+import { getSafeOrigin } from "@/lib/utils";
 
 const eventTypes: { type: EventType; label: string; icon: React.ReactNode }[] = [
   { type: "wedding", label: "חתונה", icon: <Heart className="w-6 h-6" /> },
@@ -69,14 +70,14 @@ export function EventSetup() {
   };
 
   const copyLink = () => {
-    const url = `${window.location.origin}?token=${magicToken}`;
+    const url = `${getSafeOrigin()}?token=${magicToken}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const shareWhatsApp = () => {
-    const url = `${window.location.origin}?token=${magicToken}`;
+    const url = `${getSafeOrigin()}?token=${magicToken}`;
     const text = `🎵 הצטרפו למסע המוזיקלי שלנו!\n${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
@@ -229,7 +230,7 @@ export function EventSetup() {
             <div className="glass-card p-3 rounded-xl mb-4 flex items-center gap-2">
               <code className="text-xs text-brand-blue flex-1 truncate" dir="ltr">
                 {typeof window !== "undefined"
-                  ? `${window.location.origin}?token=${magicToken}`
+                  ? `${getSafeOrigin()}?token=${magicToken}`
                   : `...?token=${magicToken}`}
               </code>
               <button

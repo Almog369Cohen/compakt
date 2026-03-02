@@ -18,7 +18,7 @@ import {
   Check,
 } from "lucide-react";
 import { useState } from "react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getSafeOrigin } from "@/lib/utils";
 
 const CELEBRATION_EMOJIS = ["🎉", "🎵", "🎶", "✨", "💫", "🎧", "🎤", "💃", "🕺", "🌟"];
 
@@ -144,7 +144,7 @@ export function MusicBrief() {
   }, [event]);
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}?token=${event?.magicToken}`;
+    const url = `${getSafeOrigin()}?token=${event?.magicToken}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -197,7 +197,7 @@ export function MusicBrief() {
       dontRequests.forEach((r) => lines.push(`  • ${r.content}`));
       lines.push("");
     }
-    const url = `${window.location.origin}?token=${event?.magicToken}`;
+    const url = `${getSafeOrigin()}?token=${event?.magicToken}`;
     lines.push(`🔗 ${url}`);
     return lines.join("\n");
   };
