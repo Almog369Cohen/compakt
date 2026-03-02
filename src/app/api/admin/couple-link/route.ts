@@ -73,15 +73,22 @@ export async function GET(req: Request) {
 
     const supabase = getServiceSupabase();
 
-    const { data, error } = await supabase
+    // Try with dj_id filter first; if column doesn't exist (migration 016 not run), return empty
+    let data: Record<string, unknown>[] | null = null;
+    const { data: d, error } = await supabase
       .from("events")
-      .select("id, magic_token, event_type, couple_name_a, couple_name_b, event_date, venue, current_stage, phone_number, created_at, updated_at")
+      .select("*")
       .eq("dj_id", profileId)
       .order("created_at", { ascending: false });
 
     if (error) {
+      if (error.message.includes("does not exist")) {
+        // dj_id column not yet added — return empty list gracefully
+        return NextResponse.json({ events: [], warning: "הריצו migration 016 כדי לחבר אירועים ל-DJ" });
+      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+    data = d;
 
     // Enrich with answer/swipe counts
     const enriched = await Promise.all(
@@ -100,7 +107,7 @@ export async function GET(req: Request) {
           ...event,
           answerCount: answerCount || 0,
           swipeCount: swipeCount || 0,
-          isComplete: event.current_stage >= 4,
+          isComplete: (event.current_stage as number) >= 4,
         };
       })
     );
