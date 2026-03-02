@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Calendar, Eye, EyeOff, User } from "lucide-react";
+import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Calendar, Eye, EyeOff, User, Link, TrendingUp } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useEventStore } from "@/stores/eventStore";
 import { SongManager } from "@/components/admin/SongManager";
@@ -12,12 +12,16 @@ import { UpsellManager } from "@/components/admin/UpsellManager";
 import { Dashboard } from "@/components/admin/Dashboard";
 import { ProfileSettings } from "@/components/admin/ProfileSettings";
 import { EventsManager } from "@/components/admin/EventsManager";
+import { CoupleLinks } from "@/components/admin/CoupleLinks";
+import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import { useProfileStore } from "@/stores/profileStore";
 
-type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "events";
+type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "events" | "couples" | "analytics";
 
 const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "dashboard", label: "דשבורד", icon: <BarChart3 className="w-4 h-4" /> },
+  { id: "couples", label: "שאלונים", icon: <Link className="w-4 h-4" /> },
+  { id: "analytics", label: "אנליטיקות", icon: <TrendingUp className="w-4 h-4" /> },
   { id: "profile", label: "פרופיל", icon: <User className="w-4 h-4" /> },
   { id: "events", label: "אירועים", icon: <Calendar className="w-4 h-4" /> },
   { id: "songs", label: "שירים", icon: <Music className="w-4 h-4" /> },
@@ -314,7 +318,7 @@ export default function AdminPage() {
       </header>
 
       {/* Content */}
-      <main className={`mx-auto px-4 py-6 ${activeTab === "profile" || activeTab === "events" ? "max-w-7xl" : "max-w-5xl"}`}>
+      <main className={`mx-auto px-4 py-6 ${["profile", "events", "couples", "analytics"].includes(activeTab) ? "max-w-7xl" : "max-w-5xl"}`}>
         <AnimatePresence mode="wait">
           {activeTab === "profile" && (
             <motion.div
@@ -374,6 +378,26 @@ export default function AdminPage() {
               exit={{ opacity: 0, y: -10 }}
             >
               <EventsManager />
+            </motion.div>
+          )}
+          {activeTab === "couples" && (
+            <motion.div
+              key="couples"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <CoupleLinks />
+            </motion.div>
+          )}
+          {activeTab === "analytics" && (
+            <motion.div
+              key="analytics"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <AnalyticsDashboard />
             </motion.div>
           )}
         </AnimatePresence>
