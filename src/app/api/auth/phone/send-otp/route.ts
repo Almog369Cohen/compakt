@@ -65,7 +65,6 @@ export async function POST(req: Request) {
           phone_number: phone,
           otp_code: otp,
           otp_expires_at: expiresAt,
-          otp_attempts: 0,
           phone_verified: false,
         },
         { onConflict: "event_id,phone_number" }

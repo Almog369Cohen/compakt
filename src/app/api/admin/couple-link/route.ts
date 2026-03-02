@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       .insert({
         dj_id: profileId,
         magic_token: token,
+        token: token,
         event_type: eventType || "wedding",
         couple_name_a: coupleNameA || "",
         couple_name_b: coupleNameB || "",

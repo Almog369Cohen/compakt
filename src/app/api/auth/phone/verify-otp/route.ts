@@ -31,17 +31,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "סשן לא נמצא" }, { status: 404 });
     }
 
-    // Check attempts
-    if (session.otp_attempts >= 5) {
-      return NextResponse.json({ error: "יותר מדי ניסיונות. בקשו קוד חדש" }, { status: 429 });
-    }
-
-    // Increment attempts
-    await supabase
-      .from("event_sessions")
-      .update({ otp_attempts: (session.otp_attempts || 0) + 1 })
-      .eq("id", sessionId);
-
     // Check expiry
     if (new Date(session.otp_expires_at) < new Date()) {
       return NextResponse.json({ error: "הקוד פג תוקף. בקשו קוד חדש" }, { status: 410 });
@@ -58,7 +47,6 @@ export async function POST(req: Request) {
       .update({
         phone_verified: true,
         otp_code: null,
-        last_active_at: new Date().toISOString(),
       })
       .eq("id", sessionId);
 
@@ -99,11 +87,11 @@ export async function POST(req: Request) {
       event,
       resumeData: hasProgress
         ? {
-            answers: answers || [],
-            swipes: swipes || [],
-            requests: requests || [],
-            currentStage: event?.current_stage || 0,
-          }
+          answers: answers || [],
+          swipes: swipes || [],
+          requests: requests || [],
+          currentStage: event?.current_stage || 0,
+        }
         : null,
     });
   } catch (e) {

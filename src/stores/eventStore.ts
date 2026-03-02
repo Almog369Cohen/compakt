@@ -101,6 +101,7 @@ export const useEventStore = create<EventStore>()(
             .insert({
               id: event.id,
               magic_token: token,
+              token: token,
               event_type: event.eventType,
               couple_name_a: event.coupleNameA || "",
               couple_name_b: event.coupleNameB || "",
