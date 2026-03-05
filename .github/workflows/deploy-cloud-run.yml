@@ -34,17 +34,57 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+      - name: Validate required secrets
+        shell: bash
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CALENDAR_REDIRECT_URI: ${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}
+        run: |
+          missing=()
+
+          check() {
+            local name="$1"
+            local val="$2"
+            if [ -z "$val" ]; then
+              missing+=("$name")
+            fi
+          }
+
+          check "NEXT_PUBLIC_APP_URL" "$NEXT_PUBLIC_APP_URL"
+          check "NEXT_PUBLIC_SUPABASE_URL" "$NEXT_PUBLIC_SUPABASE_URL"
+          check "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          check "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
+          check "GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_ID"
+          check "GOOGLE_CLIENT_SECRET" "$GOOGLE_CLIENT_SECRET"
+          check "GOOGLE_CALENDAR_REDIRECT_URI" "$GOOGLE_CALENDAR_REDIRECT_URI"
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required GitHub secrets: ${missing[*]}"
+            exit 1
+          fi
+
+          echo "All required secrets are present."
+
       - name: Deploy to Cloud Run (build from source)
         run: |
           gcloud run deploy "$SERVICE_NAME" \
             --source . \
             --region "$REGION" \
             --allow-unauthenticated \
+            --build-env-vars "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }},NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }},NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }},NEXT_PUBLIC_GIT_SHA=${{ github.sha }}" \
             --set-env-vars "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}" \
             --set-env-vars "NEXT_PUBLIC_GIT_SHA=${{ github.sha }}" \
             --set-env-vars "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
             --set-env-vars "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
             --set-env-vars "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            --set-env-vars "TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}" \
+            --set-env-vars "TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}" \
+            --set-env-vars "TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}" \
             --set-env-vars "SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }}" \
             --set-env-vars "SPOTIFY_CLIENT_SECRET=${{ secrets.SPOTIFY_CLIENT_SECRET }}" \
             --set-env-vars "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
