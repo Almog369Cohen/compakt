@@ -57,9 +57,6 @@ jobs:
           check "NEXT_PUBLIC_SUPABASE_URL" "$NEXT_PUBLIC_SUPABASE_URL"
           check "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
           check "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
-          check "GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_ID"
-          check "GOOGLE_CLIENT_SECRET" "$GOOGLE_CLIENT_SECRET"
-          check "GOOGLE_CALENDAR_REDIRECT_URI" "$GOOGLE_CALENDAR_REDIRECT_URI"
 
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required GitHub secrets: ${missing[*]}"
