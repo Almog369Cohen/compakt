@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 export const runtime = "nodejs";
 
-/** GET /api/admin/events?profileId=xxx — load DJ events */
-export async function GET(req: Request) {
+/** GET /api/admin/events — load own DJ events (session-scoped) */
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const profileId = searchParams.get("profileId");
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+    const profileId = auth.profileId;
     if (!profileId) {
-      return NextResponse.json({ error: "profileId required" }, { status: 400 });
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
     const supabase = getServiceSupabase();
@@ -59,11 +61,18 @@ export async function GET(req: Request) {
   }
 }
 
-/** POST /api/admin/events — create/update/delete event */
+/** POST /api/admin/events — create/update/delete event (session-scoped) */
 export async function POST(req: Request) {
   try {
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+    const profileId = auth.profileId;
+    if (!profileId) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
     const body = await req.json();
-    const { action, profileId, eventId, data: eventData } = body;
+    const { action, eventId, data: eventData } = body;
 
     const supabase = getServiceSupabase();
 

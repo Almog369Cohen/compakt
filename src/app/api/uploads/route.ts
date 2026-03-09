@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { Storage } from "@google-cloud/storage";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 export const runtime = "nodejs";
 
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name}`);
-  return v;
+function requireBucketName(): string {
+  const value = process.env.GCS_BUCKET || process.env.GCS_BUCKET_NAME;
+  if (!value) throw new Error("Missing GCS_BUCKET");
+  return value;
 }
 
 function sanitizeExt(filename: string): string {
@@ -17,7 +18,10 @@ function sanitizeExt(filename: string): string {
 
 export async function POST(req: Request) {
   try {
-    const bucketName = requireEnv("GCS_BUCKET");
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+
+    const bucketName = requireBucketName();
     const form = await req.formData();
 
     const file = form.get("file");

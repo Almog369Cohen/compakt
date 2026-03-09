@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
+import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -45,26 +47,29 @@ interface GCalEvent {
 
 /**
  * POST /api/gcal/sync
- * Body: { userId: string, direction: "pull" | "push" | "both" }
+ * Body: { direction: "pull" | "push" | "both" }
  *
- * Pull: Fetch events from Google Calendar → upsert into events table
- * Push: Sync local events (with google_event_id=null) → create in Google Calendar
+ * Pull: Fetch events from Google Calendar → upsert into dj_events table
+ * Push: Sync local DJ events (with google_event_id=null) → create in Google Calendar
  */
 export async function POST(request: Request) {
   try {
-    const { userId, direction = "pull" } = await request.json();
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
 
-    if (!userId) {
-      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
-    }
+    const { direction = "pull" } = await request.json();
 
     const supabase = getServiceSupabase();
+    const { access } = await loadResolvedAccessByUserId(supabase, auth.userId);
+    if (!access || !hasFeature(access, "google_calendar_sync")) {
+      return NextResponse.json({ error: "Feature not enabled for this account" }, { status: 403 });
+    }
 
     // Get profile with Google tokens
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id, google_calendar_tokens")
-      .eq("user_id", userId)
+      .eq("user_id", auth.userId)
       .single();
 
     if (profileError || !profile) {
@@ -130,7 +135,7 @@ export async function POST(request: Request) {
 
           // Upsert by google_event_id
           const { error: upsertError } = await supabase
-            .from("events")
+            .from("dj_events")
             .upsert(
               {
                 dj_id: profile.id,
@@ -152,7 +157,7 @@ export async function POST(request: Request) {
     // ── PUSH: Local Events → Google Calendar ──
     if (direction === "push" || direction === "both") {
       const { data: localEvents } = await supabase
-        .from("events")
+        .from("dj_events")
         .select("*")
         .eq("dj_id", profile.id)
         .is("google_event_id", null);
@@ -191,7 +196,7 @@ export async function POST(request: Request) {
         if (createRes.ok) {
           const created = await createRes.json();
           await supabase
-            .from("events")
+            .from("dj_events")
             .update({
               google_event_id: created.id,
               last_synced_at: new Date().toISOString(),

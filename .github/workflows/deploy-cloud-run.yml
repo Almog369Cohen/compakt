@@ -38,10 +38,16 @@ jobs:
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_CALENDAR_REDIRECT_URI: ${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}
+          GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
         run: |
           missing=()
 
@@ -53,10 +59,35 @@ jobs:
             fi
           }
 
+          check_group() {
+            local group_name="$1"
+            shift
+            local has_any="false"
+            local item
+
+            for item in "$@"; do
+              local value="${!item}"
+              if [ -n "$value" ]; then
+                has_any="true"
+                break
+              fi
+            done
+
+            if [ "$has_any" = "true" ]; then
+              for item in "$@"; do
+                check "$item" "${!item}"
+              done
+            fi
+          }
+
           check "NEXT_PUBLIC_APP_URL" "$NEXT_PUBLIC_APP_URL"
           check "NEXT_PUBLIC_SUPABASE_URL" "$NEXT_PUBLIC_SUPABASE_URL"
           check "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
           check "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
+          check "GMAIL_USER" "$GMAIL_USER"
+          check "GMAIL_APP_PASSWORD" "$GMAIL_APP_PASSWORD"
+          check_group "SPOTIFY" "SPOTIFY_CLIENT_ID" "SPOTIFY_CLIENT_SECRET"
+          check_group "GOOGLE_CALENDAR" "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "GOOGLE_CALENDAR_REDIRECT_URI"
 
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required GitHub secrets: ${missing[*]}"
@@ -66,22 +97,71 @@ jobs:
           echo "All required secrets are present."
 
       - name: Deploy to Cloud Run (build from source)
+        shell: bash
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CALENDAR_REDIRECT_URI: ${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}
         run: |
+          build_env_vars=(
+            "NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL"
+            "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL"
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+            "NEXT_PUBLIC_GIT_SHA=${{ github.sha }}"
+          )
+
+          runtime_env_vars=(
+            "NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL"
+            "NEXT_PUBLIC_GIT_SHA=${{ github.sha }}"
+            "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL"
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+            "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"
+            "GMAIL_USER=$GMAIL_USER"
+            "GMAIL_APP_PASSWORD=$GMAIL_APP_PASSWORD"
+          )
+
+          add_runtime_var_if_present() {
+            local name="$1"
+            local value="${!name}"
+            if [ -n "$value" ]; then
+              runtime_env_vars+=("$name=$value")
+            fi
+          }
+
+          if [ -n "$NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET" ]; then
+            build_env_vars+=("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=$NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET")
+            runtime_env_vars+=("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=$NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET")
+          fi
+
+          add_runtime_var_if_present "TWILIO_ACCOUNT_SID"
+          add_runtime_var_if_present "TWILIO_AUTH_TOKEN"
+          add_runtime_var_if_present "TWILIO_PHONE_NUMBER"
+          add_runtime_var_if_present "SPOTIFY_CLIENT_ID"
+          add_runtime_var_if_present "SPOTIFY_CLIENT_SECRET"
+          add_runtime_var_if_present "GCS_BUCKET"
+          add_runtime_var_if_present "GOOGLE_CLIENT_ID"
+          add_runtime_var_if_present "GOOGLE_CLIENT_SECRET"
+          add_runtime_var_if_present "GOOGLE_CALENDAR_REDIRECT_URI"
+
+          build_env_arg=$(IFS=,; echo "${build_env_vars[*]}")
+          runtime_env_arg=$(IFS=,; echo "${runtime_env_vars[*]}")
+
           gcloud run deploy "$SERVICE_NAME" \
             --source . \
             --region "$REGION" \
             --allow-unauthenticated \
-            --set-build-env-vars "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }},NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }},NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }},NEXT_PUBLIC_GIT_SHA=${{ github.sha }}" \
-            --set-env-vars "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}" \
-            --set-env-vars "NEXT_PUBLIC_GIT_SHA=${{ github.sha }}" \
-            --set-env-vars "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
-            --set-env-vars "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
-            --set-env-vars "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            --set-env-vars "TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}" \
-            --set-env-vars "TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}" \
-            --set-env-vars "TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}" \
-            --set-env-vars "SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }}" \
-            --set-env-vars "SPOTIFY_CLIENT_SECRET=${{ secrets.SPOTIFY_CLIENT_SECRET }}" \
-            --set-env-vars "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
-            --set-env-vars "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-            --set-env-vars "GOOGLE_CALENDAR_REDIRECT_URI=${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}"
+            --set-build-env-vars "$build_env_arg" \
+            --set-env-vars "$runtime_env_arg"

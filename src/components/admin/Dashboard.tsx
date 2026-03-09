@@ -60,7 +60,8 @@ export function Dashboard() {
   const songs = useAdminStore((s) => s.songs);
   const questions = useAdminStore((s) => s.questions);
   const upsells = useAdminStore((s) => s.upsells);
-  const profileId = useProfileStore((s) => s.profileId);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _profileId = useProfileStore((s) => s.profileId);
 
   const [showFixes, setShowFixes] = useState(false);
   const [fixes, setFixes] = useState<FixItem[]>([]);
@@ -74,15 +75,12 @@ export function Dashboard() {
   const loadHealth = useCallback(async () => {
     setHealthLoading(true);
     try {
-      const url = profileId
-        ? `/api/admin/db-health?profileId=${profileId}`
-        : "/api/admin/db-health";
-      const res = await fetch(url);
+      const res = await fetch("/api/admin/db-health");
       const data = await res.json();
       if (res.ok) setHealth(data);
     } catch { /* silent */ }
     setHealthLoading(false);
-  }, [profileId]);
+  }, []);
 
   useEffect(() => {
     loadHealth();

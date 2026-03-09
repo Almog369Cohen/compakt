@@ -41,10 +41,11 @@ export const useEventsStore = create<EventsStore>()((set, get) => ({
   loading: false,
   error: null,
 
-  loadEvents: async (profileId: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  loadEvents: async (_profileId?: string) => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch(`/api/admin/events?profileId=${profileId}`);
+      const res = await fetch(`/api/admin/events`);
       const json = await res.json();
 
       if (json.warning) console.warn(json.warning);
@@ -56,13 +57,13 @@ export const useEventsStore = create<EventsStore>()((set, get) => ({
     }
   },
 
-  createEvent: async (profileId: string, event: Partial<DJEvent>) => {
+  createEvent: async (_profileId: string, event: Partial<DJEvent>) => {
     set({ error: null });
     try {
       const res = await fetch("/api/admin/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create", profileId, data: event }),
+        body: JSON.stringify({ action: "create", data: event }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "שגיאה ביצירת אירוע");

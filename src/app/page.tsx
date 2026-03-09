@@ -1,6 +1,7 @@
 "use client";
 
 import { useEventStore } from "@/stores/eventStore";
+import { useAdminStore } from "@/stores/adminStore";
 import { EventSetup } from "@/components/stages/EventSetup";
 import { QuestionFlow } from "@/components/stages/QuestionFlow";
 import { SongTinder } from "@/components/stages/SongTinder";
@@ -15,6 +16,99 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { RotateCcw } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+
+type RawResumeAnswer = {
+  id: string;
+  event_id: string;
+  question_id: string;
+  answer_value: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type RawResumeSwipe = {
+  id: string;
+  event_id: string;
+  song_id: string;
+  action: "like" | "dislike" | "super_like" | "unsure";
+  reason_chips: string | string[] | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type RawResumeRequest = {
+  id: string;
+  event_id: string;
+  request_type: "free_text" | "do" | "dont" | "link" | "special_moment";
+  content: string;
+  moment_type?: "ceremony" | "glass_break" | "first_dance" | "entrance" | "parents" | "other" | null;
+  created_at?: string;
+};
+
+type RawResumeData = {
+  answers: Record<string, unknown>[];
+  swipes: Record<string, unknown>[];
+  requests: Record<string, unknown>[];
+  currentStage: number;
+};
+
+function parseMaybeJson(value: string | null): string | string[] | number | "" {
+  if (!value) return "";
+  try {
+    return JSON.parse(value) as string | string[] | number;
+  } catch {
+    return value;
+  }
+}
+
+function restoreResumeData(resumeData: RawResumeData) {
+  useEventStore.setState({
+    answers: resumeData.answers.map((answer) => {
+      const raw = answer as unknown as RawResumeAnswer;
+      return {
+        id: raw.id,
+        eventId: raw.event_id,
+        questionId: raw.question_id,
+        answerValue: parseMaybeJson(raw.answer_value),
+        answeredAt: raw.updated_at || raw.created_at || new Date().toISOString(),
+      };
+    }),
+    swipes: resumeData.swipes.map((swipe) => {
+      const raw = swipe as unknown as RawResumeSwipe;
+      return {
+        id: raw.id,
+        eventId: raw.event_id,
+        songId: raw.song_id,
+        action: raw.action,
+        reasonChips: Array.isArray(raw.reason_chips)
+          ? raw.reason_chips
+          : raw.reason_chips
+            ? ((() => {
+              try {
+                const parsed = JSON.parse(raw.reason_chips);
+                return Array.isArray(parsed) ? parsed : [];
+              } catch {
+                return [];
+              }
+            })())
+            : [],
+        swipedAt: raw.updated_at || raw.created_at || new Date().toISOString(),
+      };
+    }),
+    requests: resumeData.requests.map((request) => {
+      const raw = request as unknown as RawResumeRequest;
+      return {
+        id: raw.id,
+        eventId: raw.event_id,
+        requestType: raw.request_type,
+        content: raw.content,
+        momentType: raw.moment_type || undefined,
+        createdAt: raw.created_at || new Date().toISOString(),
+      };
+    }),
+  });
+}
 
 function JourneyApp() {
   const event = useEventStore((s) => s.event);
@@ -22,20 +116,16 @@ function JourneyApp() {
   const loadEvent = useEventStore((s) => s.loadEvent);
   const setStage = useEventStore((s) => s.setStage);
   const reset = useEventStore((s) => s.reset);
+  const loadContentFromDB = useAdminStore((s) => s.loadContentFromDB);
   const currentStage = event?.currentStage ?? 0;
   const [showReset, setShowReset] = useState(false);
 
-  // Phone auth state
+  // Couple auth state
   const [pendingToken, setPendingToken] = useState<string | null>(null);
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
-  const resumeDataRef = useRef<{
-    answers: Record<string, unknown>[];
-    swipes: Record<string, unknown>[];
-    requests: Record<string, unknown>[];
-    currentStage: number;
-  } | null>(null);
+  const resumeDataRef = useRef<RawResumeData | null>(null);
 
   // Analytics
   const { track, trackStageEnter } = useAnalytics({
@@ -56,9 +146,84 @@ function JourneyApp() {
 
   // Load event from magic link URL param
   useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    if (hashParams.get("type") === "recovery") {
+      const target = new URL(`${window.location.origin}/admin`);
+      target.searchParams.set("reset", "1");
+      window.location.replace(`${target.toString()}${window.location.hash}`);
+      return;
+    }
+
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
+    const dj = params.get("dj");
+
+    // Load DJ-specific content for couples (songs/questions/upsells)
+    // Persist chosen DJ context across refreshes
+    const storedDjProfileId = sessionStorage.getItem("compakt_dj_profile_id");
+    const storedDjSlug = sessionStorage.getItem("compakt_dj_slug");
+    const djToResolve = dj || storedDjSlug;
+
+    const sb = supabase;
+    const loadEventContext = async (eventToken: string) => {
+      if (!sb) return;
+
+      const { data } = await sb
+        .from("events")
+        .select("id, magic_token, event_type, couple_name_a, couple_name_b, event_date, venue, current_stage, created_at, dj_id")
+        .eq("magic_token", eventToken)
+        .maybeSingle();
+
+      if (!data) return;
+
+      useEventStore.setState((state) => ({
+        ...state,
+        event: {
+          id: data.id,
+          magicToken: data.magic_token,
+          eventType: data.event_type,
+          coupleNameA: data.couple_name_a,
+          coupleNameB: data.couple_name_b,
+          eventDate: data.event_date,
+          venue: data.venue,
+          currentStage: data.current_stage ?? 0,
+          theme: state.theme,
+          createdAt: data.created_at,
+        },
+      }));
+
+      if (data.dj_id) {
+        sessionStorage.setItem("compakt_dj_profile_id", data.dj_id);
+        await loadContentFromDB(data.dj_id);
+      }
+    };
+
+    if (djToResolve && sb) {
+      const maybeUseStored = async () => {
+        if (storedDjProfileId && !dj) {
+          await loadContentFromDB(storedDjProfileId);
+          return;
+        }
+
+        const { data } = await sb
+          .from("profiles")
+          .select("id, dj_slug")
+          .eq("dj_slug", djToResolve)
+          .maybeSingle();
+
+        if (data?.id) {
+          sessionStorage.setItem("compakt_dj_profile_id", data.id);
+          sessionStorage.setItem("compakt_dj_slug", data.dj_slug || djToResolve);
+          await loadContentFromDB(data.id);
+        }
+      };
+
+      maybeUseStored().catch(() => { });
+    }
+
     if (token) {
+      loadEventContext(token).catch(() => { });
+
       // Check if already verified for this token (stored in sessionStorage)
       const stored = sessionStorage.getItem(`compakt_session_${token}`);
       if (stored) {
@@ -72,9 +237,17 @@ function JourneyApp() {
         setPendingToken(token);
         track("link_open", { returning: false });
       }
+
+      // Clean URL params after capture
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+
+    if (dj) {
+      // Clean ?dj after capture to keep share URLs tidy
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [loadEvent, track]);
+  }, [loadEvent, track, loadContentFromDB]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -82,17 +255,12 @@ function JourneyApp() {
 
   const handlePhoneVerified = useCallback((data: {
     sessionId: string;
-    phone: string;
-    resumeData: {
-      answers: Record<string, unknown>[];
-      swipes: Record<string, unknown>[];
-      requests: Record<string, unknown>[];
-      currentStage: number;
-    } | null;
+    email: string;
+    resumeData: RawResumeData | null;
   }) => {
     setSessionId(data.sessionId);
     setPhoneVerified(true);
-    track("phone_verified", { phone: data.phone.slice(-4) });
+    track("email_verified", { emailDomain: data.email.includes("@") ? data.email.split("@")[1] : undefined });
 
     // Store session for page refreshes
     if (pendingToken) {
@@ -112,6 +280,7 @@ function JourneyApp() {
 
   const handleResume = () => {
     if (resumeDataRef.current) {
+      restoreResumeData(resumeDataRef.current);
       setStage(resumeDataRef.current.currentStage);
       track("session_resume", { stage: resumeDataRef.current.currentStage });
     }

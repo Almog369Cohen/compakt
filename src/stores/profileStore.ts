@@ -107,8 +107,9 @@ export const useProfileStore = create<ProfileStore>()(
 
       saveProfileToDB: async (userId: string) => {
         const { profile } = get();
+        const effectiveUserId = userId && userId !== "legacy" ? userId : null;
         const row = {
-          user_id: userId,
+          ...(effectiveUserId ? { user_id: effectiveUserId } : {}),
           business_name: profile.businessName,
           tagline: profile.tagline,
           bio: profile.bio,
@@ -132,7 +133,7 @@ export const useProfileStore = create<ProfileStore>()(
         const res = await fetch("/api/admin/profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, profileId: get().profileId, row }),
+          body: JSON.stringify({ row }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "שגיאה בשמירת פרופיל");

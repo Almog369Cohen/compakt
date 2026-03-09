@@ -1,17 +1,25 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_CALENDAR_REDIRECT_URI;
 
 export async function GET(request: Request) {
+  const auth = await requireAuth();
+  if (isAuthError(auth)) return auth;
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const userId = searchParams.get("state");
+  const stateUserId = searchParams.get("state");
 
-  if (!code || !userId) {
+  if (!code || !stateUserId) {
     return NextResponse.redirect(new URL("/admin?gcal=error&reason=missing_params", request.url));
+  }
+
+  if (stateUserId !== auth.userId) {
+    return NextResponse.redirect(new URL("/admin?gcal=error&reason=state_mismatch", request.url));
   }
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !REDIRECT_URI) {
@@ -51,7 +59,7 @@ export async function GET(request: Request) {
           expiry_date: Date.now() + (tokens.expires_in * 1000),
         }),
       })
-      .eq("user_id", userId);
+      .eq("user_id", auth.userId);
 
     if (error) {
       console.error("Failed to save Google tokens:", error);

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useProfileStore } from "@/stores/profileStore";
-import { useAdminStore } from "@/stores/adminStore";
 import { trackAnalytics } from "@/hooks/useAnalytics";
 import { getSafeOrigin } from "@/lib/utils";
 import {
@@ -18,6 +17,7 @@ import {
   Briefcase,
   Music,
   Phone,
+  Mail,
   ChevronDown,
   ChevronUp,
   ExternalLink,
@@ -64,9 +64,12 @@ const STAGE_LABELS: Record<number, string> = {
   4: "סיים",
 };
 
+function isEmailContact(value: string | null): boolean {
+  return Boolean(value && value.includes("@"));
+}
+
 export function CoupleLinks() {
   const profileId = useProfileStore((s) => s.profileId);
-  const userId = useAdminStore((s) => s.userId);
   const [events, setEvents] = useState<CoupleEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -85,7 +88,7 @@ export function CoupleLinks() {
     if (!profileId) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/couple-link?profileId=${profileId}`);
+      const res = await fetch(`/api/admin/couple-link`);
       const data = await res.json();
       if (res.ok) setEvents(data.events || []);
     } catch {
@@ -106,7 +109,6 @@ export function CoupleLinks() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          profileId,
           eventType: newType,
           coupleNameA: newNameA,
           coupleNameB: newNameB,
@@ -309,7 +311,9 @@ export function CoupleLinks() {
 
                 <div className="flex items-center gap-2 shrink-0">
                   {ev.phone_number && (
-                    <Phone className="w-3.5 h-3.5 text-brand-green" />
+                    isEmailContact(ev.phone_number)
+                      ? <Mail className="w-3.5 h-3.5 text-brand-green" />
+                      : <Phone className="w-3.5 h-3.5 text-brand-green" />
                   )}
                   <span className="text-xs text-muted">
                     {ev.answerCount} תשובות
@@ -384,11 +388,12 @@ export function CoupleLinks() {
                         </div>
                       </div>
 
-                      {/* Phone */}
                       {ev.phone_number && (
                         <p className="text-xs text-muted flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          טלפון: <span className="font-mono" dir="ltr">{ev.phone_number}</span>
+                          {isEmailContact(ev.phone_number)
+                            ? <Mail className="w-3 h-3" />
+                            : <Phone className="w-3 h-3" />}
+                          {isEmailContact(ev.phone_number) ? "מייל:" : "טלפון:"} <span className="font-mono" dir="ltr">{ev.phone_number}</span>
                         </p>
                       )}
                     </div>

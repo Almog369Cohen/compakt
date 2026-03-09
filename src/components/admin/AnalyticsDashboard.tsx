@@ -55,7 +55,7 @@ const STAGE_NAMES: Record<string, string> = {
 
 const FUNNEL_NAMES: Record<string, string> = {
   link_open: "פתחו לינק",
-  phone_verified: "אימות טלפון",
+  contact_verified: "אימות גישה",
   session_start: "התחלת שאלון",
   stage_enter_1: "שאלות",
   stage_enter_2: "שירים",
@@ -104,12 +104,12 @@ function getInsights(stats: Stats): string[] {
     insights.push("אף זוג לא סיים את השאלון — בדקו שהשלבים עובדים כמצופה");
   }
 
-  const phoneStep = stats.funnel.find((f) => f.step === "phone_verified");
+  const phoneStep = stats.funnel.find((f) => f.step === "contact_verified");
   const linkStep = stats.funnel.find((f) => f.step === "link_open");
   if (linkStep && phoneStep && linkStep.count > 0) {
     const phoneRate = Math.round((phoneStep.count / linkStep.count) * 100);
     if (phoneRate < 50) {
-      insights.push(`רק ${phoneRate}% מאמתים טלפון אחרי פתיחת לינק — שקלו להוסיף הסבר`);
+      insights.push(`רק ${phoneRate}% משלימים אימות אחרי פתיחת לינק — שקלו לפשט את שלב הכניסה`);
     }
   }
 

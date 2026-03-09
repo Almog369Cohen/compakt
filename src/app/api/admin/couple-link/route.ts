@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
+import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 
 export const runtime = "nodejs";
 
@@ -15,14 +17,21 @@ function generateMagicToken(): string {
  */
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { profileId, eventType, coupleNameA, coupleNameB, eventDate, venue } = body;
-
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+    const supabase = getServiceSupabase();
+    const { access } = await loadResolvedAccessByUserId(supabase, auth.userId);
+    if (!access || !hasFeature(access, "couple_links")) {
+      return NextResponse.json({ error: "Feature not enabled for this account" }, { status: 403 });
+    }
+    const profileId = auth.profileId;
     if (!profileId) {
-      return NextResponse.json({ error: "Missing profileId" }, { status: 400 });
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    const supabase = getServiceSupabase();
+    const body = await req.json();
+    const { eventType, coupleNameA, coupleNameB, eventDate, venue } = body;
+
     const token = generateMagicToken();
 
     const { data, error } = await supabase
@@ -63,23 +72,26 @@ export async function POST(req: Request) {
  *
  * Lists all couple questionnaire events for a DJ.
  */
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const profileId = searchParams.get("profileId");
-
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+    const supabase = getServiceSupabase();
+    const { access } = await loadResolvedAccessByUserId(supabase, auth.userId);
+    if (!access || !hasFeature(access, "couple_links")) {
+      return NextResponse.json({ error: "Feature not enabled for this account" }, { status: 403 });
+    }
+    const profileId = auth.profileId;
     if (!profileId) {
-      return NextResponse.json({ error: "profileId required" }, { status: 400 });
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    const supabase = getServiceSupabase();
-
-    // Try with dj_id filter first; if column doesn't exist (migration 016 not run), return empty
+    // Fetch events linked to this DJ + unlinked events (created directly by couples)
     let data: Record<string, unknown>[] | null = null;
     const { data: d, error } = await supabase
       .from("events")
       .select("*")
-      .eq("dj_id", profileId)
+      .or(`dj_id.eq.${profileId},dj_id.is.null`)
       .order("created_at", { ascending: false });
 
     if (error) {

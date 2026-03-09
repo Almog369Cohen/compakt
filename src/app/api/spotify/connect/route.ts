@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { getServiceSupabase } from "@/lib/supabase";
+import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 const SCOPES = [
   "playlist-read-private",
@@ -15,6 +18,16 @@ function getRedirectUri(req: Request): string {
 }
 
 export async function GET(req: Request) {
+  const auth = await requireAuth();
+  if (isAuthError(auth)) return auth;
+
+  const supabase = getServiceSupabase();
+  const { access } = await loadResolvedAccessByUserId(supabase, auth.userId);
+
+  if (!access || !hasFeature(access, "spotify_import")) {
+    return new NextResponse("Feature not enabled for this account", { status: 403 });
+  }
+
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 

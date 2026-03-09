@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Calendar, Eye, EyeOff, User, Link, TrendingUp } from "lucide-react";
@@ -15,8 +16,16 @@ import { EventsManager } from "@/components/admin/EventsManager";
 import { CoupleLinks } from "@/components/admin/CoupleLinks";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import { useProfileStore } from "@/stores/profileStore";
+import { supabase } from "@/lib/supabase";
+import type { FeatureKey } from "@/lib/access";
 
 type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "events" | "couples" | "analytics";
+
+type AdminAccess = {
+  role: string;
+  isActive: boolean;
+  features: Record<FeatureKey, boolean>;
+};
 
 const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "dashboard", label: "דשבורד", icon: <BarChart3 className="w-4 h-4" /> },
@@ -32,6 +41,7 @@ const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
 export default function AdminPage() {
   const isAuthenticated = useAdminStore((s) => s.isAuthenticated);
   const userId = useAdminStore((s) => s.userId);
+  useAdminStore((s) => s.userEmail);
   const login = useAdminStore((s) => s.login);
   const loginWithEmail = useAdminStore((s) => s.loginWithEmail);
   const loginWithOAuth = useAdminStore((s) => s.loginWithOAuth);
@@ -51,6 +61,12 @@ export default function AdminPage() {
   const [authMode, setAuthMode] = useState<"email" | "legacy">("email");
   const [isSignUp, setIsSignUp] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [resetTone, setResetTone] = useState<"error" | "success">("success");
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [access, setAccess] = useState<AdminAccess | null>(null);
   const theme = useEventStore((s) => s.theme);
 
   useEffect(() => {
@@ -61,43 +77,96 @@ export default function AdminPage() {
     checkSession();
   }, [checkSession]);
 
+  useEffect(() => {
+    if (!supabase) return;
+
+    if (typeof window === "undefined") return;
+
+    const currentUrl = new URL(window.location.href);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+    if (currentUrl.searchParams.get("reset") === "1" && hashParams.get("type") === "recovery") {
+      setIsRecoveryMode(true);
+      setAuthMode("email");
+      setIsSignUp(false);
+      setResetMessage(null);
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecoveryMode(true);
+        setAuthMode("email");
+        setIsSignUp(false);
+        setPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setResetMessage(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const router = useRouter();
+
   // Load DJ data from Supabase when authenticated
   useEffect(() => {
     if (isAuthenticated && userId) {
-      loadProfileFromDB(userId);
-    } else if (isAuthenticated && !userId) {
-      // Legacy auth fallback: load first profile via API
-      fetch("/api/admin/profile?first=true")
+      // Ensure profile row exists (idempotent — creates only if missing)
+      fetch("/api/admin/ensure-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
         .then((r) => r.json())
         .then((json) => {
-          if (json.data?.id) {
-            useProfileStore.setState({
-              profileId: json.data.id,
-              profile: {
-                businessName: json.data.business_name ?? "",
-                tagline: json.data.tagline ?? "",
-                bio: json.data.bio ?? "",
-                accentColor: json.data.accent_color ?? "#059cc0",
-                djSlug: json.data.dj_slug ?? "",
-                instagramUrl: json.data.instagram_url ?? "",
-                tiktokUrl: json.data.tiktok_url ?? "",
-                soundcloudUrl: json.data.soundcloud_url ?? "",
-                spotifyUrl: json.data.spotify_url ?? "",
-                youtubeUrl: json.data.youtube_url ?? "",
-                websiteUrl: json.data.website_url ?? "",
-                whatsappNumber: json.data.whatsapp_number ?? "",
-                coverUrl: json.data.cover_url ?? "",
-                logoUrl: json.data.logo_url ?? "",
-                customLinks: Array.isArray(json.data.custom_links) ? json.data.custom_links : [],
-                galleryPhotos: Array.isArray(json.data.gallery_photos) ? json.data.gallery_photos : [],
-                reviews: Array.isArray(json.data.reviews) ? json.data.reviews : [],
-              },
-            });
+          if (json.profile?.id) {
+            useProfileStore.setState({ profileId: json.profile.id });
           }
+          // Redirect staff users to /hq
+          if (json.profile?.role === "staff" || json.profile?.role === "owner") {
+            router.replace("/hq");
+            return;
+          }
+          fetch("/api/admin/access")
+            .then((r) => r.json())
+            .then((accessJson) => {
+              setAccess(accessJson.access || null);
+            })
+            .catch(() => {
+              setAccess(null);
+            });
+          // Load full profile data from DB
+          loadProfileFromDB(userId);
         })
-        .catch(() => { });
+        .catch(() => {
+          // Fallback: try loading directly (profile may already exist)
+          loadProfileFromDB(userId);
+        });
     }
-  }, [isAuthenticated, userId, loadProfileFromDB]);
+  }, [isAuthenticated, userId, loadProfileFromDB, router]);
+
+  useEffect(() => {
+    const allowedTabs = tabs.filter((tab) => {
+      if (!access) return true;
+      if (tab.id === "analytics") return access.features.analytics;
+      if (tab.id === "couples") return access.features.couple_links;
+      return true;
+    });
+
+    if (!allowedTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab("dashboard");
+    }
+  }, [access, activeTab]);
+
+  const visibleTabs = tabs.filter((tab) => {
+    if (!access) return true;
+    if (tab.id === "analytics") return access.features.analytics;
+    if (tab.id === "couples") return access.features.couple_links;
+    return true;
+  });
 
   // Load songs/questions/upsells from Supabase when profile is loaded
   useEffect(() => {
@@ -109,6 +178,7 @@ export default function AdminPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(false);
+    setResetMessage(null);
 
     if (authMode === "legacy") {
       if (!login(password)) {
@@ -131,13 +201,91 @@ export default function AdminPage() {
     }
   };
 
-  if (!isAuthenticated) {
+  const handleForgotPassword = async () => {
+    setError(false);
+
+    if (!supabase) {
+      setResetTone("error");
+      setResetMessage("Supabase is not configured");
+      return;
+    }
+
+    if (!email.trim()) {
+      setResetTone("error");
+      setResetMessage("הזן אימייל כדי לשלוח קישור איפוס");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: typeof window !== "undefined" ? `${window.location.origin}/admin?reset=1` : undefined,
+    });
+    setLoading(false);
+
+    if (error) {
+      setResetTone("error");
+      setResetMessage(error.message);
+      return;
+    }
+
+    setResetTone("success");
+    setResetMessage("שלחנו אליך מייל עם קישור לאיפוס סיסמה");
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(false);
+
+    if (!supabase) {
+      setResetTone("error");
+      setResetMessage("Supabase is not configured");
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setResetTone("error");
+      setResetMessage("הסיסמה החדשה חייבת להכיל לפחות 6 תווים");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setResetTone("error");
+      setResetMessage("הסיסמאות לא תואמות");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setLoading(false);
+
+    if (error) {
+      setResetTone("error");
+      setResetMessage(error.message);
+      return;
+    }
+
+    setResetTone("success");
+    setResetMessage("הסיסמה עודכנה. אפשר להתחבר עכשיו עם הסיסמה החדשה");
+    setIsRecoveryMode(false);
+    setNewPassword("");
+    setConfirmPassword("");
+    setPassword("");
+
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("reset");
+      url.hash = "";
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+
+  if (!isAuthenticated || isRecoveryMode) {
     return (
       <div className="min-h-dvh gradient-hero flex items-center justify-center px-4">
         <motion.form
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          onSubmit={handleLogin}
+          onSubmit={isRecoveryMode ? handleUpdatePassword : handleLogin}
           className="glass-card p-8 w-full max-w-sm text-center"
         >
           <div
@@ -148,12 +296,14 @@ export default function AdminPage() {
           </div>
           <h1 className="text-xl font-bold mb-1">Compakt Admin</h1>
           <p className="text-sm text-secondary mb-6">
-            {authMode === "email"
-              ? isSignUp ? "צרו חשבון DJ חדש" : "התחברו עם אימייל וסיסמה"
-              : "הכניסו סיסמה כדי להיכנס"}
+            {isRecoveryMode
+              ? "בחרו סיסמה חדשה לחשבון שלכם"
+              : authMode === "email"
+                ? isSignUp ? "צרו חשבון DJ חדש" : "התחברו עם אימייל וסיסמה"
+                : "הכניסו סיסמה כדי להיכנס"}
           </p>
 
-          {authMode === "email" && (
+          {authMode === "email" && !isRecoveryMode && (
             <div className="mb-3">
               <input
                 type="email"
@@ -167,34 +317,80 @@ export default function AdminPage() {
             </div>
           )}
 
-          <div className="relative mb-4">
-            <input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="סיסמה"
-              className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm text-foreground placeholder:text-muted focus:outline-none transition-colors pr-11 ${error ? "border-accent-danger" : "border-glass focus:border-brand-blue"
-                }`}
-              autoFocus={authMode === "legacy"}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
-              aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-              title={showPassword ? "הסתר" : "הצג"}
-            >
-              {showPassword ? (
-                <EyeOff className="w-4 h-4" />
-              ) : (
-                <Eye className="w-4 h-4" />
-              )}
-            </button>
-          </div>
+          {isRecoveryMode ? (
+            <>
+              <div className="relative mb-3">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="סיסמה חדשה"
+                  className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors pr-11"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                  aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+                  title={showPassword ? "הסתר" : "הצג"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+              <div className="mb-4">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="אימות סיסמה חדשה"
+                  className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="relative mb-4">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="סיסמה"
+                className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm text-foreground placeholder:text-muted focus:outline-none transition-colors pr-11 ${error ? "border-accent-danger" : "border-glass focus:border-brand-blue"
+                  }`}
+                autoFocus={authMode === "legacy"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+                title={showPassword ? "הסתר" : "הצג"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          )}
 
           {(error || authError) && (
             <p className="text-xs mb-3" style={{ color: "var(--accent-danger)" }}>
               {authError || "סיסמה שגויה"}
+            </p>
+          )}
+
+          {resetMessage && (
+            <p
+              className="text-xs mb-3"
+              style={{ color: resetTone === "error" ? "var(--accent-danger)" : "var(--accent-success)" }}
+            >
+              {resetMessage}
             </p>
           )}
 
@@ -203,10 +399,10 @@ export default function AdminPage() {
             disabled={loading}
             className={`btn-primary w-full ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
           >
-            {loading ? "מתחבר..." : isSignUp ? "הרשמה" : "כניסה"}
+            {loading ? "טוען..." : isRecoveryMode ? "עדכון סיסמה" : isSignUp ? "הרשמה" : "כניסה"}
           </button>
 
-          {authMode === "email" && (
+          {authMode === "email" && !isRecoveryMode && (
             <button
               type="button"
               onClick={() => setIsSignUp((v) => !v)}
@@ -216,7 +412,32 @@ export default function AdminPage() {
             </button>
           )}
 
-          {authMode === "email" && (
+          {authMode === "email" && !isSignUp && !isRecoveryMode && (
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              className="text-xs text-secondary hover:text-brand-blue mt-2 transition-colors"
+            >
+              שכחתי סיסמה
+            </button>
+          )}
+
+          {isRecoveryMode && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsRecoveryMode(false);
+                setNewPassword("");
+                setConfirmPassword("");
+                setResetMessage(null);
+              }}
+              className="text-xs text-secondary hover:text-brand-blue mt-3 transition-colors"
+            >
+              חזרה למסך הכניסה
+            </button>
+          )}
+
+          {authMode === "email" && !isRecoveryMode && (
             <div className="mt-4 pt-4 border-t border-glass space-y-2">
               <p className="text-[11px] text-muted mb-2">או התחברו עם</p>
               <div className="flex gap-2 justify-center">
@@ -257,19 +478,40 @@ export default function AdminPage() {
             </div>
           )}
 
-          <div className="mt-4 pt-4 border-t border-glass">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode((m) => (m === "email" ? "legacy" : "email"));
-                setError(false);
-              }}
-              className="text-[11px] text-muted hover:text-secondary transition-colors"
-            >
-              {authMode === "email" ? "כניסה עם סיסמת מנהל" : "כניסה עם אימייל"}
-            </button>
-          </div>
+          {process.env.NEXT_PUBLIC_ALLOW_LEGACY_LOGIN === "true" && !isRecoveryMode && (
+            <div className="mt-4 pt-4 border-t border-glass">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode((m) => (m === "email" ? "legacy" : "email"));
+                  setError(false);
+                }}
+                className="text-[11px] text-muted hover:text-secondary transition-colors"
+              >
+                {authMode === "email" ? "כניסה עם סיסמת מנהל" : "כניסה עם אימייל"}
+              </button>
+            </div>
+          )}
         </motion.form>
+      </div>
+    );
+  }
+
+  if (access && !access.isActive) {
+    return (
+      <div className="min-h-dvh gradient-hero flex items-center justify-center px-4">
+        <div className="glass-card p-8 w-full max-w-md text-center">
+          <h1 className="text-xl font-bold mb-2">החשבון מושהה</h1>
+          <p className="text-sm text-secondary mb-6">
+            הגישה לחשבון הושהתה כרגע. פנו לצוות Compakt כדי להפעיל מחדש את ההרשאות והפיצ&apos;רים.
+          </p>
+          <button
+            onClick={logout}
+            className="btn-primary w-full"
+          >
+            התנתקות
+          </button>
+        </div>
       </div>
     );
   }
@@ -290,7 +532,7 @@ export default function AdminPage() {
           <div className="flex items-center gap-2">
             {/* Tabs */}
             <nav className="flex gap-1 overflow-x-auto max-w-[70vw] sm:max-w-none scrollbar-hide">
-              {tabs.map((tab) => (
+              {visibleTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAdminStore } from "@/stores/adminStore";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,12 @@ import {
   Wand2,
 } from "lucide-react";
 import type { Song, SongCategory } from "@/lib/types";
+import type { FeatureKey } from "@/lib/access";
+
+type AdminAccess = {
+  isActive: boolean;
+  features: Record<FeatureKey, boolean>;
+};
 
 const categories: { value: SongCategory; label: string }[] = [
   { value: "reception", label: "קבלת פנים" },
@@ -48,6 +54,30 @@ export function SongManager() {
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showSpotifyImport, setShowSpotifyImport] = useState(false);
+  const [access, setAccess] = useState<AdminAccess | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/admin/access", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) {
+          setAccess(data.access || null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAccess(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const canUseSpotifyImport = Boolean(access?.isActive && access.features.spotify_import);
 
   const filtered = songs.filter((s) => {
     const q = search.toLowerCase();
@@ -78,8 +108,10 @@ export function SongManager() {
             תצוגה מקדימה
           </button>
           <button
-            onClick={() => setShowSpotifyImport(true)}
-            className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
+            onClick={() => canUseSpotifyImport && setShowSpotifyImport(true)}
+            disabled={!canUseSpotifyImport}
+            className={`btn-secondary text-sm flex items-center gap-1.5 py-2 px-4 ${!canUseSpotifyImport ? "opacity-50 cursor-not-allowed" : ""}`}
+            title={canUseSpotifyImport ? "ייבוא שירים מ-Spotify" : "פיצ'ר Spotify זמין בתוכנית Premium ומעלה או דרך override ב-HQ"}
           >
             <LinkIcon className="w-4 h-4" />
             Spotify
@@ -155,6 +187,12 @@ export function SongManager() {
           </button>
         </div>
       </div>
+
+      {!canUseSpotifyImport && (
+        <div className="glass-card p-3 text-sm text-muted">
+          ייבוא מ-Spotify חסום כרגע לחשבון הזה. אפשר להפעיל אותו דרך תוכנית תומכת או override ב-HQ.
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">
@@ -316,6 +354,7 @@ export function SongManager() {
             existingSongs={songs}
             onAdd={(data) => addSong(data)}
             onClose={() => setShowSpotifyImport(false)}
+            canUseSpotifyImport={canUseSpotifyImport}
           />
         )}
       </AnimatePresence>
@@ -487,10 +526,12 @@ function SpotifyImportModal({
   existingSongs,
   onAdd,
   onClose,
+  canUseSpotifyImport,
 }: {
   existingSongs: Song[];
   onAdd: (song: Omit<Song, "id" | "sortOrder">) => void;
   onClose: () => void;
+  canUseSpotifyImport: boolean;
 }) {
   const [playlistUrl, setPlaylistUrl] = useState("");
   const [importing, setImporting] = useState(false);
@@ -503,6 +544,11 @@ function SpotifyImportModal({
   >([]);
 
   const handleImport = async () => {
+    if (!canUseSpotifyImport) {
+      setError("ייבוא מ-Spotify לא זמין לחשבון הזה");
+      return;
+    }
+
     const url = playlistUrl.trim();
     if (!url) return;
     setImporting(true);
@@ -519,6 +565,9 @@ function SpotifyImportModal({
         }
         if (msg.includes("Invalid spotify url") || msg.includes("Invalid playlist url")) {
           throw new Error("הלינק לא מזוהה. נסו להדביק לינק של playlist/track מ-open.spotify.com או spotify.link");
+        }
+        if (msg.includes("Feature not enabled for this account")) {
+          throw new Error("ייבוא מ-Spotify לא זמין לחשבון הזה");
         }
         if (msg.includes("No tracks found")) {
           throw new Error("לא נמצאו שירים בלינק הזה");
@@ -574,13 +623,22 @@ function SpotifyImportModal({
   };
 
   const loadPlaylists = async () => {
+    if (!canUseSpotifyImport) {
+      setError("ייבוא מ-Spotify לא זמין לחשבון הזה");
+      return;
+    }
+
     setPlaylistsLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/spotify/me/playlists", { cache: "no-store" });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "Failed");
+        const msg = (text || "Failed").trim();
+        if (msg.includes("Feature not enabled for this account")) {
+          throw new Error("ייבוא מ-Spotify לא זמין לחשבון הזה");
+        }
+        throw new Error(msg);
       }
       const data = (await res.json()) as {
         connected: boolean;
@@ -596,6 +654,11 @@ function SpotifyImportModal({
   };
 
   const importPlaylistById = async (id: string) => {
+    if (!canUseSpotifyImport) {
+      setError("ייבוא מ-Spotify לא זמין לחשבון הזה");
+      return;
+    }
+
     setImporting(true);
     setResult(null);
     setError(null);
@@ -606,6 +669,9 @@ function SpotifyImportModal({
         const msg = (text || "Import failed").trim();
         if (res.status === 401) {
           throw new Error("לא מחובר ל-Spotify. לחצו על 'התחבר עם Spotify'");
+        }
+        if (msg.includes("Feature not enabled for this account")) {
+          throw new Error("ייבוא מ-Spotify לא זמין לחשבון הזה");
         }
         throw new Error(msg);
       }
@@ -679,7 +745,7 @@ function SpotifyImportModal({
         <div className="flex items-center gap-2 flex-wrap">
           <a
             href={`/api/spotify/connect?returnTo=${encodeURIComponent("/admin")}`}
-            className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
+            className={`btn-primary text-sm flex items-center gap-1.5 py-2 px-4 ${!canUseSpotifyImport ? "opacity-50 pointer-events-none" : ""}`}
           >
             <LogIn className="w-4 h-4" />
             התחבר עם Spotify
@@ -688,7 +754,7 @@ function SpotifyImportModal({
             type="button"
             onClick={loadPlaylists}
             className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
-            disabled={playlistsLoading}
+            disabled={playlistsLoading || !canUseSpotifyImport}
           >
             <ListMusic className="w-4 h-4" />
             {playlistsLoading ? "טוען..." : "טען פלייליסטים"}
@@ -762,8 +828,8 @@ function SpotifyImportModal({
           <button
             type="button"
             onClick={handleImport}
-            disabled={importing || !playlistUrl.trim()}
-            className={`btn-primary flex-1 ${importing || !playlistUrl.trim() ? "opacity-60 cursor-not-allowed" : ""}`}
+            disabled={importing || !playlistUrl.trim() || !canUseSpotifyImport}
+            className={`btn-primary flex-1 ${importing || !playlistUrl.trim() || !canUseSpotifyImport ? "opacity-60 cursor-not-allowed" : ""}`}
           >
             {importing ? "מייבא..." : "ייבא"}
           </button>

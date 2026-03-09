@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 interface AdminStore {
   isAuthenticated: boolean;
   userId: string | null;
+  userEmail: string | null;
   authError: string | null;
   songs: Song[];
   questions: Question[];
@@ -44,18 +45,25 @@ interface AdminStore {
 }
 
 const ADMIN_PASSWORD = "compakt2024";
+const LEGACY_LOGIN_ALLOWED =
+  process.env.NEXT_PUBLIC_ALLOW_LEGACY_LOGIN === "true";
 
 export const useAdminStore = create<AdminStore>()(
   persist(
     (set, get) => ({
       isAuthenticated: false,
       userId: null,
+      userEmail: null,
       authError: null,
       songs: defaultSongs,
       questions: defaultQuestions,
       upsells: defaultUpsells,
 
       login: (password) => {
+        if (!LEGACY_LOGIN_ALLOWED) {
+          set({ authError: "Legacy login is disabled. Use email/password." });
+          return false;
+        }
         if (password === ADMIN_PASSWORD) {
           set({ isAuthenticated: true, authError: null });
           return true;
@@ -75,7 +83,7 @@ export const useAdminStore = create<AdminStore>()(
           set({ authError: error.message });
           return false;
         }
-        set({ isAuthenticated: true, userId: data.user?.id ?? null, authError: null });
+        set({ isAuthenticated: true, userId: data.user?.id ?? null, userEmail: data.user?.email ?? null, authError: null });
         return true;
       },
 
@@ -108,7 +116,7 @@ export const useAdminStore = create<AdminStore>()(
           return false;
         }
         if (data.user) {
-          set({ isAuthenticated: true, userId: data.user.id, authError: null });
+          set({ isAuthenticated: true, userId: data.user.id, userEmail: data.user.email ?? null, authError: null });
         }
         return true;
       },
@@ -117,7 +125,7 @@ export const useAdminStore = create<AdminStore>()(
         if (!supabase) return;
         const { data } = await supabase.auth.getSession();
         if (data.session?.user) {
-          set({ isAuthenticated: true, userId: data.session.user.id });
+          set({ isAuthenticated: true, userId: data.session.user.id, userEmail: data.session.user.email ?? null });
         }
       },
 
@@ -125,7 +133,7 @@ export const useAdminStore = create<AdminStore>()(
         if (supabase) {
           supabase.auth.signOut().then(() => { });
         }
-        set({ isAuthenticated: false, userId: null, authError: null });
+        set({ isAuthenticated: false, userId: null, userEmail: null, authError: null });
       },
 
       // Songs
@@ -375,7 +383,7 @@ export const useAdminStore = create<AdminStore>()(
             const res = await fetch("/api/admin/ensure-defaults", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ profileId }),
+              body: JSON.stringify({}),
             });
             const result = await res.json();
 

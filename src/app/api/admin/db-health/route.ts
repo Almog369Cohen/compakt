@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 export const runtime = "nodejs";
 
@@ -15,13 +16,49 @@ interface HealthCheck {
  *
  * Automated DB health check. Returns list of checks with pass/fail/warn.
  */
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const profileId = searchParams.get("profileId");
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+    const profileId = auth.profileId || null;
 
     const supabase = getServiceSupabase();
     const checks: HealthCheck[] = [];
+
+    // 0. Profile integrity checks (global)
+    try {
+      const { count: missingUserIdCount } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .is("user_id", null);
+      checks.push({
+        name: "profiles_have_user_id",
+        status: (missingUserIdCount ?? 0) === 0 ? "pass" : "warn",
+        detail: (missingUserIdCount ?? 0) === 0
+          ? "All profiles have user_id"
+          : `${missingUserIdCount} profiles have NULL user_id (legacy/manual profiles)`,
+        count: missingUserIdCount ?? 0,
+      });
+
+      const { count: missingSlugCount } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .or("dj_slug.is.null,dj_slug.eq.");
+      checks.push({
+        name: "profiles_have_dj_slug",
+        status: (missingSlugCount ?? 0) === 0 ? "pass" : "warn",
+        detail: (missingSlugCount ?? 0) === 0
+          ? "All profiles have dj_slug"
+          : `${missingSlugCount} profiles have empty dj_slug (not publishable)`,
+        count: missingSlugCount ?? 0,
+      });
+    } catch {
+      checks.push({
+        name: "profiles_integrity",
+        status: "warn",
+        detail: "Could not run profile integrity checks",
+      });
+    }
 
     // 1. Tables exist
     const tables = ["profiles", "events", "answers", "swipes", "requests", "songs", "questions", "upsells"];
@@ -106,11 +143,6 @@ export async function GET(req: Request) {
     // 3. Global integrity checks
 
     // Orphan answers (event_id points to non-existent event)
-    const { data: orphanAnswers } = await supabase
-      .from("answers")
-      .select("id, event_id")
-      .not("event_id", "in", `(SELECT id FROM events)`)
-      .limit(5);
     // Use a different approach since subquery isn't supported in PostgREST
     const { data: allAnswerEventIds } = await supabase.from("answers").select("event_id");
     const { data: allEventIds } = await supabase.from("events").select("id");
@@ -162,23 +194,23 @@ export async function GET(req: Request) {
 
         const missingPhoneCount = (sessionEvents || []).filter((e) => !e.phone_number).length;
         checks.push({
-          name: "verified_sessions_have_phone",
+          name: "verified_sessions_have_contact",
           status: missingPhoneCount === 0 ? "pass" : "warn",
           detail: missingPhoneCount === 0
-            ? "All verified sessions have phone on event"
+            ? "All verified sessions have contact info on event"
             : `${missingPhoneCount} verified sessions but event.phone_number is NULL`,
           count: missingPhoneCount,
         });
       } else {
         checks.push({
-          name: "verified_sessions_have_phone",
+          name: "verified_sessions_have_contact",
           status: "pass",
           detail: "No verified sessions yet",
         });
       }
     } catch {
       checks.push({
-        name: "verified_sessions_have_phone",
+        name: "verified_sessions_have_contact",
         status: "warn",
         detail: "event_sessions table not available (run migration 016)",
       });

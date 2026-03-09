@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
+import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 
 export const runtime = "nodejs";
 
@@ -62,6 +64,9 @@ export async function POST(req: Request) {
  */
 export async function GET(req: Request) {
   try {
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+
     const { searchParams } = new URL(req.url);
     const djId = searchParams.get("djId");
     const from = searchParams.get("from");
@@ -73,6 +78,15 @@ export async function GET(req: Request) {
     }
 
     const supabase = getServiceSupabase();
+    const { profile, access } = await loadResolvedAccessByUserId(supabase, auth.userId);
+
+    if (!access || !hasFeature(access, "analytics")) {
+      return NextResponse.json({ error: "Feature not enabled for this account" }, { status: 403 });
+    }
+
+    if (djId && profile?.id && djId !== profile.id && access.role !== "staff" && access.role !== "owner") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     let query = supabase
       .from("analytics_events")
@@ -116,10 +130,9 @@ function computeStats(events: AnalyticsRow[]) {
   const coupleEvents = events.filter((e) => e.category === "couple");
   const adminEvents = events.filter((e) => e.category === "admin");
 
-  // Funnel: link_open → session_start → stage_1 → stage_2 → stage_3 → session_complete
   const funnelSteps = [
     "link_open",
-    "phone_verified",
+    "contact_verified",
     "session_start",
     "stage_enter_1",
     "stage_enter_2",
@@ -130,7 +143,10 @@ function computeStats(events: AnalyticsRow[]) {
 
   const funnel = funnelSteps.map((step) => ({
     step,
-    count: coupleEvents.filter((e) => e.event_name === step).length,
+    count:
+      step === "contact_verified"
+        ? coupleEvents.filter((e) => e.event_name === "phone_verified" || e.event_name === "email_verified").length
+        : coupleEvents.filter((e) => e.event_name === step).length,
   }));
 
   // Breakpoints: stages where people drop off
@@ -154,8 +170,8 @@ function computeStats(events: AnalyticsRow[]) {
     dropRate:
       stageEnters[stage] > 0
         ? Math.round(
-            ((stageEnters[stage] - (stageCompletes[stage] || 0)) / stageEnters[stage]) * 100
-          )
+          ((stageEnters[stage] - (stageCompletes[stage] || 0)) / stageEnters[stage]) * 100
+        )
         : 0,
   }));
 

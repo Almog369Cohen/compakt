@@ -159,7 +159,7 @@ describe("Phone OTP Flow", () => {
     const res = await fetch(`${BASE}/api/auth/phone/send-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: "0501234567", eventId }),
+      body: JSON.stringify({ email: "couple+send@example.com", eventId }),
     });
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -175,7 +175,7 @@ describe("Phone OTP Flow", () => {
     const sendRes = await fetch(`${BASE}/api/auth/phone/send-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: "0509999999", eventId }),
+      body: JSON.stringify({ email: "couple+verify@example.com", eventId }),
     });
     const sendData = await sendRes.json();
     const otp = sendData.devOtp;
@@ -185,7 +185,7 @@ describe("Phone OTP Flow", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        phone: "0509999999",
+        email: "couple+verify@example.com",
         otp,
         sessionId: sendData.sessionId,
       }),
@@ -213,18 +213,18 @@ describe("Duplicate Phone Handling", () => {
   });
 
   it("same phone + same event = same session (upsert)", async () => {
-    const phone = "0501111111";
+    const email = "same+session@example.com";
     const res1 = await fetch(`${BASE}/api/auth/phone/send-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, eventId }),
+      body: JSON.stringify({ email, eventId }),
     });
     const data1 = await res1.json();
 
     const res2 = await fetch(`${BASE}/api/auth/phone/send-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, eventId }),
+      body: JSON.stringify({ email, eventId }),
     });
     const data2 = await res2.json();
 

@@ -1,47 +1,21 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 export const runtime = "nodejs";
 
-/** GET /api/admin/profile?userId=xxx  — load profile by user_id */
-export async function GET(req: Request) {
+/** GET /api/admin/profile  — load own profile (session-scoped) */
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-    const slug = searchParams.get("slug");
-    const first = searchParams.get("first");
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
 
     const supabase = getServiceSupabase();
-
-    if (slug) {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("dj_slug", slug)
-        .single();
-      if (error) return NextResponse.json({ error: error.message }, { status: 404 });
-      return NextResponse.json(data);
-    }
-
-    // Legacy auth fallback: return first available profile
-    if (first === "true") {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      return NextResponse.json({ data: data || null });
-    }
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId or slug required" }, { status: 400 });
-    }
 
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", auth.userId)
       .single();
 
     if (error || !data) {
@@ -54,11 +28,14 @@ export async function GET(req: Request) {
   }
 }
 
-/** POST /api/admin/profile — upsert profile */
+/** POST /api/admin/profile — upsert own profile (session-scoped) */
 export async function POST(req: Request) {
   try {
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+
     const body = await req.json();
-    const { userId, profileId, row } = body;
+    const { row } = body;
 
     if (!row) {
       return NextResponse.json({ error: "Missing row data" }, { status: 400 });
@@ -66,12 +43,12 @@ export async function POST(req: Request) {
 
     const supabase = getServiceSupabase();
 
-    // Try update by profileId first
-    if (profileId) {
+    // Always scope to the authenticated user's profile
+    if (auth.profileId) {
       const { data, error } = await supabase
         .from("profiles")
         .update(row)
-        .eq("id", profileId)
+        .eq("id", auth.profileId)
         .select("id")
         .single();
       if (!error && data?.id) {
@@ -79,31 +56,29 @@ export async function POST(req: Request) {
       }
     }
 
-    // Try find by userId and update
-    if (userId) {
-      const { data: existing } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .limit(1)
-        .maybeSingle();
+    // Fallback: find by userId and update
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", auth.userId)
+      .limit(1)
+      .maybeSingle();
 
-      if (existing?.id) {
-        const { data, error } = await supabase
-          .from("profiles")
-          .update(row)
-          .eq("id", existing.id)
-          .select("id")
-          .single();
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ profileId: data?.id });
-      }
+    if (existing?.id) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .update(row)
+        .eq("id", existing.id)
+        .select("id")
+        .single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ profileId: data?.id });
     }
 
-    // Insert new
+    // Insert new (with user_id attached)
     const { data, error } = await supabase
       .from("profiles")
-      .insert(row)
+      .insert({ ...row, user_id: auth.userId })
       .select("id")
       .single();
 

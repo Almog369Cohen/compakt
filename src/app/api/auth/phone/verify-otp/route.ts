@@ -12,7 +12,10 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request) {
   try {
-    const { sessionId, otp } = await req.json();
+    const { sessionId, otp, email, phone } = await req.json();
+    const normalizedIdentity = typeof (email || phone) === "string"
+      ? String(email || phone).trim().toLowerCase()
+      : null;
 
     if (!sessionId || !otp) {
       return NextResponse.json({ error: "חסר קוד או מזהה סשן" }, { status: 400 });
@@ -39,6 +42,10 @@ export async function POST(req: Request) {
     // Verify OTP
     if (session.otp_code !== otp.trim()) {
       return NextResponse.json({ error: "קוד שגוי" }, { status: 401 });
+    }
+
+    if (normalizedIdentity && String(session.phone_number || "").trim().toLowerCase() !== normalizedIdentity) {
+      return NextResponse.json({ error: "פרטי האימות לא תואמים לסשן" }, { status: 401 });
     }
 
     // Mark verified

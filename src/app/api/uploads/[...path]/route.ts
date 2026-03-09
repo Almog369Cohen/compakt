@@ -3,10 +3,10 @@ import { Readable } from "node:stream";
 
 export const runtime = "nodejs";
 
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name}`);
-  return v;
+function requireBucketName(): string {
+  const value = process.env.GCS_BUCKET || process.env.GCS_BUCKET_NAME;
+  if (!value) throw new Error("Missing GCS_BUCKET");
+  return value;
 }
 
 export async function GET(
@@ -14,7 +14,7 @@ export async function GET(
   ctx: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const bucketName = requireEnv("GCS_BUCKET");
+    const bucketName = requireBucketName();
     const { path } = await ctx.params;
 
     const objectName = path.join("/");

@@ -2,13 +2,13 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, ArrowLeft, Loader2, CheckCircle, RotateCcw } from "lucide-react";
+import { Mail, ArrowLeft, Loader2, CheckCircle, RotateCcw } from "lucide-react";
 
 interface PhoneGateProps {
   eventId: string;
   onVerified: (data: {
     sessionId: string;
-    phone: string;
+    email: string;
     resumeData: {
       answers: Record<string, unknown>[];
       swipes: Record<string, unknown>[];
@@ -23,7 +23,7 @@ type Step = "phone" | "otp" | "verified";
 
 export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
   const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [sessionId, setSessionId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,8 +41,9 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
   }, [countdown]);
 
   const handleSendOtp = async () => {
-    if (!phone.trim() || phone.replace(/\D/g, "").length < 9) {
-      setError("הזינו מספר טלפון תקין");
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("הזינו כתובת מייל תקינה");
       return;
     }
 
@@ -53,7 +54,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
       const res = await fetch("/api/auth/phone/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, eventId }),
+        body: JSON.stringify({ email: normalizedEmail, eventId }),
       });
       const data = await res.json();
 
@@ -88,7 +89,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
       const res = await fetch("/api/auth/phone/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, otp: code }),
+        body: JSON.stringify({ sessionId, otp: code, email: email.trim().toLowerCase() }),
       });
       const data = await res.json();
 
@@ -103,7 +104,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
       setTimeout(() => {
         onVerified({
           sessionId: data.sessionId,
-          phone,
+          email: email.trim().toLowerCase(),
           resumeData: data.resumeData,
         });
       }, 800);
@@ -183,7 +184,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
                   className="inline-flex items-center justify-center w-14 h-14 rounded-full mb-3"
                   style={{ background: "linear-gradient(135deg, #059cc0, #03b28c)" }}
                 >
-                  <Phone className="w-7 h-7 text-white" />
+                  <Mail className="w-7 h-7 text-white" />
                 </motion.div>
                 <h2 className="text-xl font-bold mb-1">!ברוכים הבאים</h2>
                 {djName && (
@@ -192,23 +193,23 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
                   </p>
                 )}
                 <p className="text-xs text-muted">
-                  הזינו מספר טלפון כדי לשמור את ההתקדמות ולחזור בכל זמן
+                  הזינו מייל כדי לקבל קוד אימות, לשמור התקדמות ולחזור בכל זמן
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <input
-                    type="tel"
-                    value={phone}
+                    type="email"
+                    value={email}
                     onChange={(e) => {
-                      setPhone(e.target.value);
+                      setEmail(e.target.value);
                       setError(null);
                     }}
                     onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
-                    placeholder="050-1234567"
+                    placeholder="you@example.com"
                     dir="ltr"
-                    className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-center text-lg tracking-wider focus:outline-none focus:border-brand-blue transition-colors"
+                    className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-center text-base focus:outline-none focus:border-brand-blue transition-colors"
                     autoFocus
                   />
                 </div>
@@ -233,7 +234,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      שלחו קוד
+                      שלחו קוד למייל
                       <ArrowLeft className="w-4 h-4" />
                     </>
                   )}
@@ -254,7 +255,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
                 <h2 className="text-xl font-bold mb-1">הזינו את הקוד</h2>
                 <p className="text-xs text-muted">
                   שלחנו קוד בן 6 ספרות ל-{" "}
-                  <span className="font-mono text-brand-blue" dir="ltr">{phone}</span>
+                  <span className="font-mono text-brand-blue" dir="ltr">{email}</span>
                 </p>
               </div>
 
@@ -303,7 +304,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
                   onClick={() => { setStep("phone"); setError(null); }}
                   className="text-xs text-muted hover:text-brand-blue transition-colors ml-4"
                 >
-                  שינוי מספר
+                  שינוי מייל
                 </button>
                 {countdown > 0 ? (
                   <span className="text-xs text-muted">
@@ -315,7 +316,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
                     className="text-xs text-brand-blue hover:underline flex items-center gap-1 mx-auto"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    שלחו שוב
+                    שלחו שוב למייל
                   </button>
                 )}
               </div>

@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/supabase";
 import { defaultSongs } from "@/data/songs";
 import { defaultQuestions } from "@/data/questions";
 import { defaultUpsells } from "@/data/upsells";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 export const runtime = "nodejs";
 
@@ -14,12 +15,13 @@ export const runtime = "nodejs";
  * If any are empty, seeds them from the default templates.
  * Returns what was seeded.
  */
-export async function POST(req: Request) {
+export async function POST() {
   try {
-    const { profileId } = await req.json();
-
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+    const profileId = auth.profileId;
     if (!profileId) {
-      return NextResponse.json({ error: "Missing profileId" }, { status: 400 });
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
     const supabase = getServiceSupabase();

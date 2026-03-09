@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
+import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 
 export const runtime = "nodejs";
 
@@ -7,7 +9,15 @@ const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "dj-media";
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+
     const supabase = getServiceSupabase();
+    const { access } = await loadResolvedAccessByUserId(supabase, auth.userId);
+    if (!access || !hasFeature(access, "image_uploads")) {
+      return NextResponse.json({ error: "Feature not enabled for this account" }, { status: 403 });
+    }
+
     const form = await req.formData();
 
     const file = form.get("file");
@@ -16,7 +26,7 @@ export async function POST(req: Request) {
     }
 
     const folder = String(form.get("folder") || "gallery");
-    const userId = String(form.get("userId") || "anonymous");
+    const userId = auth.userId;
 
     // Validate
     if (!file.type.startsWith("image/")) {

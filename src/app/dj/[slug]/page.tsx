@@ -11,7 +11,6 @@ import type { ProfileState } from "@/stores/profileStore";
 export default function DJPublicPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const storeProfile = useProfileStore((s) => s.profile);
   const loadProfileBySlug = useProfileStore((s) => s.loadProfileBySlug);
   const [profile, setProfile] = useState<ProfileState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,17 +27,15 @@ export default function DJPublicPage() {
         return;
       }
 
-      // Fallback to localStorage
       if (!cancelled) {
-        const isMatch = storeProfile.djSlug === slug;
-        setProfile(isMatch ? storeProfile : null);
+        setProfile(null);
         setLoading(false);
       }
     }
 
     load();
     return () => { cancelled = true; };
-  }, [slug, storeProfile, loadProfileBySlug]);
+  }, [slug, loadProfileBySlug]);
 
   if (loading) {
     return (

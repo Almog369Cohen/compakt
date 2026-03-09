@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Calendar,
   Plus,
@@ -22,6 +23,12 @@ import { useEventsStore, type DJEvent } from "@/stores/eventsStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { ImageUploader } from "@/components/ui/ImageUploader";
 import { useAdminStore } from "@/stores/adminStore";
+import type { FeatureKey } from "@/lib/access";
+
+type AdminAccess = {
+  isActive: boolean;
+  features: Record<FeatureKey, boolean>;
+};
 
 const STATUS_OPTIONS: { value: DJEvent["status"]; label: string; color: string }[] = [
   { value: "upcoming", label: "קרוב", color: "#059cc0" },
@@ -33,6 +40,7 @@ const STATUS_OPTIONS: { value: DJEvent["status"]; label: string; color: string }
 export function EventsManager() {
   const profileId = useProfileStore((s) => s.profileId);
   const userId = useAdminStore((s) => s.userId);
+  const router = useRouter();
   const { events, loading, error, loadEvents, createEvent, updateEvent, deleteEvent, addScreenshot, removeScreenshot } =
     useEventsStore();
 
@@ -42,20 +50,78 @@ export function EventsManager() {
   const [creating, setCreating] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [access, setAccess] = useState<AdminAccess | null>(null);
 
   useEffect(() => {
     if (profileId) loadEvents(profileId);
   }, [profileId, loadEvents]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/admin/access", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) {
+          setAccess(data.access || null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAccess(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const canUseGoogleCalendar = Boolean(access?.isActive && access.features.google_calendar_sync);
+  const canUseImageUploads = Boolean(access?.isActive && access.features.image_uploads);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const gcal = params.get("gcal");
+    const reason = params.get("reason");
+
+    if (!gcal) return;
+
+    if (gcal === "success") {
+      setSyncMsg("Google Calendar חובר בהצלחה");
+    } else {
+      const reasonMap: Record<string, string> = {
+        missing_params: "חסרים פרמטרים בתהליך החיבור ל-Google Calendar",
+        not_configured: "Google Calendar עדיין לא מוגדר בפרודקשן",
+        token_exchange: "נכשל חילוף ה-token מול Google",
+        save_failed: "שמירת פרטי החיבור ל-Google Calendar נכשלה",
+        unknown: "אירעה שגיאה לא צפויה בחיבור ל-Google Calendar",
+        state_mismatch: "אימות החיבור ל-Google Calendar נכשל. נסו להתחבר שוב",
+      };
+      setSyncMsg(`שגיאה: ${reasonMap[reason || ""] || "חיבור Google Calendar נכשל"}`);
+    }
+
+    params.delete("gcal");
+    params.delete("reason");
+    const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+    router.replace(nextUrl);
+  }, [router]);
+
   const handleSync = async (direction: "pull" | "push" | "both") => {
-    if (!userId) return;
+    if (!canUseGoogleCalendar) {
+      setSyncMsg("Google Calendar לא זמין לחשבון הזה");
+      return;
+    }
+
     setSyncing(true);
     setSyncMsg(null);
     try {
       const res = await fetch("/api/gcal/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, direction }),
+        body: JSON.stringify({ direction }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -72,8 +138,12 @@ export function EventsManager() {
   };
 
   const handleConnectGCal = () => {
-    if (!userId) return;
-    window.location.href = `/api/gcal/connect?userId=${userId}`;
+    if (!canUseGoogleCalendar) {
+      setSyncMsg("Google Calendar לא זמין לחשבון הזה");
+      return;
+    }
+
+    window.location.href = "/api/gcal/connect";
   };
 
   const handleCreate = async () => {
@@ -184,18 +254,18 @@ export function EventsManager() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleConnectGCal}
-            disabled={!userId}
-            className="btn-secondary text-sm flex items-center gap-2 py-2.5 px-4"
-            title="חברו את Google Calendar"
+            disabled={!userId || !canUseGoogleCalendar}
+            className={`btn-secondary text-sm flex items-center gap-2 py-2.5 px-4 ${!canUseGoogleCalendar ? "opacity-50 cursor-not-allowed" : ""}`}
+            title={canUseGoogleCalendar ? "חברו את Google Calendar" : "Google Calendar זמין בתוכנית Pro ומעלה או דרך override ב-HQ"}
           >
             <Link className="w-4 h-4" />
             <span className="hidden sm:inline">חבר Google Calendar</span>
           </button>
           <button
             onClick={() => handleSync("both")}
-            disabled={syncing || !userId}
-            className={`btn-secondary text-sm flex items-center gap-2 py-2.5 px-4 ${syncing ? "opacity-70" : ""}`}
-            title="סנכרן עם Google Calendar"
+            disabled={syncing || !userId || !canUseGoogleCalendar}
+            className={`btn-secondary text-sm flex items-center gap-2 py-2.5 px-4 ${syncing || !canUseGoogleCalendar ? "opacity-70" : ""}`}
+            title={canUseGoogleCalendar ? "סנכרן עם Google Calendar" : "Google Calendar זמין בתוכנית Pro ומעלה או דרך override ב-HQ"}
           >
             {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             <span className="hidden sm:inline">{syncing ? "מסנכרן..." : "סנכרן"}</span>
@@ -214,6 +284,18 @@ export function EventsManager() {
       {syncMsg && (
         <div className="glass-card p-3 text-sm text-center text-secondary">
           {syncMsg}
+        </div>
+      )}
+
+      {!canUseGoogleCalendar && (
+        <div className="glass-card p-3 text-sm text-muted">
+          חיבור וסנכרון עם Google Calendar חסומים כרגע לחשבון הזה. אפשר להפעיל אותם דרך תוכנית תומכת או override ב-HQ.
+        </div>
+      )}
+
+      {!canUseImageUploads && (
+        <div className="glass-card p-3 text-sm text-muted">
+          העלאת צילומי מסך חסומה כרגע לחשבון הזה. אפשר להפעיל אותה דרך תוכנית תומכת או override ב-HQ.
         </div>
       )}
 
@@ -257,6 +339,7 @@ export function EventsManager() {
               onDraftChange={setDraft}
               onScreenshotUpload={(urls) => handleScreenshotUpload(event.id, urls)}
               onScreenshotRemove={(urls) => handleScreenshotRemove(event.id, urls)}
+              canUseImageUploads={canUseImageUploads}
             />
           ))}
         </div>
@@ -284,6 +367,7 @@ export function EventsManager() {
               onDraftChange={setDraft}
               onScreenshotUpload={(urls) => handleScreenshotUpload(event.id, urls)}
               onScreenshotRemove={(urls) => handleScreenshotRemove(event.id, urls)}
+              canUseImageUploads={canUseImageUploads}
             />
           ))}
         </div>
@@ -318,6 +402,7 @@ interface EventCardProps {
   onDraftChange: (d: Partial<DJEvent>) => void;
   onScreenshotUpload: (urls: string[]) => void;
   onScreenshotRemove: (urls: string[]) => void;
+  canUseImageUploads: boolean;
 }
 
 function EventCard({
@@ -336,6 +421,7 @@ function EventCard({
   onDraftChange,
   onScreenshotUpload,
   onScreenshotRemove,
+  canUseImageUploads,
 }: EventCardProps) {
   const statusOption = STATUS_OPTIONS.find((s) => s.value === event.status);
 
@@ -501,7 +587,7 @@ function EventCard({
               <ImageIcon className="w-3.5 h-3.5 text-brand-blue" />
               צילומי מסך וואטסאפ (הוכחה חברתית)
             </h4>
-            {userId ? (
+            {userId && canUseImageUploads ? (
               <ImageUploader
                 images={screenshotUrls}
                 onChange={(newUrls) => {
@@ -516,6 +602,8 @@ function EventCard({
                 maxImages={20}
                 folder="screenshots"
               />
+            ) : userId ? (
+              <p className="text-xs text-muted">העלאת תמונות לא זמינה לחשבון הזה</p>
             ) : (
               <p className="text-xs text-muted">התחברו עם אימייל כדי להעלות תמונות</p>
             )}

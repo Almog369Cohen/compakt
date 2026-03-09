@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { getServiceSupabase } from "@/lib/supabase";
+import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
+import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 type SpotifyEntity =
   | { type: "playlist"; id: string }
@@ -87,6 +90,16 @@ async function getAccessToken(): Promise<string> {
 }
 
 export async function GET(req: Request) {
+  const auth = await requireAuth();
+  if (isAuthError(auth)) return auth;
+
+  const supabase = getServiceSupabase();
+  const { access } = await loadResolvedAccessByUserId(supabase, auth.userId);
+
+  if (!access || !hasFeature(access, "spotify_import")) {
+    return new NextResponse("Feature not enabled for this account", { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
   const raw = searchParams.get("url") || "";
   const normalized = normalizeInput(raw);
