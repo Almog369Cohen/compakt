@@ -156,7 +156,7 @@ describe("Phone OTP Flow", () => {
   });
 
   it("send-otp returns success with dev OTP", async () => {
-    const res = await fetch(`${BASE}/api/auth/phone/send-otp`, {
+    const res = await fetch(`${BASE}/api/auth/email/send-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "couple+send@example.com", eventId }),
@@ -172,7 +172,7 @@ describe("Phone OTP Flow", () => {
 
   it("verify-otp with correct code succeeds", async () => {
     // First get the OTP
-    const sendRes = await fetch(`${BASE}/api/auth/phone/send-otp`, {
+    const sendRes = await fetch(`${BASE}/api/auth/email/send-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "couple+verify@example.com", eventId }),
@@ -181,7 +181,7 @@ describe("Phone OTP Flow", () => {
     const otp = sendData.devOtp;
     if (!otp) return; // Skip if no dev OTP
 
-    const verifyRes = await fetch(`${BASE}/api/auth/phone/verify-otp`, {
+    const verifyRes = await fetch(`${BASE}/api/auth/email/verify-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -214,14 +214,14 @@ describe("Duplicate Phone Handling", () => {
 
   it("same phone + same event = same session (upsert)", async () => {
     const email = "same+session@example.com";
-    const res1 = await fetch(`${BASE}/api/auth/phone/send-otp`, {
+    const res1 = await fetch(`${BASE}/api/auth/email/send-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, eventId }),
     });
     const data1 = await res1.json();
 
-    const res2 = await fetch(`${BASE}/api/auth/phone/send-otp`, {
+    const res2 = await fetch(`${BASE}/api/auth/email/send-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, eventId }),

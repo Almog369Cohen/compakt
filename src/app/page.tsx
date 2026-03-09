@@ -7,7 +7,7 @@ import { QuestionFlow } from "@/components/stages/QuestionFlow";
 import { SongTinder } from "@/components/stages/SongTinder";
 import { DreamsRequests } from "@/components/stages/DreamsRequests";
 import { MusicBrief } from "@/components/stages/MusicBrief";
-import { PhoneGate } from "@/components/auth/PhoneGate";
+import { EmailGate } from "@/components/auth/PhoneGate";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { StageNav } from "@/components/ui/StageNav";
 import { HydrationGuard } from "@/components/ui/HydrationGuard";
@@ -122,7 +122,7 @@ function JourneyApp() {
 
   // Couple auth state
   const [pendingToken, setPendingToken] = useState<string | null>(null);
-  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const resumeDataRef = useRef<RawResumeData | null>(null);
@@ -229,7 +229,7 @@ function JourneyApp() {
       if (stored) {
         // Already verified — load event directly
         loadEvent(token);
-        setPhoneVerified(true);
+        setEmailVerified(true);
         setSessionId(stored);
         track("link_open", { returning: true });
       } else {
@@ -253,13 +253,13 @@ function JourneyApp() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  const handlePhoneVerified = useCallback((data: {
+  const handleEmailVerified = useCallback((data: {
     sessionId: string;
     email: string;
     resumeData: RawResumeData | null;
   }) => {
     setSessionId(data.sessionId);
-    setPhoneVerified(true);
+    setEmailVerified(true);
     track("email_verified", { emailDomain: data.email.includes("@") ? data.email.split("@")[1] : undefined });
 
     // Store session for page refreshes
@@ -300,17 +300,16 @@ function JourneyApp() {
     }
   };
 
-  // Show phone gate for new token visits
-  if (pendingToken && !phoneVerified) {
+  if (pendingToken && !emailVerified) {
     return (
       <main className="min-h-dvh gradient-hero relative">
         <div className="fixed top-4 left-4 z-50">
           <ThemeToggle />
         </div>
         <div className="flex items-center justify-center min-h-dvh px-4 py-16">
-          <PhoneGate
+          <EmailGate
             eventId={pendingToken}
-            onVerified={handlePhoneVerified}
+            onVerified={handleEmailVerified}
           />
         </div>
       </main>

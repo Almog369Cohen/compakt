@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ArrowLeft, Loader2, CheckCircle, RotateCcw } from "lucide-react";
 
-interface PhoneGateProps {
+interface EmailGateProps {
   eventId: string;
   onVerified: (data: {
     sessionId: string;
@@ -19,10 +19,10 @@ interface PhoneGateProps {
   djName?: string;
 }
 
-type Step = "phone" | "otp" | "verified";
+type Step = "email" | "otp" | "verified";
 
-export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
-  const [step, setStep] = useState<Step>("phone");
+export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [sessionId, setSessionId] = useState("");
@@ -51,7 +51,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
     setError(null);
 
     try {
-      const res = await fetch("/api/auth/phone/send-otp", {
+      const res = await fetch("/api/auth/email/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalizedEmail, eventId }),
@@ -86,7 +86,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
     setError(null);
 
     try {
-      const res = await fetch("/api/auth/phone/verify-otp", {
+      const res = await fetch("/api/auth/email/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, otp: code, email: email.trim().toLowerCase() }),
@@ -168,10 +168,9 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
     >
       <div className="glass-card p-6 sm:p-8">
         <AnimatePresence mode="wait">
-          {/* Step 1: Phone Input */}
-          {step === "phone" && (
+          {step === "email" && (
             <motion.div
-              key="phone"
+              key="email"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -301,7 +300,7 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
 
               <div className="text-center">
                 <button
-                  onClick={() => { setStep("phone"); setError(null); }}
+                  onClick={() => { setStep("email"); setError(null); }}
                   className="text-xs text-muted hover:text-brand-blue transition-colors ml-4"
                 >
                   שינוי מייל
@@ -347,3 +346,5 @@ export function PhoneGate({ eventId, onVerified, djName }: PhoneGateProps) {
     </motion.div>
   );
 }
+
+export const PhoneGate = EmailGate;

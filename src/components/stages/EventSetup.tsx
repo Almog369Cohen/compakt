@@ -100,7 +100,7 @@ export function EventSetup() {
     setOtpError(null);
 
     try {
-      const res = await fetch("/api/auth/phone/send-otp", {
+      const res = await fetch("/api/auth/email/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase(), eventId }),
@@ -136,7 +136,7 @@ export function EventSetup() {
     setOtpError(null);
 
     try {
-      const res = await fetch("/api/auth/phone/verify-otp", {
+      const res = await fetch("/api/auth/email/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, otp: code, email: email.trim().toLowerCase() }),
