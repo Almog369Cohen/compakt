@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const email = normalizeEmail(body.email || body.phone || "");
-    const eventIdOrToken = body.eventId;
+    const eventIdOrToken = String(body.eventId || "").trim();
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json({ error: "כתובת מייל לא תקינה" }, { status: 400 });
@@ -71,11 +71,16 @@ export async function POST(req: Request) {
     const supabase = getServiceSupabase();
 
     // Check if event exists by id OR magic_token (couple links use magic_token)
-    const { data: event, error: eventErr } = await supabase
+    const lookup = supabase
       .from("events")
-      .select("id")
-      .or(`id.eq.${eventIdOrToken},magic_token.eq.${eventIdOrToken}`)
-      .maybeSingle();
+      .select("id, magic_token, token");
+
+    const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(eventIdOrToken);
+    const eventQuery = uuidLike
+      ? lookup.or(`id.eq.${eventIdOrToken},magic_token.eq.${eventIdOrToken},token.eq.${eventIdOrToken}`)
+      : lookup.or(`magic_token.eq.${eventIdOrToken},token.eq.${eventIdOrToken}`);
+
+    const { data: event, error: eventErr } = await eventQuery.maybeSingle();
 
     if (eventErr || !event) {
       return NextResponse.json({ error: "אירוע לא נמצא" }, { status: 404 });
@@ -118,7 +123,7 @@ export async function POST(req: Request) {
 
       try {
         await sendVerificationEmail(email, otp);
-        return NextResponse.json({ sessionId: session.id, sent: true });
+        return NextResponse.json({ sessionId: session.id, sent: true, eventKey: event.magic_token });
       } catch (emailError) {
         console.error("Email send failed:", emailError);
         return NextResponse.json({ error: "שגיאה בשליחת מייל האימות" }, { status: 500 });
@@ -129,6 +134,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       sessionId: session.id,
       sent: true,
+      eventKey: event.magic_token,
       ...(isDev ? { devOtp: otp } : {}),
     });
   } catch (e) {

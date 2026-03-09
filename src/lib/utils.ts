@@ -9,6 +9,10 @@ export function generateMagicToken(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
+export function generateEventNumber(): string {
+  return String(Date.now()).slice(-8);
+}
+
 export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat("he-IL", {
     day: "numeric",

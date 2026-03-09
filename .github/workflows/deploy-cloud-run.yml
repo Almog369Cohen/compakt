@@ -116,52 +116,59 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_CALENDAR_REDIRECT_URI: ${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}
         run: |
-          build_env_vars=(
-            "NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL"
-            "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL"
-            "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY"
-            "NEXT_PUBLIC_GIT_SHA=${{ github.sha }}"
-          )
+          python3 <<'PY'
+          import json
+          import os
 
-          runtime_env_vars=(
-            "NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL"
-            "NEXT_PUBLIC_GIT_SHA=${{ github.sha }}"
-            "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL"
-            "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY"
-            "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"
-            "GMAIL_USER=$GMAIL_USER"
-            "GMAIL_APP_PASSWORD=$GMAIL_APP_PASSWORD"
-          )
-
-          add_runtime_var_if_present() {
-            local name="$1"
-            local value="${!name}"
-            if [ -n "$value" ]; then
-              runtime_env_vars+=("$name=$value")
-            fi
+          build_vars = {
+              "NEXT_PUBLIC_APP_URL": os.environ["NEXT_PUBLIC_APP_URL"],
+              "NEXT_PUBLIC_SUPABASE_URL": os.environ["NEXT_PUBLIC_SUPABASE_URL"],
+              "NEXT_PUBLIC_SUPABASE_ANON_KEY": os.environ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+              "NEXT_PUBLIC_GIT_SHA": "${{ github.sha }}",
           }
 
-          if [ -n "$NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET" ]; then
-            build_env_vars+=("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=$NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET")
-            runtime_env_vars+=("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=$NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET")
-          fi
+          if os.environ.get("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET"):
+              build_vars["NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET"] = os.environ["NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET"]
 
-          add_runtime_var_if_present "TWILIO_ACCOUNT_SID"
-          add_runtime_var_if_present "TWILIO_AUTH_TOKEN"
-          add_runtime_var_if_present "TWILIO_PHONE_NUMBER"
-          add_runtime_var_if_present "SPOTIFY_CLIENT_ID"
-          add_runtime_var_if_present "SPOTIFY_CLIENT_SECRET"
-          add_runtime_var_if_present "GCS_BUCKET"
-          add_runtime_var_if_present "GOOGLE_CLIENT_ID"
-          add_runtime_var_if_present "GOOGLE_CLIENT_SECRET"
-          add_runtime_var_if_present "GOOGLE_CALENDAR_REDIRECT_URI"
+          runtime_vars = {
+              "NEXT_PUBLIC_APP_URL": os.environ["NEXT_PUBLIC_APP_URL"],
+              "NEXT_PUBLIC_GIT_SHA": "${{ github.sha }}",
+              "NEXT_PUBLIC_SUPABASE_URL": os.environ["NEXT_PUBLIC_SUPABASE_URL"],
+              "NEXT_PUBLIC_SUPABASE_ANON_KEY": os.environ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+              "SUPABASE_SERVICE_ROLE_KEY": os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+              "GMAIL_USER": os.environ["GMAIL_USER"],
+              "GMAIL_APP_PASSWORD": os.environ["GMAIL_APP_PASSWORD"],
+          }
 
-          build_env_arg=$(IFS=,; echo "${build_env_vars[*]}")
-          runtime_env_arg=$(IFS=,; echo "${runtime_env_vars[*]}")
+          for key in [
+              "NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET",
+              "TWILIO_ACCOUNT_SID",
+              "TWILIO_AUTH_TOKEN",
+              "TWILIO_PHONE_NUMBER",
+              "SPOTIFY_CLIENT_ID",
+              "SPOTIFY_CLIENT_SECRET",
+              "GCS_BUCKET",
+              "GOOGLE_CLIENT_ID",
+              "GOOGLE_CLIENT_SECRET",
+              "GOOGLE_CALENDAR_REDIRECT_URI",
+          ]:
+              value = os.environ.get(key)
+              if value:
+                  runtime_vars[key] = value
+
+          with open(".cloudrun-build-env.yaml", "w", encoding="utf-8") as build_file:
+              for key, value in build_vars.items():
+                  build_file.write(f"{key}: {json.dumps(value)}\n")
+
+          with open(".cloudrun-runtime.env", "w", encoding="utf-8") as runtime_file:
+              for key, value in runtime_vars.items():
+                  runtime_file.write(f"{key}={json.dumps(value)}\n")
+          PY
 
           gcloud run deploy "$SERVICE_NAME" \
             --source . \
             --region "$REGION" \
             --allow-unauthenticated \
-            --set-build-env-vars "$build_env_arg" \
-            --set-env-vars "$runtime_env_arg"
+            --build-env-vars-file .cloudrun-build-env.yaml \
+            --env-vars-file .cloudrun-runtime.env
+

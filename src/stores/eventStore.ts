@@ -9,7 +9,7 @@ import type {
   ThemeMode,
   SwipeAction,
 } from "@/lib/types";
-import { generateMagicToken } from "@/lib/utils";
+import { generateEventNumber, generateMagicToken } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
 interface AnalyticsEvent {
@@ -79,9 +79,11 @@ export const useEventStore = create<EventStore>()(
 
       createEvent: (data) => {
         const token = generateMagicToken();
+        const eventNumber = data.eventNumber || generateEventNumber();
         const event: EventData = {
           id: crypto.randomUUID(),
           magicToken: token,
+          eventNumber,
           eventType: data.eventType || "wedding",
           eventDate: data.eventDate,
           venue: data.venue,
@@ -101,7 +103,7 @@ export const useEventStore = create<EventStore>()(
             .insert({
               id: event.id,
               magic_token: token,
-              token: token,
+              token: eventNumber,
               event_type: event.eventType,
               couple_name_a: event.coupleNameA || "",
               couple_name_b: event.coupleNameB || "",
@@ -134,6 +136,7 @@ export const useEventStore = create<EventStore>()(
                   event: {
                     id: data.id,
                     magicToken: data.magic_token,
+                    eventNumber: data.token,
                     eventType: data.event_type,
                     coupleNameA: data.couple_name_a,
                     coupleNameB: data.couple_name_b,

@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ArrowLeft, Loader2, CheckCircle, RotateCcw } from "lucide-react";
 
 interface EmailGateProps {
-  eventId: string;
+  eventId?: string;
   onVerified: (data: {
     sessionId: string;
     email: string;
+    eventKey: string;
     resumeData: {
       answers: Record<string, unknown>[];
       swipes: Record<string, unknown>[];
@@ -23,9 +24,11 @@ type Step = "email" | "otp" | "verified";
 
 export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
   const [step, setStep] = useState<Step>("email");
+  const [eventNumber, setEventNumber] = useState("");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [sessionId, setSessionId] = useState("");
+  const [resolvedEventKey, setResolvedEventKey] = useState(eventId || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [devOtp, setDevOtp] = useState<string | null>(null);
@@ -42,6 +45,13 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
 
   const handleSendOtp = async () => {
     const normalizedEmail = email.trim().toLowerCase();
+    const lookupKey = (eventId || eventNumber).trim();
+
+    if (!lookupKey) {
+      setError("הזינו מספר אירוע");
+      return;
+    }
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       setError("הזינו כתובת מייל תקינה");
       return;
@@ -54,7 +64,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
       const res = await fetch("/api/auth/email/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, eventId }),
+        body: JSON.stringify({ email: normalizedEmail, eventId: lookupKey }),
       });
       const data = await res.json();
 
@@ -64,6 +74,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
       }
 
       setSessionId(data.sessionId);
+      setResolvedEventKey(data.eventKey || lookupKey);
       if (data.devOtp) setDevOtp(data.devOtp);
       setStep("otp");
       setCountdown(60);
@@ -105,6 +116,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
         onVerified({
           sessionId: data.sessionId,
           email: email.trim().toLowerCase(),
+          eventKey: resolvedEventKey || eventId || eventNumber.trim(),
           resumeData: data.resumeData,
         });
       }, 800);
@@ -197,6 +209,23 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
               </div>
 
               <div className="space-y-4">
+                {!eventId && (
+                  <div>
+                    <input
+                      type="text"
+                      value={eventNumber}
+                      onChange={(e) => {
+                        setEventNumber(e.target.value.replace(/\D/g, "").slice(0, 8));
+                        setError(null);
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
+                      placeholder="מספר אירוע"
+                      dir="ltr"
+                      className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-center text-base focus:outline-none focus:border-brand-blue transition-colors mb-3"
+                      autoFocus
+                    />
+                  </div>
+                )}
                 <div>
                   <input
                     type="email"
@@ -209,7 +238,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
                     placeholder="you@example.com"
                     dir="ltr"
                     className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-center text-base focus:outline-none focus:border-brand-blue transition-colors"
-                    autoFocus
+                    autoFocus={Boolean(eventId)}
                   />
                 </div>
 

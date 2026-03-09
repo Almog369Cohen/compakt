@@ -33,6 +33,7 @@ export function EventSetup() {
   const [email, setEmail] = useState("");
   const [copied, setCopied] = useState(false);
   const [magicToken, setMagicToken] = useState(event?.magicToken || "");
+  const [eventNumber, setEventNumber] = useState(event?.eventNumber || "");
   const [nameHint, setNameHint] = useState(false);
 
   // OTP state
@@ -69,6 +70,7 @@ export function EventSetup() {
 
     if (event) {
       // Existing event — update and send OTP
+      setEventNumber(event.eventNumber || "");
       updateEvent({
         eventType: selectedType,
         coupleNameA,
@@ -87,6 +89,7 @@ export function EventSetup() {
         venue: venue || undefined,
       });
       setMagicToken(token);
+      setEventNumber(useEventStore.getState().event?.eventNumber || "");
       trackEvent("event_created", { eventType: selectedType });
 
       // Wait for DB insert to propagate, then send OTP using magic token
@@ -528,6 +531,13 @@ export function EventSetup() {
             <p className="text-secondary text-sm mb-6">
               שמרו את הלינק הזה כדי לחזור בכל זמן
             </p>
+
+            {eventNumber && (
+              <div className="glass-card p-3 rounded-xl mb-4 text-center">
+                <p className="text-xs text-muted mb-1">מספר אירוע</p>
+                <p className="font-mono text-lg font-bold text-brand-blue" dir="ltr">{eventNumber}</p>
+              </div>
+            )}
 
             <div className="glass-card p-3 rounded-xl mb-4 flex items-center gap-2">
               <code className="text-xs text-brand-blue flex-1 truncate" dir="ltr">

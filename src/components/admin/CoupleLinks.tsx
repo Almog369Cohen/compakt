@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface CoupleEvent {
   id: string;
   magic_token: string;
+  token: string | null;
   event_type: string;
   couple_name_a: string;
   couple_name_b: string;
@@ -310,11 +311,7 @@ export function CoupleLinks() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  {ev.phone_number && (
-                    isEmailContact(ev.phone_number)
-                      ? <Mail className="w-3.5 h-3.5 text-brand-green" />
-                      : <Phone className="w-3.5 h-3.5 text-brand-green" />
-                  )}
+                  {ev.token && <span className="text-[11px] font-mono text-brand-blue">#{ev.token}</span>}
                   <span className="text-xs text-muted">
                     {ev.answerCount} תשובות
                   </span>
@@ -387,6 +384,13 @@ export function CoupleLinks() {
                           <p className="text-xs text-muted">שלב</p>
                         </div>
                       </div>
+
+                      {ev.token && (
+                        <p className="text-xs text-muted flex items-center gap-1">
+                          <span>מספר אירוע:</span>
+                          <span className="font-mono text-brand-blue" dir="ltr">{ev.token}</span>
+                        </p>
+                      )}
 
                       {ev.phone_number && (
                         <p className="text-xs text-muted flex items-center gap-1">

@@ -15,6 +15,7 @@ export type ThemeMode = "night" | "day";
 export interface EventData {
   id: string;
   magicToken: string;
+  eventNumber?: string;
   eventType: EventType;
   eventDate?: string;
   venue?: string;

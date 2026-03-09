@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
 import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
+import { generateEventNumber } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -33,13 +34,14 @@ export async function POST(req: Request) {
     const { eventType, coupleNameA, coupleNameB, eventDate, venue } = body;
 
     const token = generateMagicToken();
+    const eventNumber = generateEventNumber();
 
     const { data, error } = await supabase
       .from("events")
       .insert({
         dj_id: profileId,
         magic_token: token,
-        token: token,
+        token: eventNumber,
         event_type: eventType || "wedding",
         couple_name_a: coupleNameA || "",
         couple_name_b: coupleNameB || "",
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
         venue: venue || "",
         current_stage: 0,
       })
-      .select("id, magic_token")
+      .select("id, magic_token, token")
       .single();
 
     if (error) {
@@ -58,6 +60,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       eventId: data.id,
       magicToken: data.magic_token,
+      eventNumber: data.token,
     });
   } catch (e) {
     return NextResponse.json(

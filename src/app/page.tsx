@@ -119,6 +119,7 @@ function JourneyApp() {
   const loadContentFromDB = useAdminStore((s) => s.loadContentFromDB);
   const currentStage = event?.currentStage ?? 0;
   const [showReset, setShowReset] = useState(false);
+  const [showReturnGate, setShowReturnGate] = useState(false);
 
   // Couple auth state
   const [pendingToken, setPendingToken] = useState<string | null>(null);
@@ -170,7 +171,7 @@ function JourneyApp() {
 
       const { data } = await sb
         .from("events")
-        .select("id, magic_token, event_type, couple_name_a, couple_name_b, event_date, venue, current_stage, created_at, dj_id")
+        .select("id, magic_token, token, event_type, couple_name_a, couple_name_b, event_date, venue, current_stage, created_at, dj_id")
         .eq("magic_token", eventToken)
         .maybeSingle();
 
@@ -181,6 +182,7 @@ function JourneyApp() {
         event: {
           id: data.id,
           magicToken: data.magic_token,
+          eventNumber: data.token,
           eventType: data.event_type,
           coupleNameA: data.couple_name_a,
           coupleNameB: data.couple_name_b,
@@ -256,16 +258,20 @@ function JourneyApp() {
   const handleEmailVerified = useCallback((data: {
     sessionId: string;
     email: string;
+    eventKey: string;
     resumeData: RawResumeData | null;
   }) => {
+    const resolvedEventKey = data.eventKey || pendingToken;
+
     setSessionId(data.sessionId);
     setEmailVerified(true);
+    setShowReturnGate(false);
     track("email_verified", { emailDomain: data.email.includes("@") ? data.email.split("@")[1] : undefined });
 
     // Store session for page refreshes
-    if (pendingToken) {
-      sessionStorage.setItem(`compakt_session_${pendingToken}`, data.sessionId);
-      loadEvent(pendingToken);
+    if (resolvedEventKey) {
+      sessionStorage.setItem(`compakt_session_${resolvedEventKey}`, data.sessionId);
+      loadEvent(resolvedEventKey);
     }
 
     // If there's resume data, offer to continue
@@ -311,6 +317,29 @@ function JourneyApp() {
             eventId={pendingToken}
             onVerified={handleEmailVerified}
           />
+        </div>
+      </main>
+    );
+  }
+
+  if (!event && showReturnGate) {
+    return (
+      <main className="min-h-dvh gradient-hero relative">
+        <div className="fixed top-4 left-4 z-50">
+          <ThemeToggle />
+        </div>
+        <div className="flex items-center justify-center min-h-dvh px-4 py-16">
+          <div className="w-full max-w-sm space-y-4">
+            <EmailGate onVerified={handleEmailVerified} />
+            <div className="text-center">
+              <button
+                onClick={() => setShowReturnGate(false)}
+                className="text-xs text-muted hover:text-brand-blue transition-colors"
+              >
+                חזרה לפתיחת אירוע חדש
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     );
@@ -420,6 +449,16 @@ function JourneyApp() {
           >
             <ErrorBoundary>
               {renderStage()}
+              {!event && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => setShowReturnGate(true)}
+                    className="text-sm text-brand-blue hover:underline"
+                  >
+                    יש לכם כבר מספר אירוע? חזרו לערוך כאן
+                  </button>
+                </div>
+              )}
             </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
