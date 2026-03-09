@@ -116,23 +116,27 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_CALENDAR_REDIRECT_URI: ${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}
         run: |
+          build_env_vars=(
+            "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}"
+            "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}"
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
+            "NEXT_PUBLIC_GIT_SHA=${GITHUB_SHA}"
+          )
+
+          if [ -n "${NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET}" ]; then
+            build_env_vars+=("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=${NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET}")
+          fi
+
+          build_env_vars_csv=$(printf '%s,' "${build_env_vars[@]}")
+          build_env_vars_csv="${build_env_vars_csv%,}"
+
           python3 <<'PY'
           import json
           import os
 
-          build_vars = {
-              "NEXT_PUBLIC_APP_URL": os.environ["NEXT_PUBLIC_APP_URL"],
-              "NEXT_PUBLIC_SUPABASE_URL": os.environ["NEXT_PUBLIC_SUPABASE_URL"],
-              "NEXT_PUBLIC_SUPABASE_ANON_KEY": os.environ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
-              "NEXT_PUBLIC_GIT_SHA": "${{ github.sha }}",
-          }
-
-          if os.environ.get("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET"):
-              build_vars["NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET"] = os.environ["NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET"]
-
           runtime_vars = {
               "NEXT_PUBLIC_APP_URL": os.environ["NEXT_PUBLIC_APP_URL"],
-              "NEXT_PUBLIC_GIT_SHA": "${{ github.sha }}",
+              "NEXT_PUBLIC_GIT_SHA": os.environ["GITHUB_SHA"],
               "NEXT_PUBLIC_SUPABASE_URL": os.environ["NEXT_PUBLIC_SUPABASE_URL"],
               "NEXT_PUBLIC_SUPABASE_ANON_KEY": os.environ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
               "SUPABASE_SERVICE_ROLE_KEY": os.environ["SUPABASE_SERVICE_ROLE_KEY"],
@@ -156,19 +160,14 @@ jobs:
               if value:
                   runtime_vars[key] = value
 
-          with open(".cloudrun-build-env.yaml", "w", encoding="utf-8") as build_file:
-              for key, value in build_vars.items():
-                  build_file.write(f"{key}: {json.dumps(value)}\n")
-
-          with open(".cloudrun-runtime.env", "w", encoding="utf-8") as runtime_file:
+          with open(".cloudrun-runtime.yaml", "w", encoding="utf-8") as runtime_file:
               for key, value in runtime_vars.items():
-                  runtime_file.write(f"{key}={json.dumps(value)}\n")
+                  runtime_file.write(f"{key}: {json.dumps(value)}\n")
           PY
 
           gcloud run deploy "$SERVICE_NAME" \
             --source . \
             --region "$REGION" \
             --allow-unauthenticated \
-            --build-env-vars-file .cloudrun-build-env.yaml \
-            --env-vars-file .cloudrun-runtime.env
-
+            --set-build-env-vars "$build_env_vars_csv" \
+            --env-vars-file .cloudrun-runtime.yaml
