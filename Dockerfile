@@ -32,6 +32,20 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     CLERK_SECRET_KEY=$CLERK_SECRET_KEY \
     SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
 
+# Write .env.production so Next.js can read all vars reliably
+RUN node -e "\
+    const fs = require('fs');\
+    const keys = [\
+    'NEXT_PUBLIC_APP_URL','NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',\
+    'NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY',\
+    'NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET','NEXT_PUBLIC_GIT_SHA',\
+    'CLERK_SECRET_KEY','SUPABASE_SERVICE_ROLE_KEY'\
+    ];\
+    const lines = keys.filter(k => process.env[k]).map(k => k+'='+process.env[k]);\
+    fs.writeFileSync('.env.production', lines.join('\n'));\
+    console.log('env.production:', lines.map(l => l.split('=')[0] + '=' + l.split('=').slice(1).join('=').length + ' chars').join(', '));\
+    "
+
 RUN npm run build
 
 # --- Runner ---
