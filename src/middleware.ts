@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 import { createMiddlewareSupabase } from "@/lib/supabase-server";
 
 /**
@@ -8,19 +9,26 @@ import { createMiddlewareSupabase } from "@/lib/supabase-server";
  * - /admin, /hq → redirect to /admin?login=1 if no session
  * - /api/admin/* → return 401 JSON if no session
  */
-export async function middleware(req: NextRequest) {
+export default clerkMiddleware(async (auth, req: NextRequest) => {
   const res = NextResponse.next();
-  const supabase = createMiddlewareSupabase(req, res);
+  const clerkAuth = await auth();
+  const hasClerkUser = Boolean(clerkAuth.userId);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let hasSupabaseUser = false;
+  if (!hasClerkUser) {
+    const supabase = createMiddlewareSupabase(req, res);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    hasSupabaseUser = Boolean(user);
+  }
+
+  const isAuthenticated = hasClerkUser || hasSupabaseUser;
 
   const { pathname } = req.nextUrl;
 
-  // API routes: return 401 JSON
   if (pathname.startsWith("/api/admin")) {
-    if (!user) {
+    if (!isAuthenticated) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -29,13 +37,11 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // Page routes: redirect to login
   if (pathname.startsWith("/admin") || pathname.startsWith("/hq")) {
-    if (!user) {
+    if (!isAuthenticated) {
       const loginUrl = req.nextUrl.clone();
       loginUrl.pathname = "/admin";
       loginUrl.searchParams.set("login", "1");
-      // If already on /admin, don't redirect (let the page show the login form)
       if (pathname === "/admin") {
         return res;
       }
@@ -45,7 +51,7 @@ export async function middleware(req: NextRequest) {
   }
 
   return res;
-}
+});
 
 export const config = {
   matcher: ["/admin/:path*", "/hq/:path*", "/api/admin/:path*", "/api/hq/:path*"],

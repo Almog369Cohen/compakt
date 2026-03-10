@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { loadAccessProfileByIdentity } from "@/lib/access";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 export const runtime = "nodejs";
@@ -12,10 +13,20 @@ export async function GET() {
 
     const supabase = getServiceSupabase();
 
+    const profile = await loadAccessProfileByIdentity(supabase, {
+      profileId: auth.profileId,
+      userId: auth.userId,
+      email: auth.email,
+    });
+
+    if (!profile) {
+      return NextResponse.json({ data: null });
+    }
+
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", auth.userId)
+      .eq("id", profile.id)
       .single();
 
     if (error || !data) {
@@ -43,7 +54,6 @@ export async function POST(req: Request) {
 
     const supabase = getServiceSupabase();
 
-    // Always scope to the authenticated user's profile
     if (auth.profileId) {
       const { data, error } = await supabase
         .from("profiles")
@@ -56,13 +66,10 @@ export async function POST(req: Request) {
       }
     }
 
-    // Fallback: find by userId and update
-    const { data: existing } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", auth.userId)
-      .limit(1)
-      .maybeSingle();
+    const existing = await loadAccessProfileByIdentity(supabase, {
+      userId: auth.userId,
+      email: auth.email,
+    });
 
     if (existing?.id) {
       const { data, error } = await supabase
@@ -76,9 +83,13 @@ export async function POST(req: Request) {
     }
 
     // Insert new (with user_id attached)
+    const insertRow: Record<string, unknown> = { ...row, clerk_user_id: auth.userId };
+    if (auth.email) {
+      insertRow.email = auth.email;
+    }
     const { data, error } = await supabase
       .from("profiles")
-      .insert({ ...row, user_id: auth.userId })
+      .insert(insertRow)
       .select("id")
       .single();
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
-import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
+import { hasFeature, loadAccessProfileByIdentity, loadResolvedAccessByIdentity } from "@/lib/access";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -60,31 +60,44 @@ export async function POST(request: Request) {
     const { direction = "pull" } = await request.json();
 
     const supabase = getServiceSupabase();
-    const { access } = await loadResolvedAccessByUserId(supabase, auth.userId);
+    const { access } = await loadResolvedAccessByIdentity(supabase, {
+      profileId: auth.profileId,
+      userId: auth.userId,
+      email: auth.email,
+    });
     if (!access || !hasFeature(access, "google_calendar_sync")) {
       return NextResponse.json({ error: "Feature not enabled for this account" }, { status: 403 });
     }
 
-    // Get profile with Google tokens
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, google_calendar_tokens")
-      .eq("user_id", auth.userId)
-      .single();
+    const profile = await loadAccessProfileByIdentity(supabase, {
+      profileId: auth.profileId,
+      userId: auth.userId,
+      email: auth.email,
+    });
 
-    if (profileError || !profile) {
+    if (!profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    if (!profile.google_calendar_tokens) {
+    const { data: profileRow, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, google_calendar_tokens")
+      .eq("id", profile.id)
+      .single();
+
+    if (profileError || !profileRow) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    if (!profileRow.google_calendar_tokens) {
       return NextResponse.json({ error: "Google Calendar not connected" }, { status: 400 });
     }
 
     let tokens: GoogleTokens;
     try {
-      tokens = typeof profile.google_calendar_tokens === "string"
-        ? JSON.parse(profile.google_calendar_tokens)
-        : profile.google_calendar_tokens;
+      tokens = typeof profileRow.google_calendar_tokens === "string"
+        ? JSON.parse(profileRow.google_calendar_tokens)
+        : profileRow.google_calendar_tokens;
     } catch {
       return NextResponse.json({ error: "Invalid token data" }, { status: 500 });
     }
@@ -101,7 +114,7 @@ export async function POST(request: Request) {
       await supabase
         .from("profiles")
         .update({ google_calendar_tokens: JSON.stringify(tokens) })
-        .eq("id", profile.id);
+        .eq("id", profileRow.id);
     }
 
     const results: { pulled: number; pushed: number } = { pulled: 0, pushed: 0 };
@@ -139,6 +152,7 @@ export async function POST(request: Request) {
             .upsert(
               {
                 dj_id: profile.id,
+
                 google_event_id: ge.id,
                 name: ge.summary || "אירוע מ-Google Calendar",
                 date_time: dateTime,
@@ -159,7 +173,7 @@ export async function POST(request: Request) {
       const { data: localEvents } = await supabase
         .from("dj_events")
         .select("*")
-        .eq("dj_id", profile.id)
+        .eq("dj_id", profileRow.id)
         .is("google_event_id", null);
 
       for (const le of localEvents || []) {

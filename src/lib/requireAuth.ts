@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { createRouteClient } from "@/lib/supabase-server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { loadAccessProfileByIdentity } from "@/lib/access";
 
 export type AuthContext = {
   userId: string;
@@ -25,41 +27,68 @@ export async function requireAuth(
 ): Promise<AuthContext | NextResponse> {
   const { allowedRoles } = options;
 
-  // 1. Validate session from cookies
-  const supabase = createRouteClient();
-  const {
-    data: { user },
-    error: sessionError,
-  } = await supabase.auth.getUser();
+  const service = getServiceSupabase();
 
-  if (sessionError || !user) {
+  let userId: string | null = null;
+  let email: string | null = null;
+
+  try {
+    const clerkAuth = await auth();
+    userId = clerkAuth.userId ?? null;
+    email = clerkAuth.sessionClaims?.email as string | null | undefined ?? null;
+  } catch {
+    userId = null;
+  }
+
+  if (!userId) {
+    const supabase = createRouteClient();
+    const {
+      data: { user },
+      error: sessionError,
+    } = await supabase.auth.getUser();
+
+    if (sessionError || !user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    userId = user.id;
+    email = user.email ?? null;
+  }
+
+  const profile = await loadAccessProfileByIdentity(service, {
+    userId,
+    email,
+  });
+
+  if (!profile && allowedRoles && allowedRoles.length > 0) {
     return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 }
+      { error: "Forbidden: profile not found" },
+      { status: 403 }
     );
   }
 
-  // 2. Look up profile row using service role (bypasses RLS)
-  const service = getServiceSupabase();
-  const { data: profile, error: profileError } = await service
-    .from("profiles")
-    .select("id, role")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  if (!profile && !allowedRoles?.length) {
+    return {
+      userId,
+      profileId: "",
+      role: "dj",
+      email,
+    };
+  }
 
-  if (profileError) {
+  if (!profile) {
     return NextResponse.json(
       { error: "Failed to load profile" },
       { status: 500 }
     );
   }
 
-  // Profile might not exist yet (first login before ensure-profile runs).
-  // For ensure-profile endpoint specifically, profileId may be null.
-  const role = profile?.role ?? "dj";
-  const profileId = profile?.id ?? "";
+  const role = profile.role ?? "dj";
+  const profileId = profile.id ?? "";
 
-  // 3. Check role if required
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(role)) {
     return NextResponse.json(
       { error: "Forbidden: insufficient role" },
@@ -68,10 +97,10 @@ export async function requireAuth(
   }
 
   return {
-    userId: user.id,
+    userId,
     profileId,
     role,
-    email: user.email ?? null,
+    email,
   };
 }
 

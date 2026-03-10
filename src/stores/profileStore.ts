@@ -62,17 +62,17 @@ export const useProfileStore = create<ProfileStore>()(
       setProfile: (patch) => set({ profile: { ...get().profile, ...patch } }),
       resetProfile: () => set({ profile: DEFAULT_PROFILE, profileId: null }),
 
-      loadProfileFromDB: async (userId: string) => {
-        if (!supabase) return;
+      loadProfileFromDB: async () => {
         set({ loading: true });
         try {
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("user_id", userId)
-            .single();
+          const response = await fetch("/api/admin/profile", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+          const result = await response.json();
+          const data = result.data;
 
-          if (error || !data) {
+          if (!response.ok || !data) {
             set({ loading: false });
             return;
           }
@@ -105,11 +105,9 @@ export const useProfileStore = create<ProfileStore>()(
         }
       },
 
-      saveProfileToDB: async (userId: string) => {
+      saveProfileToDB: async () => {
         const { profile } = get();
-        const effectiveUserId = userId && userId !== "legacy" ? userId : null;
         const row = {
-          ...(effectiveUserId ? { user_id: effectiveUserId } : {}),
           business_name: profile.businessName,
           tagline: profile.tagline,
           bio: profile.bio,

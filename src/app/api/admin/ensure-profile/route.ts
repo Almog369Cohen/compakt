@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { getServiceSupabase } from "@/lib/supabase";
 import { createRouteClient } from "@/lib/supabase-server";
+import { loadAccessProfileByIdentity } from "@/lib/access";
 
 export const runtime = "nodejs";
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
 
 /**
  * POST /api/admin/ensure-profile
@@ -13,46 +19,68 @@ export const runtime = "nodejs";
  */
 export async function POST() {
   try {
-    // Auth: validate session, derive userId from token (ignore client body)
-    const routeClient = createRouteClient();
-    const { data: { user }, error: authErr } = await routeClient.auth.getUser();
-    if (authErr || !user) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    let userId: string | null = null;
+    let email: string | null = null;
+
+    try {
+      const clerkAuth = await auth();
+      userId = clerkAuth.userId ?? null;
+      email = clerkAuth.sessionClaims?.email as string | null | undefined ?? null;
+    } catch {
+      userId = null;
     }
 
-    const userId = user.id;
-    const email = user.email ?? undefined;
+    if (!userId) {
+      const routeClient = createRouteClient();
+      const { data: { user }, error: authErr } = await routeClient.auth.getUser();
+      if (authErr || !user) {
+        return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      }
+
+      userId = user.id;
+      email = user.email ?? null;
+    }
 
     const supabase = getServiceSupabase();
 
-    // Check if profile already exists
-    const { data: existing, error: selectError } = await supabase
-      .from("profiles")
-      .select("id, user_id, business_name, role")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (selectError) {
-      return NextResponse.json({ error: selectError.message }, { status: 500 });
-    }
+    const existing = await loadAccessProfileByIdentity(supabase, { userId, email });
 
     if (existing) {
+      const patch: Record<string, unknown> = {};
+      if (!existing.clerk_user_id) {
+        patch.clerk_user_id = userId;
+      }
+      if (email && existing.email !== email) {
+        patch.email = email;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        await supabase.from("profiles").update(patch).eq("id", existing.id);
+      }
+
       return NextResponse.json({
-        profile: existing,
+        profile: {
+          id: existing.id,
+          user_id: existing.user_id,
+          business_name: existing.business_name,
+          role: existing.role,
+        },
         created: false,
       });
     }
 
-    // Create minimal profile for new user
     const newRow: Record<string, unknown> = {
-      user_id: userId,
+      clerk_user_id: userId,
       business_name: "",
       role: "dj",
     };
 
-    // Add email if provided (column may exist in live DB)
     if (email) {
       newRow.email = email;
+    }
+
+    if (isUuid(userId)) {
+      newRow.user_id = userId;
     }
 
     const { data: created, error: insertError } = await supabase

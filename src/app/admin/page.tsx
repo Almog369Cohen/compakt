@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Calendar, Eye, EyeOff, User, Link, TrendingUp } from "lucide-react";
@@ -38,7 +39,54 @@ const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "upsells", label: "שדרוגים", icon: <Sparkles className="w-4 h-4" /> },
 ];
 
+function ClerkAdminAuthSync() {
+  const { isLoaded, isSignedIn, userId } = useAuth();
+  const { user } = useUser();
+  const setAuthState = useAdminStore((s) => s.setAuthState);
+  const resetAuthState = useAdminStore((s) => s.resetAuthState);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (isSignedIn) {
+      setAuthState({
+        isAuthenticated: true,
+        userId: userId ?? null,
+        userEmail: user?.primaryEmailAddress?.emailAddress ?? null,
+        authError: null,
+      });
+      return;
+    }
+
+    resetAuthState();
+  }, [isLoaded, isSignedIn, resetAuthState, setAuthState, user, userId]);
+
+  return null;
+}
+
+function ClerkAdminLogoutButton() {
+  const { signOut } = useClerk();
+  const resetAuthState = useAdminStore((s) => s.resetAuthState);
+  const router = useRouter();
+
+  return (
+    <button
+      onClick={() => {
+        signOut().then(() => {
+          resetAuthState();
+          router.replace("/admin");
+        });
+      }}
+      className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
+      aria-label="התנתקות"
+    >
+      <LogOut className="w-4 h-4" />
+    </button>
+  );
+}
+
 export default function AdminPage() {
+  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
   const isAuthenticated = useAdminStore((s) => s.isAuthenticated);
   const userId = useAdminStore((s) => s.userId);
   useAdminStore((s) => s.userEmail);
@@ -74,8 +122,10 @@ export default function AdminPage() {
   }, [theme]);
 
   useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+    if (!clerkEnabled) {
+      checkSession();
+    }
+  }, [checkSession, clerkEnabled]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -278,6 +328,46 @@ export default function AdminPage() {
       window.history.replaceState({}, "", url.toString());
     }
   };
+
+  if ((!isAuthenticated || isRecoveryMode) && clerkEnabled) {
+    return (
+      <div className="min-h-dvh gradient-hero flex items-center justify-center px-4">
+        {clerkEnabled ? <ClerkAdminAuthSync /> : null}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-card p-8 w-full max-w-md text-center"
+        >
+          <div
+            className="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4"
+            style={{ background: "linear-gradient(135deg, #059cc0, #03b28c)" }}
+          >
+            <Lock className="w-6 h-6 text-white" />
+          </div>
+          <h1 className="text-xl font-bold mb-1">Compakt Admin</h1>
+          <p className="text-sm text-secondary mb-6">
+            {isSignUp ? "צרו חשבון DJ חדש עם Clerk" : "התחברו עם Clerk"}
+          </p>
+
+          <div className="flex justify-center mb-4">
+            {isSignUp ? (
+              <SignUp routing="hash" signInUrl="/admin" fallbackRedirectUrl="/admin" />
+            ) : (
+              <SignIn routing="hash" signUpUrl="/admin" fallbackRedirectUrl="/admin" />
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsSignUp((v) => !v)}
+            className="text-xs text-secondary hover:text-brand-blue mt-3 transition-colors"
+          >
+            {isSignUp ? "כבר יש לי חשבון → כניסה" : "אין לי חשבון → הרשמה"}
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated || isRecoveryMode) {
     return (
@@ -518,6 +608,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-dvh gradient-hero">
+      {clerkEnabled ? <ClerkAdminAuthSync /> : null}
       {/* Header */}
       <header className="sticky top-0 z-50 glass-card rounded-none border-x-0 border-t-0 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
@@ -548,13 +639,15 @@ export default function AdminPage() {
             </nav>
 
             <ThemeToggle />
-            <button
-              onClick={logout}
-              className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
-              aria-label="התנתקות"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            {clerkEnabled ? <ClerkAdminLogoutButton /> : (
+              <button
+                onClick={logout}
+                className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
+                aria-label="התנתקות"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </header>

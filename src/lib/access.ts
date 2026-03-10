@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+function isUuid(value: string | null | undefined) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 export const PLAN_KEYS = ["starter", "pro", "premium", "enterprise"] as const;
 export const FEATURE_KEYS = [
   "analytics",
@@ -23,6 +27,7 @@ export type FeatureOverrides = Partial<Record<FeatureKey, boolean>>;
 export interface AccessProfile {
   id: string;
   user_id: string | null;
+  clerk_user_id: string | null;
   business_name: string;
   dj_slug: string | null;
   role: RoleKey;
@@ -80,6 +85,7 @@ export function mapProfileRow(row: Record<string, unknown>): AccessProfile {
   return {
     id: String(row.id || ""),
     user_id: typeof row.user_id === "string" ? row.user_id : null,
+    clerk_user_id: typeof row.clerk_user_id === "string" ? row.clerk_user_id : null,
     business_name: typeof row.business_name === "string" ? row.business_name : "",
     dj_slug: typeof row.dj_slug === "string" ? row.dj_slug : null,
     role: normalizeRole(row.role),
@@ -134,11 +140,62 @@ export function hasFeature(access: ResolvedAccess, feature: FeatureKey): boolean
 }
 
 export async function loadResolvedAccessByUserId(service: SupabaseClient, userId: string) {
-  const profile = await loadAccessProfileByUserId(service, userId);
+  const profile = await loadAccessProfileByIdentity(service, { userId });
   return {
     profile,
     access: profile ? resolveAccess(profile) : null,
   };
+}
+
+export async function loadResolvedAccessByIdentity(
+  service: SupabaseClient,
+  identity: { userId?: string | null; email?: string | null; profileId?: string | null }
+) {
+  const profile = await loadAccessProfileByIdentity(service, identity);
+  return {
+    profile,
+    access: profile ? resolveAccess(profile) : null,
+  };
+}
+
+export async function loadAccessProfileByIdentity(
+  service: SupabaseClient,
+  identity: { userId?: string | null; email?: string | null; profileId?: string | null }
+): Promise<AccessProfile | null> {
+  if (identity.profileId) {
+    const byId = await loadAccessProfileById(service, identity.profileId);
+    if (byId) return byId;
+  }
+
+  if (identity.userId) {
+    const { data: byClerkId, error: clerkError } = await service
+      .from("profiles")
+      .select("*")
+      .eq("clerk_user_id", identity.userId)
+      .maybeSingle();
+
+    if (!clerkError && byClerkId) return mapProfileRow(byClerkId as Record<string, unknown>);
+
+    const { data: bySupabaseId, error: userError } = await service
+      .from("profiles")
+      .select("*")
+      .eq("user_id", identity.userId)
+      .maybeSingle();
+
+    if (!userError && bySupabaseId) return mapProfileRow(bySupabaseId as Record<string, unknown>);
+  }
+
+  if (identity.email) {
+    const { data, error } = await service
+      .from("profiles")
+      .select("*")
+      .eq("email", identity.email)
+      .maybeSingle();
+
+    if (!error && data) return mapProfileRow(data as Record<string, unknown>);
+  }
+
+  return null;
 }
 
 export function canManageFeatureOverrides(access: ResolvedAccess | null): boolean {
@@ -154,14 +211,7 @@ export function canPromoteOwner(access: ResolvedAccess | null): boolean {
 }
 
 export async function loadAccessProfileByUserId(service: SupabaseClient, userId: string): Promise<AccessProfile | null> {
-  const { data, error } = await service
-    .from("profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return mapProfileRow(data as Record<string, unknown>);
+  return loadAccessProfileByIdentity(service, { userId });
 }
 
 export async function loadAccessProfileById(service: SupabaseClient, profileId: string): Promise<AccessProfile | null> {
@@ -187,7 +237,7 @@ export async function writeAuditLog(
   }
 ) {
   const { error } = await service.from("hq_audit_logs").insert({
-    actor_user_id: input.actorUserId,
+    actor_user_id: isUuid(input.actorUserId) ? input.actorUserId : null,
     actor_profile_id: input.actorProfileId,
     target_profile_id: input.targetProfileId,
     action: input.action,

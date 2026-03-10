@@ -4,6 +4,8 @@
 
 | Variable | Client/Server | Where to get | Description |
 |----------|:------------:|-------------|-------------|
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | **Client** (build-time) | Clerk Dashboard | Clerk publishable key for admin/HQ auth |
+| `CLERK_SECRET_KEY` | **Server only** | Clerk Dashboard | Clerk server secret for server-side auth verification |
 | `NEXT_PUBLIC_SUPABASE_URL` | **Client** (build-time) | Supabase → Settings → API → Project URL | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Client** (build-time) | Supabase → Settings → API → anon public | Browser-safe key (RLS enforced) |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Server only** | Supabase → Settings → API → service_role | Bypasses RLS — **never expose to client** |
@@ -13,8 +15,8 @@
 
 | Variable | Client/Server | Where to get | Description |
 |----------|:------------:|-------------|-------------|
-| `RESEND_API_KEY` | Server | [Resend Dashboard](https://resend.com/api-keys) | Couple email verification code delivery |
-| `RESEND_FROM_EMAIL` | Server | Verified sender/domain in Resend | From address for couple verification emails |
+| `RESEND_API_KEY` | Server | [Resend Dashboard](https://resend.com/api-keys) | Optional future email delivery provider |
+| `RESEND_FROM_EMAIL` | Server | Verified sender/domain in Resend | Optional future sender address |
 | `OTP_DEV_MODE` | Server | Set manually in local/dev environments | When `true`, returns OTP in API responses instead of requiring Resend |
 | `NEXT_PUBLIC_ALLOW_LEGACY_LOGIN` | **Client** (build-time) | Set manually | Enables the legacy password login button on `/admin` |
 | `NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET` | **Client/Server** | Supabase Storage bucket name | Storage bucket used for DJ media uploads (defaults to `dj-media`) |
@@ -43,6 +45,7 @@ npm install
 #   supabase/migrations/016_phone_auth_and_analytics.sql
 #   supabase/migrations/017_add_role_column.sql
 #   supabase/migrations/018_hq_governance.sql
+#   supabase/migrations/019_clerk_identity.sql
 #   supabase/migrations/fix_run_this.sql
 
 # 4. Start dev server
@@ -74,12 +77,14 @@ The workflow `.github/workflows/deploy-cloud-run.yml` handles this via `--build-
 GitHub Secrets required (Settings → Secrets → Actions):
 - `GCP_PROJECT_ID`
 - `GCP_SA_KEY`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_APP_URL`
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
+- `GMAIL_USER`
+- `GMAIL_APP_PASSWORD`
 - `SPOTIFY_CLIENT_ID` (optional)
 - `SPOTIFY_CLIENT_SECRET` (optional)
 - `GOOGLE_CLIENT_ID` (optional)
@@ -91,6 +96,7 @@ Recommended production runtime configuration:
 - `NEXT_PUBLIC_ALLOW_LEGACY_LOGIN` should be unset or `false`
 - `OTP_DEV_MODE` should be unset or `false`
 - Run `018_hq_governance.sql` before using `/hq` profile management or audit logs
+- Run `019_clerk_identity.sql` before using Clerk as the primary admin/HQ login
 - If using `/api/uploads`, create the GCS bucket first and grant the Cloud Run service account write access
 
 ## Security Notes

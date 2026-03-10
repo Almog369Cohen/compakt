@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
-import { loadAccessProfileByUserId, resolveAccess } from "@/lib/access";
+import { loadAccessProfileByIdentity, resolveAccess } from "@/lib/access";
 
 export const runtime = "nodejs";
 
@@ -11,7 +11,11 @@ export async function GET() {
     if (isAuthError(auth)) return auth;
 
     const supabase = getServiceSupabase();
-    const profile = await loadAccessProfileByUserId(supabase, auth.userId);
+    const profile = await loadAccessProfileByIdentity(supabase, {
+      profileId: auth.profileId,
+      userId: auth.userId,
+      email: auth.email,
+    });
 
     return NextResponse.json({
       profile,

@@ -22,6 +22,8 @@ interface AdminStore {
   loginWithOAuth: (provider: "google" | "apple" | "facebook") => Promise<void>;
   checkSession: () => Promise<void>;
   logout: () => void;
+  setAuthState: (input: { isAuthenticated: boolean; userId?: string | null; userEmail?: string | null; authError?: string | null }) => void;
+  resetAuthState: () => void;
 
   // Songs
   addSong: (song: Omit<Song, "id" | "sortOrder">) => void;
@@ -48,6 +50,27 @@ const ADMIN_PASSWORD = "compakt2024";
 const LEGACY_LOGIN_ALLOWED =
   process.env.NEXT_PUBLIC_ALLOW_LEGACY_LOGIN === "true";
 
+async function resolveProfileId(identity: { userId: string | null; userEmail: string | null }) {
+  if (!supabase || (!identity.userId && !identity.userEmail)) {
+    return null;
+  }
+
+  if (identity.userId) {
+    const byClerk = await supabase.from("profiles").select("id").eq("clerk_user_id", identity.userId).maybeSingle();
+    if (byClerk.data?.id) return byClerk.data.id;
+
+    const byUserId = await supabase.from("profiles").select("id").eq("user_id", identity.userId).maybeSingle();
+    if (byUserId.data?.id) return byUserId.data.id;
+  }
+
+  if (identity.userEmail) {
+    const byEmail = await supabase.from("profiles").select("id").eq("email", identity.userEmail).maybeSingle();
+    if (byEmail.data?.id) return byEmail.data.id;
+  }
+
+  return null;
+}
+
 export const useAdminStore = create<AdminStore>()(
   persist(
     (set, get) => ({
@@ -58,6 +81,14 @@ export const useAdminStore = create<AdminStore>()(
       songs: defaultSongs,
       questions: defaultQuestions,
       upsells: defaultUpsells,
+
+      setAuthState: ({ isAuthenticated, userId = null, userEmail = null, authError = null }) => {
+        set({ isAuthenticated, userId, userEmail, authError });
+      },
+
+      resetAuthState: () => {
+        set({ isAuthenticated: false, userId: null, userEmail: null, authError: null });
+      },
 
       login: (password) => {
         if (!LEGACY_LOGIN_ALLOWED) {
@@ -138,16 +169,16 @@ export const useAdminStore = create<AdminStore>()(
 
       // Songs
       addSong: (song) => {
-        const { songs, userId } = get();
+        const { songs, userId, userEmail } = get();
         const id = crypto.randomUUID();
         const newSong = { ...song, id, sortOrder: songs.length + 1 };
         set({ songs: [...songs, newSong] });
 
-        if (supabase && userId) {
-          supabase.from("profiles").select("id").eq("user_id", userId).single().then(({ data: profile }) => {
-            if (!profile) return;
+        if (supabase && (userId || userEmail)) {
+          resolveProfileId({ userId, userEmail }).then((profileId) => {
+            if (!profileId) return;
             supabase!.from("songs").insert({
-              id, dj_id: profile.id, title: song.title, artist: song.artist,
+              id, dj_id: profileId, title: song.title, artist: song.artist,
               cover_url: song.coverUrl || "", preview_url: song.previewUrl || "",
               external_link: song.externalLink || "", category: song.category,
               tags: JSON.stringify(song.tags), energy: song.energy,
@@ -203,16 +234,16 @@ export const useAdminStore = create<AdminStore>()(
 
       // Questions
       addQuestion: (question) => {
-        const { questions, userId } = get();
+        const { questions, userId, userEmail } = get();
         const id = `q${Date.now()}`;
         const newQ = { ...question, id, sortOrder: questions.length + 1 };
         set({ questions: [...questions, newQ] });
 
-        if (supabase && userId) {
-          supabase.from("profiles").select("id").eq("user_id", userId).single().then(({ data: profile }) => {
-            if (!profile) return;
+        if (supabase && (userId || userEmail)) {
+          resolveProfileId({ userId, userEmail }).then((profileId) => {
+            if (!profileId) return;
             supabase!.from("questions").insert({
-              id, dj_id: profile.id, question_he: question.questionHe,
+              id, dj_id: profileId, question_he: question.questionHe,
               question_type: question.questionType, event_type: question.eventType,
               options: JSON.stringify(question.options || []),
               slider_min: question.sliderMin, slider_max: question.sliderMax,
@@ -267,16 +298,16 @@ export const useAdminStore = create<AdminStore>()(
 
       // Upsells
       addUpsell: (upsell) => {
-        const { upsells, userId } = get();
+        const { upsells, userId, userEmail } = get();
         const id = crypto.randomUUID();
         const newUpsell = { ...upsell, id, sortOrder: upsells.length + 1 };
         set({ upsells: [...upsells, newUpsell] });
 
-        if (supabase && userId) {
-          supabase.from("profiles").select("id").eq("user_id", userId).single().then(({ data: profile }) => {
-            if (!profile) return;
+        if (supabase && (userId || userEmail)) {
+          resolveProfileId({ userId, userEmail }).then((profileId) => {
+            if (!profileId) return;
             supabase!.from("upsells").insert({
-              id, dj_id: profile.id, title_he: upsell.titleHe,
+              id, dj_id: profileId, title_he: upsell.titleHe,
               description_he: upsell.descriptionHe, price_hint: upsell.priceHint || "",
               cta_text_he: upsell.ctaTextHe, placement: upsell.placement,
               is_active: upsell.isActive, sort_order: upsells.length + 1,

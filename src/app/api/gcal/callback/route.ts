@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
+import { loadAccessProfileByIdentity } from "@/lib/access";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -50,6 +51,16 @@ export async function GET(request: Request) {
 
     // Store tokens in profiles table
     const supabase = getServiceSupabase();
+    const profile = await loadAccessProfileByIdentity(supabase, {
+      profileId: auth.profileId,
+      userId: auth.userId,
+      email: auth.email,
+    });
+
+    if (!profile) {
+      return NextResponse.redirect(new URL("/admin?gcal=error&reason=profile_missing", request.url));
+    }
+
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -59,7 +70,7 @@ export async function GET(request: Request) {
           expiry_date: Date.now() + (tokens.expires_in * 1000),
         }),
       })
-      .eq("user_id", auth.userId);
+      .eq("id", profile.id);
 
     if (error) {
       console.error("Failed to save Google tokens:", error);
