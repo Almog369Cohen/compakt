@@ -14,6 +14,7 @@ concurrency:
 env:
   SERVICE_NAME: compakt
   REGION: us-central1
+  PRODUCTION_PROJECT_ID: project-9ed1b370-0678-4a14-b8d
 
 jobs:
   deploy:
@@ -30,7 +31,7 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: ${{ env.PRODUCTION_PROJECT_ID }}
 
       - name: Validate required secrets
         shell: bash
@@ -133,7 +134,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          IMAGE="${REGION}-docker.pkg.dev/${CLOUDSDK_CORE_PROJECT}/${SERVICE_NAME}/${SERVICE_NAME}:${GITHUB_SHA::8}"
+          IMAGE="${REGION}-docker.pkg.dev/${PRODUCTION_PROJECT_ID}/${SERVICE_NAME}/${SERVICE_NAME}:${GITHUB_SHA::8}"
 
           # Ensure Artifact Registry repo exists
           gcloud artifacts repositories describe "$SERVICE_NAME" \
@@ -220,19 +221,24 @@ jobs:
               if value:
                   runtime_vars[key] = value
 
+          with open(".cloudrun-runtime.yaml", "w", encoding="utf-8") as f:
+              for key, value in runtime_vars.items():
+                  f.write(f"{key}: {json.dumps(value)}\n")
+
           deploy_cmd = [
               "gcloud",
               "run",
               "deploy",
               os.environ["SERVICE_NAME"],
+              "--project",
+              os.environ["PRODUCTION_PROJECT_ID"],
               "--image",
               os.environ["IMAGE"],
               "--region",
               os.environ["REGION"],
               "--allow-unauthenticated",
-              "--set-env-vars=" + ",".join(
-                  f"{key}={value}" for key, value in runtime_vars.items()
-              ),
+              "--env-vars-file",
+              ".cloudrun-runtime.yaml",
           ]
           subprocess.run(deploy_cmd, check=True)
 
@@ -244,6 +250,8 @@ jobs:
                       "services",
                       "describe",
                       os.environ["SERVICE_NAME"],
+                      "--project",
+                      os.environ["PRODUCTION_PROJECT_ID"],
                       "--region",
                       os.environ["REGION"],
                       "--format=json",
