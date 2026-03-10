@@ -100,7 +100,42 @@ jobs:
 
           echo "All required secrets are present."
 
-      - name: Deploy to Cloud Run (build from source)
+      - name: Build and push Docker image
+        shell: bash
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET }}
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${CLOUDSDK_CORE_PROJECT}/${SERVICE_NAME}/${SERVICE_NAME}:${GITHUB_SHA::8}"
+
+          # Ensure Artifact Registry repo exists
+          gcloud artifacts repositories describe "$SERVICE_NAME" \
+            --location="$REGION" --format="value(name)" 2>/dev/null || \
+          gcloud artifacts repositories create "$SERVICE_NAME" \
+            --repository-format=docker \
+            --location="$REGION" \
+            --description="Compakt container images"
+
+          # Configure docker auth
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+          # Build with Docker (NEXT_PUBLIC_* vars are passed as build args)
+          docker build \
+            --build-arg "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}" \
+            --build-arg "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" \
+            --build-arg "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}" \
+            --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
+            --build-arg "NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=${NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET}" \
+            --build-arg "NEXT_PUBLIC_GIT_SHA=${GITHUB_SHA}" \
+            -t "$IMAGE" .
+
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run
         shell: bash
         env:
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
@@ -126,24 +161,6 @@ jobs:
           import json
           import os
 
-          # --- Build-time env vars (NEXT_PUBLIC_* needed by next build) ---
-          build_vars = {
-              "NEXT_PUBLIC_APP_URL": os.environ["NEXT_PUBLIC_APP_URL"],
-              "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": os.environ["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"],
-              "NEXT_PUBLIC_SUPABASE_URL": os.environ["NEXT_PUBLIC_SUPABASE_URL"],
-              "NEXT_PUBLIC_SUPABASE_ANON_KEY": os.environ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
-              "NEXT_PUBLIC_GIT_SHA": os.environ.get("GITHUB_SHA", ""),
-          }
-          for key in ["NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET"]:
-              value = os.environ.get(key)
-              if value:
-                  build_vars[key] = value
-
-          with open(".cloudrun-build.yaml", "w", encoding="utf-8") as f:
-              for key, value in build_vars.items():
-                  f.write(f"{key}: {json.dumps(value)}\n")
-
-          # --- Runtime env vars ---
           runtime_vars = {
               "NEXT_PUBLIC_APP_URL": os.environ["NEXT_PUBLIC_APP_URL"],
               "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": os.environ["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"],
@@ -178,8 +195,7 @@ jobs:
           PY
 
           gcloud run deploy "$SERVICE_NAME" \
-            --source . \
+            --image "$IMAGE" \
             --region "$REGION" \
             --allow-unauthenticated \
-            --build-env-vars-file .cloudrun-build.yaml \
             --env-vars-file .cloudrun-runtime.yaml
