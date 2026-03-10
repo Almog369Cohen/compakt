@@ -122,30 +122,33 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_CALENDAR_REDIRECT_URI: ${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}
         run: |
-          build_env_vars=(
-            "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}"
-            "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}"
-            "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}"
-            "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
-            "NEXT_PUBLIC_GIT_SHA=${GITHUB_SHA}"
-          )
-
-          if [ -n "${NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET}" ]; then
-            build_env_vars+=("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=${NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET}")
-          fi
-
-          build_env_vars_csv=$(printf '%s,' "${build_env_vars[@]}")
-          build_env_vars_csv="${build_env_vars_csv%,}"
-
           python3 <<'PY'
           import json
           import os
 
+          # --- Build-time env vars (NEXT_PUBLIC_* needed by next build) ---
+          build_vars = {
+              "NEXT_PUBLIC_APP_URL": os.environ["NEXT_PUBLIC_APP_URL"],
+              "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": os.environ["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"],
+              "NEXT_PUBLIC_SUPABASE_URL": os.environ["NEXT_PUBLIC_SUPABASE_URL"],
+              "NEXT_PUBLIC_SUPABASE_ANON_KEY": os.environ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+              "NEXT_PUBLIC_GIT_SHA": os.environ.get("GITHUB_SHA", ""),
+          }
+          for key in ["NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET"]:
+              value = os.environ.get(key)
+              if value:
+                  build_vars[key] = value
+
+          with open(".cloudrun-build.yaml", "w", encoding="utf-8") as f:
+              for key, value in build_vars.items():
+                  f.write(f"{key}: {json.dumps(value)}\n")
+
+          # --- Runtime env vars ---
           runtime_vars = {
               "NEXT_PUBLIC_APP_URL": os.environ["NEXT_PUBLIC_APP_URL"],
               "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": os.environ["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"],
               "CLERK_SECRET_KEY": os.environ["CLERK_SECRET_KEY"],
-              "NEXT_PUBLIC_GIT_SHA": os.environ["GITHUB_SHA"],
+              "NEXT_PUBLIC_GIT_SHA": os.environ.get("GITHUB_SHA", ""),
               "NEXT_PUBLIC_SUPABASE_URL": os.environ["NEXT_PUBLIC_SUPABASE_URL"],
               "NEXT_PUBLIC_SUPABASE_ANON_KEY": os.environ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
               "SUPABASE_SERVICE_ROLE_KEY": os.environ["SUPABASE_SERVICE_ROLE_KEY"],
@@ -169,14 +172,14 @@ jobs:
               if value:
                   runtime_vars[key] = value
 
-          with open(".cloudrun-runtime.yaml", "w", encoding="utf-8") as runtime_file:
+          with open(".cloudrun-runtime.yaml", "w", encoding="utf-8") as f:
               for key, value in runtime_vars.items():
-                  runtime_file.write(f"{key}: {json.dumps(value)}\n")
+                  f.write(f"{key}: {json.dumps(value)}\n")
           PY
 
           gcloud run deploy "$SERVICE_NAME" \
             --source . \
             --region "$REGION" \
             --allow-unauthenticated \
-            --set-build-env-vars "$build_env_vars_csv" \
+            --build-env-vars-file .cloudrun-build.yaml \
             --env-vars-file .cloudrun-runtime.yaml
