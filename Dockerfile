@@ -20,10 +20,11 @@ ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET
 ARG NEXT_PUBLIC_GIT_SHA
 
-# Server-only keys needed so Clerk/Supabase modules can initialise during
-# next build page-data collection. Real values are injected at runtime.
-ARG CLERK_SECRET_KEY=build_placeholder
-ARG SUPABASE_SERVICE_ROLE_KEY=build_placeholder
+# Server-only keys: Clerk SDK validates key format at import time during
+# next build. Pass real values via --build-arg; multi-stage build keeps
+# them out of the final runner image.
+ARG CLERK_SECRET_KEY
+ARG SUPABASE_SERVICE_ROLE_KEY
 ENV CLERK_SECRET_KEY=$CLERK_SECRET_KEY
 ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
 
