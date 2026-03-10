@@ -144,7 +144,8 @@ export default function AdminPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } = supabase.auth.onAuthStateChange((event: any) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryMode(true);
         setAuthMode("email");
