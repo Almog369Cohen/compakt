@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
-import { createMiddlewareSupabase } from "@/lib/supabase-server";
 
 /**
  * Next.js Middleware — runs on every matched route.
@@ -13,17 +12,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   const res = NextResponse.next();
   const clerkAuth = await auth();
   const hasClerkUser = Boolean(clerkAuth.userId);
-
-  let hasSupabaseUser = false;
-  if (!hasClerkUser) {
-    const supabase = createMiddlewareSupabase(req, res);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    hasSupabaseUser = Boolean(user);
-  }
-
-  const isAuthenticated = hasClerkUser || hasSupabaseUser;
+  const isAuthenticated = hasClerkUser;
 
   const { pathname } = req.nextUrl;
 
