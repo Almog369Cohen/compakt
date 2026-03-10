@@ -165,8 +165,10 @@ jobs:
           GOOGLE_CALENDAR_REDIRECT_URI: ${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}
         run: |
           python3 <<'PY'
-          import json
           import os
+          import subprocess
+          import json
+          import sys
 
           runtime_vars = {
               "NEXT_PUBLIC_APP_URL": os.environ["NEXT_PUBLIC_APP_URL"],
@@ -196,13 +198,60 @@ jobs:
               if value:
                   runtime_vars[key] = value
 
-          with open(".cloudrun-runtime.yaml", "w", encoding="utf-8") as f:
-              for key, value in runtime_vars.items():
-                  f.write(f"{key}: {json.dumps(value)}\n")
-          PY
+          deploy_cmd = [
+              "gcloud",
+              "run",
+              "deploy",
+              os.environ["SERVICE_NAME"],
+              "--image",
+              os.environ["IMAGE"],
+              "--region",
+              os.environ["REGION"],
+              "--allow-unauthenticated",
+              "--set-env-vars=" + ",".join(
+                  f"{key}={value}" for key, value in runtime_vars.items()
+              ),
+          ]
+          subprocess.run(deploy_cmd, check=True)
 
-          gcloud run deploy "$SERVICE_NAME" \
-            --image "$IMAGE" \
-            --region "$REGION" \
-            --allow-unauthenticated \
-            --env-vars-file .cloudrun-runtime.yaml
+          service = json.loads(
+              subprocess.check_output(
+                  [
+                      "gcloud",
+                      "run",
+                      "services",
+                      "describe",
+                      os.environ["SERVICE_NAME"],
+                      "--region",
+                      os.environ["REGION"],
+                      "--format=json",
+                  ],
+                  text=True,
+              )
+          )
+          spec = service.get("spec", {})
+          template = spec.get("template", {})
+          template_spec = template.get("spec", {})
+          containers = template_spec.get("containers", [])
+          env_items = containers[0].get("env", []) if containers else []
+          env_names = {item.get("name") for item in env_items if item.get("name")}
+
+          required_keys = {
+              "NEXT_PUBLIC_APP_URL",
+              "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+              "CLERK_SECRET_KEY",
+              "NEXT_PUBLIC_SUPABASE_URL",
+              "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+              "SUPABASE_SERVICE_ROLE_KEY",
+              "GMAIL_USER",
+              "GMAIL_APP_PASSWORD",
+          }
+          missing = sorted(required_keys - env_names)
+
+          if missing:
+              print(
+                  "::error::Cloud Run revision is missing runtime env vars: "
+                  + ", ".join(missing)
+              )
+              sys.exit(1)
+          PY
