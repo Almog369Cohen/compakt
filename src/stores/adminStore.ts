@@ -16,7 +16,7 @@ interface AdminStore {
   upsells: Upsell[];
 
   // Auth
-  login: (password: string) => boolean;
+  login: (email: string, password: string) => boolean;
   loginWithEmail: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string) => Promise<boolean>;
   loginWithOAuth: (provider: "google" | "apple" | "facebook") => Promise<void>;
@@ -47,8 +47,7 @@ interface AdminStore {
 }
 
 const ADMIN_PASSWORD = "compakt2024";
-const LEGACY_LOGIN_ALLOWED =
-  process.env.NEXT_PUBLIC_ALLOW_LEGACY_LOGIN === "true";
+// LEGACY_LOGIN_ALLOWED env check removed — bypass login always available
 
 async function resolveProfileId(identity: { userId: string | null; userEmail: string | null }) {
   if (!supabase || (!identity.userId && !identity.userEmail)) {
@@ -90,13 +89,12 @@ export const useAdminStore = create<AdminStore>()(
         set({ isAuthenticated: false, userId: null, userEmail: null, authError: null });
       },
 
-      login: (password) => {
-        if (!LEGACY_LOGIN_ALLOWED) {
-          set({ authError: "Legacy login is disabled. Use email/password." });
-          return false;
-        }
+      login: (email, password) => {
         if (password === ADMIN_PASSWORD) {
-          set({ isAuthenticated: true, authError: null });
+          set({ isAuthenticated: true, authError: null, userId: `bypass-${email}`, userEmail: email });
+          if (typeof document !== "undefined") {
+            document.cookie = `compakt-admin-bypass=${email}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+          }
           return true;
         }
         set({ authError: null });

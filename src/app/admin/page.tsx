@@ -107,6 +107,7 @@ export default function AdminPage() {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authMode, setAuthMode] = useState<"email" | "legacy">("email");
+  const [bypassClerk, setBypassClerk] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [resetMessage, setResetMessage] = useState<string | null>(null);
@@ -231,8 +232,8 @@ export default function AdminPage() {
     setError(false);
     setResetMessage(null);
 
-    if (authMode === "legacy") {
-      if (!login(password)) {
+    if (bypassClerk || authMode === "legacy") {
+      if (!login(email || "admin@compakt.app", password)) {
         setError(true);
         setTimeout(() => setError(false), 2000);
       }
@@ -330,7 +331,7 @@ export default function AdminPage() {
     }
   };
 
-  if ((!isAuthenticated || isRecoveryMode) && clerkEnabled) {
+  if ((!isAuthenticated || isRecoveryMode) && clerkEnabled && !bypassClerk) {
     return (
       <div className="min-h-dvh gradient-hero flex items-center justify-center px-4">
         {clerkEnabled ? <ClerkAdminAuthSync /> : null}
@@ -365,6 +366,16 @@ export default function AdminPage() {
           >
             {isSignUp ? "כבר יש לי חשבון → כניסה" : "אין לי חשבון → הרשמה"}
           </button>
+
+          <div className="mt-4 pt-4 border-t border-glass">
+            <button
+              type="button"
+              onClick={() => setBypassClerk(true)}
+              className="text-xs text-secondary hover:text-brand-blue transition-colors"
+            >
+              כניסה עם סיסמה
+            </button>
+          </div>
         </motion.div>
       </div>
     );
@@ -394,7 +405,7 @@ export default function AdminPage() {
                 : "הכניסו סיסמה כדי להיכנס"}
           </p>
 
-          {authMode === "email" && !isRecoveryMode && (
+          {(authMode === "email" || bypassClerk) && !isRecoveryMode && (
             <div className="mb-3">
               <input
                 type="email"

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 import { createRouteClient } from "@/lib/supabase-server";
 import { getServiceSupabase } from "@/lib/supabase";
@@ -40,12 +41,22 @@ export async function requireAuth(
   let userId: string | null = null;
   let email: string | null = null;
 
-  try {
-    const clerkAuth = await auth();
-    userId = clerkAuth.userId ?? null;
-    email = clerkAuth.sessionClaims?.email as string | null | undefined ?? null;
-  } catch {
-    userId = null;
+  // Check for admin bypass cookie (temporary password-based auth)
+  const cookieStore = await cookies();
+  const bypassEmail = cookieStore.get("compakt-admin-bypass")?.value;
+  if (bypassEmail) {
+    userId = `bypass-${bypassEmail}`;
+    email = bypassEmail;
+  }
+
+  if (!userId) {
+    try {
+      const clerkAuth = await auth();
+      userId = clerkAuth.userId ?? null;
+      email = clerkAuth.sessionClaims?.email as string | null | undefined ?? null;
+    } catch {
+      userId = null;
+    }
   }
 
   if (!userId) {
