@@ -93,6 +93,28 @@ jobs:
           check_group "SPOTIFY" "SPOTIFY_CLIENT_ID" "SPOTIFY_CLIENT_SECRET"
           check_group "GOOGLE_CALENDAR" "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "GOOGLE_CALENDAR_REDIRECT_URI"
 
+          case "$NEXT_PUBLIC_APP_URL" in
+            http://localhost:*|https://localhost:*|*=http://localhost:*|*=https://localhost:*)
+              echo "::error::NEXT_PUBLIC_APP_URL points to localhost or has an invalid prefix: $NEXT_PUBLIC_APP_URL"
+              exit 1
+              ;;
+          esac
+
+          case "$NEXT_PUBLIC_SUPABASE_URL" in
+            https://*) ;;
+            *)
+              echo "::error::NEXT_PUBLIC_SUPABASE_URL must be a valid https URL. Current value looks invalid."
+              exit 1
+              ;;
+          esac
+
+          case "$NEXT_PUBLIC_SUPABASE_URL" in
+            *localhost*|*=http://*|*=https://*)
+              echo "::error::NEXT_PUBLIC_SUPABASE_URL looks malformed: $NEXT_PUBLIC_SUPABASE_URL"
+              exit 1
+              ;;
+          esac
+
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required GitHub secrets: ${missing[*]}"
             exit 1
