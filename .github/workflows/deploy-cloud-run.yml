@@ -14,7 +14,7 @@ concurrency:
 env:
   SERVICE_NAME: compakt
   REGION: us-central1
-  PRODUCTION_PROJECT_ID: project-9ed1b370-0678-4a14-b8d
+  PRODUCTION_PROJECT_ID: compakt-488215
 
 jobs:
   deploy:
