@@ -3,6 +3,8 @@ import { getServiceSupabase } from "@/lib/supabase";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
 import { hasFeature, loadAccessProfileByIdentity, loadResolvedAccessByIdentity } from "@/lib/access";
 
+export const dynamic = "force-dynamic";
+
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 

@@ -6,6 +6,7 @@ import { defaultUpsells } from "@/data/upsells";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * POST /api/admin/ensure-defaults

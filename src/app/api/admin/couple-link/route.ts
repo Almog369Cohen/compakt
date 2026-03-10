@@ -5,6 +5,7 @@ import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 import { generateEventNumber } from "@/lib/utils";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function generateMagicToken(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);

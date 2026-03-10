@@ -4,6 +4,7 @@ import { requireAuth, isAuthError } from "@/lib/requireAuth";
 import { loadAccessProfileByIdentity, resolveAccess } from "@/lib/access";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {

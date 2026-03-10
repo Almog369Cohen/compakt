@@ -3,6 +3,7 @@ import { Storage } from "@google-cloud/storage";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function requireBucketName(): string {
   const value = process.env.GCS_BUCKET || process.env.GCS_BUCKET_NAME;

@@ -4,6 +4,7 @@ import { loadAccessProfileByIdentity } from "@/lib/access";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /** GET /api/admin/profile  — load own profile (session-scoped) */
 export async function GET() {

@@ -3,6 +3,8 @@ import { requireAuth, isAuthError } from "@/lib/requireAuth";
 import { getServiceSupabase } from "@/lib/supabase";
 import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 
+export const dynamic = "force-dynamic";
+
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const REDIRECT_URI = process.env.GOOGLE_CALENDAR_REDIRECT_URI;
 

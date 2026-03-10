@@ -3,6 +3,8 @@ import { getServiceSupabase } from "@/lib/supabase";
 import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
+export const dynamic = "force-dynamic";
+
 function getSiteOrigin(req: Request): string {
   if (process.env.URL) return process.env.URL;
   const url = new URL(req.url);

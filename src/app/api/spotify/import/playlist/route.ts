@@ -3,6 +3,8 @@ import { getServiceSupabase } from "@/lib/supabase";
 import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
 
+export const dynamic = "force-dynamic";
+
 type SpotifyCookie = {
   access_token: string;
   refresh_token?: string;

@@ -4,6 +4,7 @@ import { requireAuth, isAuthError } from "@/lib/requireAuth";
 import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "dj-media";
 
