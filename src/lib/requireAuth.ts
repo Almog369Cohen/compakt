@@ -27,7 +27,15 @@ export async function requireAuth(
 ): Promise<AuthContext | NextResponse> {
   const { allowedRoles } = options;
 
-  const service = getServiceSupabase();
+  let service;
+  try {
+    service = getServiceSupabase();
+  } catch {
+    return NextResponse.json(
+      { error: "Server configuration error" },
+      { status: 500 }
+    );
+  }
 
   let userId: string | null = null;
   let email: string | null = null;
@@ -41,21 +49,28 @@ export async function requireAuth(
   }
 
   if (!userId) {
-    const supabase = createRouteClient();
-    const {
-      data: { user },
-      error: sessionError,
-    } = await supabase.auth.getUser();
+    try {
+      const supabase = createRouteClient();
+      const {
+        data: { user },
+        error: sessionError,
+      } = await supabase.auth.getUser();
 
-    if (sessionError || !user) {
+      if (sessionError || !user) {
+        return NextResponse.json(
+          { error: "Authentication required" },
+          { status: 401 }
+        );
+      }
+
+      userId = user.id;
+      email = user.email ?? null;
+    } catch {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
-
-    userId = user.id;
-    email = user.email ?? null;
   }
 
   const profile = await loadAccessProfileByIdentity(service, {
