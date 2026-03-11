@@ -166,7 +166,6 @@ function formatDateLabel(value?: string | null): string {
 export function CoupleLinks() {
   const profileId = useProfileStore((s) => s.profileId);
   const djSlug = useProfileStore((s) => s.profile.djSlug);
-  const profileLoading = useProfileStore((s) => s.loading);
   const [events, setEvents] = useState<CoupleEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
