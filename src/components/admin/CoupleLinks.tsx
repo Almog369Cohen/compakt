@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useProfileStore } from "@/stores/profileStore";
 import { trackAnalytics } from "@/hooks/useAnalytics";
 import { getSafeOrigin } from "@/lib/utils";
+import type { EventRequest, Question, SongSwipe } from "@/lib/types";
 import {
   Link,
   Plus,
@@ -21,6 +22,12 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  FileText,
+  ListMusic,
+  ClipboardList,
+  MessageSquareText,
+  Calendar,
+  MapPin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -35,11 +42,59 @@ interface CoupleEvent {
   venue: string;
   current_stage: number;
   phone_number: string | null;
+  email?: string | null;
   answerCount: number;
   swipeCount: number;
+  requestCount?: number;
   isComplete: boolean;
   created_at: string;
+  updated_at?: string | null;
 }
+
+interface RawAnswer {
+  id: string;
+  event_id: string;
+  question_id: string;
+  answer_value: unknown;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface DetailEventData {
+  event: CoupleEvent;
+  answers: RawAnswer[];
+  swipes: Array<{
+    id: string;
+    event_id: string;
+    song_id: string;
+    action: SongSwipe["action"];
+    reason_chips: string[] | string | null;
+    created_at?: string;
+    updated_at?: string;
+  }>;
+  requests: Array<{
+    id: string;
+    event_id: string;
+    request_type: EventRequest["requestType"];
+    content: string;
+    moment_type?: EventRequest["momentType"] | null;
+    created_at?: string;
+  }>;
+  questions: Array<{
+    id: string;
+    question_he: string;
+    question_type: Question["questionType"];
+    event_type: Question["eventType"];
+    sort_order?: number;
+  }>;
+  songs: Array<{
+    id: string;
+    title: string;
+    artist: string;
+  }>;
+}
+
+type DetailTab = "overview" | "answers" | "swipes" | "requests" | "summary";
 
 const EVENT_ICONS: Record<string, React.ReactNode> = {
   wedding: <Heart className="w-4 h-4" />,
@@ -69,13 +124,58 @@ function isEmailContact(value: string | null): boolean {
   return Boolean(value && value.includes("@"));
 }
 
+function parseAnswerValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).join(", ");
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.map((item) => String(item)).join(", ");
+      if (parsed && typeof parsed === "object") return JSON.stringify(parsed);
+      return String(parsed);
+    } catch {
+      return value;
+    }
+  }
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function parseReasonChips(value: string[] | string | null): string[] {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map((item) => String(item)) : [];
+  } catch {
+    return [value];
+  }
+}
+
+function formatDateLabel(value?: string | null): string {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleString("he-IL");
+  } catch {
+    return value;
+  }
+}
+
 export function CoupleLinks() {
   const profileId = useProfileStore((s) => s.profileId);
+  const djSlug = useProfileStore((s) => s.profile.djSlug);
+  const profileLoading = useProfileStore((s) => s.loading);
   const [events, setEvents] = useState<CoupleEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activeTabByEvent, setActiveTabByEvent] = useState<Record<string, DetailTab>>({});
+  const [detailByEvent, setDetailByEvent] = useState<Record<string, DetailEventData>>({});
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
 
   // New link form
   const [showForm, setShowForm] = useState(false);
@@ -86,24 +186,46 @@ export function CoupleLinks() {
   const [newVenue, setNewVenue] = useState("");
 
   const loadEvents = useCallback(async () => {
-    if (!profileId) return;
     setLoading(true);
+    setLoadError(null);
     try {
-      const res = await fetch(`/api/admin/couple-link`);
+      const res = await fetch("/api/admin/couple-link", { cache: "no-store" });
       const data = await res.json();
-      if (res.ok) setEvents(data.events || []);
-    } catch {
-      // silent
+      if (!res.ok) {
+        throw new Error(data.error || "שגיאה בטעינת קישורי שאלון");
+      }
+      setEvents(data.events || []);
+    } catch (error) {
+      setEvents([]);
+      setLoadError(error instanceof Error ? error.message : "שגיאה בטעינת קישורי שאלון");
     }
     setLoading(false);
-  }, [profileId]);
+  }, []);
 
   useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
+    void loadEvents();
+  }, [loadEvents, profileId]);
+
+  const loadEventDetail = useCallback(async (eventId: string) => {
+    setDetailLoadingId(eventId);
+    try {
+      const res = await fetch(`/api/admin/couple-events/${eventId}`, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "שגיאה בטעינת פרטי אירוע");
+      }
+      setDetailByEvent((prev) => ({
+        ...prev,
+        [eventId]: data as DetailEventData,
+      }));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "שגיאה בטעינת פרטי אירוע");
+    } finally {
+      setDetailLoadingId((current) => (current === eventId ? null : current));
+    }
+  }, []);
 
   const handleCreate = async () => {
-    if (!profileId) return;
     setCreating(true);
     try {
       const res = await fetch("/api/admin/couple-link", {
@@ -135,11 +257,15 @@ export function CoupleLinks() {
       }
     } catch {
       alert("שגיאה ביצירת קישור");
-    }
+    };
     setCreating(false);
   };
 
-  const getLink = (token: string) => `${getSafeOrigin()}/?token=${token}`;
+  const getLink = (token: string) => (
+    djSlug
+      ? `${getSafeOrigin()}/dj/${djSlug}?token=${token}`
+      : `${getSafeOrigin()}/?token=${token}`
+  );
 
   const copyLink = (token: string, eventId: string) => {
     navigator.clipboard.writeText(getLink(token));
@@ -161,6 +287,33 @@ export function CoupleLinks() {
       djId: profileId || undefined,
     });
   };
+
+  const toggleExpanded = async (eventId: string) => {
+    const willExpand = expandedId !== eventId;
+    setExpandedId(willExpand ? eventId : null);
+    if (!willExpand) return;
+    setActiveTabByEvent((prev) => ({
+      ...prev,
+      [eventId]: prev[eventId] || "overview",
+    }));
+    if (detailByEvent[eventId]) return;
+    await loadEventDetail(eventId);
+  };
+
+  const setEventTab = (eventId: string, tab: DetailTab) => {
+    setActiveTabByEvent((prev) => ({
+      ...prev,
+      [eventId]: tab,
+    }));
+  };
+
+  const detailTabs = useMemo(() => ([
+    { id: "overview" as const, label: "סקירה", icon: <ClipboardList className="w-3.5 h-3.5" /> },
+    { id: "answers" as const, label: "שאלון", icon: <FileText className="w-3.5 h-3.5" /> },
+    { id: "swipes" as const, label: "שירים", icon: <ListMusic className="w-3.5 h-3.5" /> },
+    { id: "requests" as const, label: "בקשות", icon: <MessageSquareText className="w-3.5 h-3.5" /> },
+    { id: "summary" as const, label: "סיכום", icon: <Check className="w-3.5 h-3.5" /> },
+  ]), []);
 
   return (
     <div className="space-y-4">
@@ -259,8 +412,16 @@ export function CoupleLinks() {
         </div>
       )}
 
+      {loadError && (
+        <div className="glass-card p-4 text-center">
+          <p className="text-sm" style={{ color: "var(--accent-danger)" }}>
+            {loadError}
+          </p>
+        </div>
+      )}
+
       {/* Empty State */}
-      {!loading && events.length === 0 && (
+      {!loading && !loadError && events.length === 0 && (
         <div className="glass-card p-8 text-center">
           <Link className="w-10 h-10 text-muted mx-auto mb-3" />
           <p className="text-sm text-muted">
@@ -274,12 +435,28 @@ export function CoupleLinks() {
         {events.map((ev) => {
           const isExpanded = expandedId === ev.id;
           const names = [ev.couple_name_a, ev.couple_name_b].filter(Boolean).join(" & ");
+          const detail = detailByEvent[ev.id];
+          const activeTab = activeTabByEvent[ev.id] || "overview";
+          const swipeCounts = detail ? {
+            like: detail.swipes.filter((swipe) => swipe.action === "like").length,
+            super_like: detail.swipes.filter((swipe) => swipe.action === "super_like").length,
+            dislike: detail.swipes.filter((swipe) => swipe.action === "dislike").length,
+            unsure: detail.swipes.filter((swipe) => swipe.action === "unsure").length,
+          } : null;
+          const questionMap = detail
+            ? new Map(detail.questions.map((question) => [question.id, question.question_he]))
+            : new Map<string, string>();
+          const songMap = detail
+            ? new Map(detail.songs.map((song) => [song.id, `${song.title} - ${song.artist}`]))
+            : new Map<string, string>();
 
           return (
             <div key={ev.id} className="glass-card overflow-hidden">
               {/* Header row */}
               <button
-                onClick={() => setExpandedId(isExpanded ? null : ev.id)}
+                onClick={() => {
+                  void toggleExpanded(ev.id);
+                }}
                 className="w-full p-3 flex items-center gap-3 text-right hover:bg-glass/10 transition-colors"
               >
                 <div
@@ -315,6 +492,9 @@ export function CoupleLinks() {
                   <span className="text-xs text-muted">
                     {ev.answerCount} תשובות
                   </span>
+                  <span className="text-xs text-muted hidden sm:inline">
+                    {ev.requestCount || 0} בקשות
+                  </span>
                   {isExpanded ? (
                     <ChevronUp className="w-4 h-4 text-muted" />
                   ) : (
@@ -333,7 +513,6 @@ export function CoupleLinks() {
                     className="overflow-hidden"
                   >
                     <div className="px-3 pb-3 border-t border-glass/50 pt-3 space-y-3">
-                      {/* Link */}
                       <div className="flex items-center gap-2 glass-card p-2 rounded-lg">
                         <code className="text-xs text-brand-blue flex-1 truncate" dir="ltr">
                           {getLink(ev.magic_token)}
@@ -358,7 +537,6 @@ export function CoupleLinks() {
                         </a>
                       </div>
 
-                      {/* Share button */}
                       <button
                         onClick={() => shareWhatsApp(ev.magic_token, ev.couple_name_a, ev.couple_name_b)}
                         className="btn-secondary w-full text-xs flex items-center justify-center gap-2"
@@ -367,8 +545,7 @@ export function CoupleLinks() {
                         שלחו בוואטסאפ
                       </button>
 
-                      {/* Stats */}
-                      <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="grid grid-cols-4 gap-2 text-center">
                         <div className="glass-card p-2 rounded-lg">
                           <p className="text-lg font-bold text-brand-blue">{ev.answerCount}</p>
                           <p className="text-xs text-muted">תשובות</p>
@@ -376,6 +553,10 @@ export function CoupleLinks() {
                         <div className="glass-card p-2 rounded-lg">
                           <p className="text-lg font-bold text-brand-blue">{ev.swipeCount}</p>
                           <p className="text-xs text-muted">סוויפים</p>
+                        </div>
+                        <div className="glass-card p-2 rounded-lg">
+                          <p className="text-lg font-bold text-brand-blue">{ev.requestCount || 0}</p>
+                          <p className="text-xs text-muted">בקשות</p>
                         </div>
                         <div className="glass-card p-2 rounded-lg">
                           <p className="text-lg font-bold" style={{ color: ev.isComplete ? "#03b28c" : "#059cc0" }}>
@@ -392,6 +573,13 @@ export function CoupleLinks() {
                         </p>
                       )}
 
+                      {ev.email && (
+                        <p className="text-xs text-muted flex items-center gap-1">
+                          <Mail className="w-3 h-3" />
+                          מייל: <span className="font-mono" dir="ltr">{ev.email}</span>
+                        </p>
+                      )}
+
                       {ev.phone_number && (
                         <p className="text-xs text-muted flex items-center gap-1">
                           {isEmailContact(ev.phone_number)
@@ -399,6 +587,119 @@ export function CoupleLinks() {
                             : <Phone className="w-3 h-3" />}
                           {isEmailContact(ev.phone_number) ? "מייל:" : "טלפון:"} <span className="font-mono" dir="ltr">{ev.phone_number}</span>
                         </p>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        {detailTabs.map((tab) => (
+                          <button
+                            key={tab.id}
+                            onClick={() => setEventTab(ev.id, tab.id)}
+                            className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-colors ${activeTab === tab.id ? "bg-brand-blue text-white" : "border border-glass text-muted hover:text-foreground"}`}
+                          >
+                            {tab.icon}
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {detailLoadingId === ev.id && !detail ? (
+                        <div className="glass-card p-6 text-center text-sm text-muted">
+                          <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2 text-brand-blue" />
+                          טוען פרטי אירוע...
+                        </div>
+                      ) : null}
+
+                      {detail && activeTab === "overview" && (
+                        <div className="grid sm:grid-cols-2 gap-3">
+                          <div className="glass-card p-3 space-y-2">
+                            <p className="text-xs text-muted flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> נוצר: {formatDateLabel(ev.created_at)}</p>
+                            <p className="text-xs text-muted flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> עודכן: {formatDateLabel(ev.updated_at || ev.created_at)}</p>
+                            <p className="text-xs text-muted flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> מקום: {ev.venue || "—"}</p>
+                            <p className="text-xs text-muted">סוג אירוע: {EVENT_LABELS[ev.event_type] || ev.event_type}</p>
+                          </div>
+                          <div className="glass-card p-3 space-y-2">
+                            <p className="text-sm font-semibold">סטטוס תוכן</p>
+                            <p className="text-xs text-muted">שאלון: {ev.answerCount > 0 ? "קיים" : "עדיין לא"}</p>
+                            <p className="text-xs text-muted">בחירות שירים: {ev.swipeCount > 0 ? "קיימות" : "עדיין לא"}</p>
+                            <p className="text-xs text-muted">בקשות: {(ev.requestCount || 0) > 0 ? "קיימות" : "עדיין לא"}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {detail && activeTab === "answers" && (
+                        <div className="space-y-2">
+                          {detail.answers.length === 0 ? (
+                            <div className="glass-card p-4 text-sm text-muted text-center">עדיין אין תשובות שאלון</div>
+                          ) : (
+                            detail.answers.map((answer) => (
+                              <div key={answer.id} className="glass-card p-3">
+                                <p className="text-sm font-medium mb-1">{questionMap.get(answer.question_id) || answer.question_id}</p>
+                                <p className="text-xs text-secondary">{parseAnswerValue(answer.answer_value)}</p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      {detail && activeTab === "swipes" && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <div className="glass-card p-2 text-center"><p className="text-lg font-bold text-brand-blue">{swipeCounts?.like || 0}</p><p className="text-xs text-muted">אהבו</p></div>
+                            <div className="glass-card p-2 text-center"><p className="text-lg font-bold text-brand-blue">{swipeCounts?.super_like || 0}</p><p className="text-xs text-muted">סופר</p></div>
+                            <div className="glass-card p-2 text-center"><p className="text-lg font-bold text-brand-blue">{swipeCounts?.dislike || 0}</p><p className="text-xs text-muted">לא אהבו</p></div>
+                            <div className="glass-card p-2 text-center"><p className="text-lg font-bold text-brand-blue">{swipeCounts?.unsure || 0}</p><p className="text-xs text-muted">לא בטוחים</p></div>
+                          </div>
+                          {detail.swipes.length === 0 ? (
+                            <div className="glass-card p-4 text-sm text-muted text-center">עדיין אין בחירות שירים</div>
+                          ) : (
+                            detail.swipes.map((swipe) => (
+                              <div key={swipe.id} className="glass-card p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-sm font-medium">{songMap.get(swipe.song_id) || swipe.song_id}</p>
+                                  <span className="text-xs text-brand-blue">{swipe.action}</span>
+                                </div>
+                                {parseReasonChips(swipe.reason_chips).length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {parseReasonChips(swipe.reason_chips).map((chip) => (
+                                      <span key={`${swipe.id}-${chip}`} className="text-[11px] px-2 py-0.5 rounded-full border border-glass text-muted">
+                                        {chip}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      {detail && activeTab === "requests" && (
+                        <div className="space-y-2">
+                          {detail.requests.length === 0 ? (
+                            <div className="glass-card p-4 text-sm text-muted text-center">עדיין אין בקשות</div>
+                          ) : (
+                            detail.requests.map((request) => (
+                              <div key={request.id} className="glass-card p-3">
+                                <div className="flex items-center justify-between gap-3 mb-1">
+                                  <p className="text-sm font-medium">{request.content || "—"}</p>
+                                  <span className="text-xs text-brand-blue">{request.request_type}</span>
+                                </div>
+                                {request.moment_type && (
+                                  <p className="text-xs text-muted">רגע באירוע: {request.moment_type}</p>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      {detail && activeTab === "summary" && (
+                        <div className="glass-card p-4 space-y-2">
+                          <p className="text-sm font-semibold">סיכום מהיר לדיג׳יי</p>
+                          <p className="text-xs text-muted">הזוג מילא {detail.answers.length} תשובות, סימן {detail.swipes.length} שירים, והשאיר {detail.requests.length} בקשות.</p>
+                          <p className="text-xs text-muted">שירי אהבה: {swipeCounts?.like || 0} | סופר אהבה: {swipeCounts?.super_like || 0} | פסילות: {swipeCounts?.dislike || 0}</p>
+                          <p className="text-xs text-muted">שלב נוכחי: {STAGE_LABELS[ev.current_stage] || `שלב ${ev.current_stage}`}</p>
+                        </div>
                       )}
                     </div>
                   </motion.div>

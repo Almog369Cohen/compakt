@@ -59,7 +59,11 @@ export async function POST() {
 
     if (existing) {
       const patch: Record<string, unknown> = {};
-      if (!existing.clerk_user_id) {
+      if (isUuid(userId)) {
+        if (!existing.user_id) {
+          patch.user_id = userId;
+        }
+      } else if (!existing.clerk_user_id) {
         patch.clerk_user_id = userId;
       }
       if (email && existing.email !== email) {
@@ -82,7 +86,6 @@ export async function POST() {
     }
 
     const newRow: Record<string, unknown> = {
-      clerk_user_id: userId,
       business_name: "",
       role: "dj",
     };
@@ -93,6 +96,8 @@ export async function POST() {
 
     if (isUuid(userId)) {
       newRow.user_id = userId;
+    } else {
+      newRow.clerk_user_id = userId;
     }
 
     const { data: created, error: insertError } = await supabase

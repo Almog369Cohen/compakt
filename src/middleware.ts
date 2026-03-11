@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
+import { createMiddlewareSupabase } from "@/lib/supabase-server";
 
 /**
  * Next.js Middleware — runs on every matched route.
@@ -10,12 +11,31 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
  */
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   const res = NextResponse.next();
+  const { pathname } = req.nextUrl;
+  const requiresAdminAuth = pathname.startsWith("/api/admin") || pathname.startsWith("/admin") || pathname.startsWith("/hq");
+
+  if (!requiresAdminAuth || pathname === "/admin") {
+    return res;
+  }
+
   const clerkAuth = await auth();
   const hasClerkUser = Boolean(clerkAuth.userId);
   const bypassCookie = req.cookies.get('compakt-admin-bypass')?.value;
-  const isAuthenticated = hasClerkUser || Boolean(bypassCookie);
 
-  const { pathname } = req.nextUrl;
+  let hasSupabaseUser = false;
+  if (requiresAdminAuth) {
+    try {
+      const supabase = createMiddlewareSupabase(req, res);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      hasSupabaseUser = Boolean(user);
+    } catch {
+      hasSupabaseUser = false;
+    }
+  }
+
+  const isAuthenticated = hasClerkUser || Boolean(bypassCookie) || hasSupabaseUser;
 
   if (pathname.startsWith("/api/admin")) {
     if (!isAuthenticated) {

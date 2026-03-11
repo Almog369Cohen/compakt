@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
   EventData,
+  EventType,
   QuestionAnswer,
   SongSwipe,
   EventRequest,
@@ -18,6 +19,25 @@ interface AnalyticsEvent {
   createdAt: string;
 }
 
+type EventRow = {
+  id: string;
+  magic_token: string;
+  token: string;
+  event_type: EventType;
+  couple_name_a: string | null;
+  couple_name_b: string | null;
+  event_date: string | null;
+  venue: string | null;
+  dj_id: string | null;
+  current_stage: number | null;
+  created_at: string;
+};
+
+function isUuidLike(value: string | undefined): boolean {
+  if (!value) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 interface EventStore {
   // Current event
   event: EventData | null;
@@ -30,7 +50,9 @@ interface EventStore {
 
   // Actions
   createEvent: (data: Partial<EventData>) => string;
+  createEventAsync: (data: Partial<EventData>) => Promise<string>;
   loadEvent: (token: string) => boolean;
+  loadEventAsync: (token: string) => Promise<boolean>;
   updateEvent: (data: Partial<EventData>) => void;
   setStage: (stage: number) => void;
 
@@ -90,6 +112,7 @@ export const useEventStore = create<EventStore>()(
           city: data.city,
           coupleNameA: data.coupleNameA,
           coupleNameB: data.coupleNameB,
+          djId: data.djId,
           currentStage: 0,
           theme: "night",
           createdAt: new Date().toISOString(),
@@ -98,22 +121,81 @@ export const useEventStore = create<EventStore>()(
 
         // Sync to Supabase in background
         if (supabase) {
+          const row: Record<string, unknown> = {
+            id: event.id,
+            magic_token: token,
+            token: eventNumber,
+            event_type: event.eventType,
+            couple_name_a: event.coupleNameA || "",
+            couple_name_b: event.coupleNameB || "",
+            event_date: event.eventDate || "",
+            venue: event.venue || "",
+            current_stage: 0,
+          };
+          if (isUuidLike(data.djId)) row.dj_id = data.djId;
           supabase
             .from("events")
-            .insert({
-              id: event.id,
-              magic_token: token,
-              token: eventNumber,
-              event_type: event.eventType,
-              couple_name_a: event.coupleNameA || "",
-              couple_name_b: event.coupleNameB || "",
-              event_date: event.eventDate || "",
-              venue: event.venue || "",
-              current_stage: 0,
-            })
-            .then(({ error }) => {
-              if (error) console.error("[DB Write] events.insert failed:", error.message);
+            .insert(row)
+            .then(({ error }: { error: { message: string } | null }) => {
+              if (error) {
+                const message = error.message.includes("events_dj_id_fkey")
+                  ? "Selected DJ was not found while saving event."
+                  : error.message;
+                console.error("[DB Write] events.insert failed:", message);
+              }
             });
+        }
+
+        return token;
+      },
+
+      createEventAsync: async (data) => {
+        const token = generateMagicToken();
+        const eventNumber = data.eventNumber || generateEventNumber();
+        const event: EventData = {
+          id: crypto.randomUUID(),
+          magicToken: token,
+          eventNumber,
+          eventType: data.eventType || "wedding",
+          eventDate: data.eventDate,
+          venue: data.venue,
+          city: data.city,
+          coupleNameA: data.coupleNameA,
+          coupleNameB: data.coupleNameB,
+          contactEmail: data.contactEmail,
+          contactPhone: data.contactPhone,
+          djId: data.djId,
+          currentStage: 0,
+          theme: "night",
+          createdAt: new Date().toISOString(),
+        };
+        set({ event, answers: [], swipes: [], requests: [], upsellClicks: [], analytics: [] });
+
+        if (supabase) {
+          const row: Record<string, unknown> = {
+            id: event.id,
+            magic_token: token,
+            token: eventNumber,
+            event_type: event.eventType,
+            couple_name_a: event.coupleNameA || "",
+            couple_name_b: event.coupleNameB || "",
+            event_date: event.eventDate || "",
+            venue: event.venue || "",
+            phone_number: event.contactPhone || "",
+            current_stage: 0,
+          };
+          if (isUuidLike(data.djId)) row.dj_id = data.djId;
+          const { error } = await supabase
+            .from("events")
+            .insert(row);
+          if (error) {
+            const message = error.message.includes("events_dj_id_fkey")
+              ? "הדיג׳יי שנבחר לא נמצא. רעננו את הדף ובחרו שוב."
+              : error.message;
+            console.error("[DB Write] events.insert failed:", message);
+            set({ event: null, answers: [], swipes: [], requests: [], upsellClicks: [], analytics: [] });
+            throw new Error(message || "יצירת האירוע נכשלה");
+          }
         }
 
         return token;
@@ -130,7 +212,7 @@ export const useEventStore = create<EventStore>()(
             .select("*")
             .eq("magic_token", token)
             .single()
-            .then(({ data }) => {
+            .then(({ data }: { data: EventRow | null }) => {
               if (data) {
                 set({
                   event: {
@@ -138,10 +220,11 @@ export const useEventStore = create<EventStore>()(
                     magicToken: data.magic_token,
                     eventNumber: data.token,
                     eventType: data.event_type,
-                    coupleNameA: data.couple_name_a,
-                    coupleNameB: data.couple_name_b,
-                    eventDate: data.event_date,
-                    venue: data.venue,
+                    coupleNameA: data.couple_name_a || undefined,
+                    coupleNameB: data.couple_name_b || undefined,
+                    eventDate: data.event_date || undefined,
+                    venue: data.venue || undefined,
+                    djId: data.dj_id || undefined,
                     currentStage: data.current_stage ?? 0,
                     theme: "night",
                     createdAt: data.created_at,
@@ -152,6 +235,40 @@ export const useEventStore = create<EventStore>()(
         }
 
         return false;
+      },
+
+      loadEventAsync: async (token) => {
+        const { event } = get();
+        if (event?.magicToken === token) return true;
+        if (!supabase) return false;
+
+        const { data } = await supabase
+          .from("events")
+          .select("*")
+          .eq("magic_token", token)
+          .single();
+
+        if (!data) return false;
+
+        const row = data as EventRow;
+        set({
+          event: {
+            id: row.id,
+            magicToken: row.magic_token,
+            eventNumber: row.token,
+            eventType: row.event_type,
+            coupleNameA: row.couple_name_a || undefined,
+            coupleNameB: row.couple_name_b || undefined,
+            eventDate: row.event_date || undefined,
+            venue: row.venue || undefined,
+            djId: row.dj_id || undefined,
+            currentStage: row.current_stage ?? 0,
+            theme: "night",
+            createdAt: row.created_at,
+          },
+        });
+
+        return true;
       },
 
       updateEvent: (data) => {
@@ -167,7 +284,7 @@ export const useEventStore = create<EventStore>()(
         trackEvent("stage_change", { stage });
 
         if (supabase) {
-          supabase.from("events").update({ current_stage: stage }).eq("id", event.id).then(({ error }) => {
+          supabase.from("events").update({ current_stage: stage }).eq("id", event.id).then(({ error }: { error: { message: string } | null }) => {
             if (error) console.error("[DB Write] events.update stage failed:", error.message);
           });
         }
@@ -205,7 +322,7 @@ export const useEventStore = create<EventStore>()(
               },
               { onConflict: "id" }
             )
-            .then(({ error }) => {
+            .then(({ error }: { error: { message: string } | null }) => {
               if (error) console.error("[DB Write] answers.upsert failed:", error.message);
             });
         }
@@ -249,7 +366,7 @@ export const useEventStore = create<EventStore>()(
               },
               { onConflict: "id" }
             )
-            .then(({ error }) => {
+            .then(({ error }: { error: { message: string } | null }) => {
               if (error) console.error("[DB Write] swipes.upsert failed:", error.message);
             });
         }
@@ -267,7 +384,7 @@ export const useEventStore = create<EventStore>()(
         const swipe = get().swipes.find((s) => s.songId === songId);
         set({ swipes: get().swipes.filter((s) => s.songId !== songId) });
         if (supabase && swipe) {
-          supabase.from("swipes").delete().eq("id", swipe.id).then(({ error }) => {
+          supabase.from("swipes").delete().eq("id", swipe.id).then(({ error }: { error: { message: string } | null }) => {
             if (error) console.error("[DB Write] swipes.delete failed:", error.message);
           });
         }
@@ -300,7 +417,7 @@ export const useEventStore = create<EventStore>()(
               content: request.content,
               moment_type: request.momentType || null,
             })
-            .then(({ error }) => {
+            .then(({ error }: { error: { message: string } | null }) => {
               if (error) console.error("[DB Write] requests.insert failed:", error.message);
             });
         }
@@ -309,7 +426,7 @@ export const useEventStore = create<EventStore>()(
       removeRequest: (id) => {
         set({ requests: get().requests.filter((r) => r.id !== id) });
         if (supabase) {
-          supabase.from("requests").delete().eq("id", id).then(({ error }) => {
+          supabase.from("requests").delete().eq("id", id).then(({ error }: { error: { message: string } | null }) => {
             if (error) console.error("[DB Write] requests.delete failed:", error.message);
           });
         }

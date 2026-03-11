@@ -18,7 +18,7 @@ interface AdminStore {
   // Auth
   login: (email: string, password: string) => boolean;
   loginWithEmail: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string) => Promise<boolean>;
+  signUp: (email: string, password: string) => Promise<"authenticated" | "pending_confirmation" | "error">;
   loginWithOAuth: (provider: "google" | "apple" | "facebook") => Promise<void>;
   checkSession: () => Promise<void>;
   logout: () => void;
@@ -136,18 +136,20 @@ export const useAdminStore = create<AdminStore>()(
       signUp: async (email, password) => {
         if (!supabase) {
           set({ authError: "Supabase is not configured" });
-          return false;
+          return "error";
         }
         set({ authError: null });
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) {
           set({ authError: error.message });
-          return false;
+          return "error";
         }
-        if (data.user) {
-          set({ isAuthenticated: true, userId: data.user.id, userEmail: data.user.email ?? null, authError: null });
+        if (data.session?.user) {
+          set({ isAuthenticated: true, userId: data.session.user.id, userEmail: data.session.user.email ?? null, authError: null });
+          return "authenticated";
         }
-        return true;
+        set({ isAuthenticated: false, userId: null, userEmail: data.user?.email ?? email, authError: null });
+        return "pending_confirmation";
       },
 
       checkSession: async () => {
@@ -155,7 +157,9 @@ export const useAdminStore = create<AdminStore>()(
         const { data } = await supabase.auth.getSession();
         if (data.session?.user) {
           set({ isAuthenticated: true, userId: data.session.user.id, userEmail: data.session.user.email ?? null });
+          return;
         }
+        set({ isAuthenticated: false, userId: null, userEmail: null });
       },
 
       logout: () => {
@@ -356,7 +360,21 @@ export const useAdminStore = create<AdminStore>()(
         ]);
 
         // Map DB rows to app types (empty array if no data)
-        const dbSongs: Song[] = (songsRes.data || []).map((s) => ({
+        const dbSongs: Song[] = (songsRes.data || []).map((s: {
+          id: string;
+          title: string;
+          artist: string;
+          cover_url?: string | null;
+          preview_url?: string | null;
+          external_link?: string | null;
+          category?: string | null;
+          tags?: string[] | string | null;
+          energy?: number | null;
+          language?: string | null;
+          is_safe?: boolean | null;
+          is_active?: boolean | null;
+          sort_order?: number | null;
+        }) => ({
           id: s.id,
           title: s.title,
           artist: s.artist,
@@ -372,7 +390,18 @@ export const useAdminStore = create<AdminStore>()(
           sortOrder: s.sort_order ?? 0,
         })) as Song[];
 
-        const dbQuestions: Question[] = (questionsRes.data || []).map((q) => ({
+        const dbQuestions: Question[] = (questionsRes.data || []).map((q: {
+          id: string;
+          question_he: string;
+          question_type?: Question["questionType"] | null;
+          event_type?: Question["eventType"] | null;
+          options?: Question["options"] | string | null;
+          slider_min?: number | null;
+          slider_max?: number | null;
+          slider_labels?: string[] | string | null;
+          is_active?: boolean | null;
+          sort_order?: number | null;
+        }) => ({
           id: q.id,
           questionHe: q.question_he,
           questionType: q.question_type ?? "single_select",
@@ -385,7 +414,16 @@ export const useAdminStore = create<AdminStore>()(
           sortOrder: q.sort_order ?? 0,
         })) as Question[];
 
-        const dbUpsells: Upsell[] = (upsellsRes.data || []).map((u) => ({
+        const dbUpsells: Upsell[] = (upsellsRes.data || []).map((u: {
+          id: string;
+          title_he: string;
+          description_he?: string | null;
+          price_hint?: string | null;
+          cta_text_he?: string | null;
+          placement?: Upsell["placement"] | null;
+          is_active?: boolean | null;
+          sort_order?: number | null;
+        }) => ({
           id: u.id,
           titleHe: u.title_he,
           descriptionHe: u.description_he ?? "",
@@ -426,7 +464,21 @@ export const useAdminStore = create<AdminStore>()(
               ]);
               if (s2.data && s2.data.length > 0) {
                 set({
-                  songs: s2.data.map((s) => ({
+                  songs: s2.data.map((s: {
+                    id: string;
+                    title: string;
+                    artist: string;
+                    cover_url?: string | null;
+                    preview_url?: string | null;
+                    external_link?: string | null;
+                    category?: string | null;
+                    tags?: string[] | null;
+                    energy?: number | null;
+                    language?: string | null;
+                    is_safe?: boolean | null;
+                    is_active?: boolean | null;
+                    sort_order?: number | null;
+                  }) => ({
                     id: s.id, title: s.title, artist: s.artist,
                     coverUrl: s.cover_url ?? "", previewUrl: s.preview_url ?? "",
                     externalLink: s.external_link ?? "", category: s.category ?? "dancing",
@@ -438,7 +490,18 @@ export const useAdminStore = create<AdminStore>()(
               }
               if (q2.data && q2.data.length > 0) {
                 set({
-                  questions: q2.data.map((q) => ({
+                  questions: q2.data.map((q: {
+                    id: string;
+                    question_he: string;
+                    question_type?: Question["questionType"] | null;
+                    event_type?: Question["eventType"] | null;
+                    options?: Question["options"] | null;
+                    slider_min?: number | null;
+                    slider_max?: number | null;
+                    slider_labels?: string[] | null;
+                    is_active?: boolean | null;
+                    sort_order?: number | null;
+                  }) => ({
                     id: q.id, questionHe: q.question_he,
                     questionType: q.question_type ?? "single_select",
                     eventType: q.event_type ?? "wedding",
@@ -451,7 +514,16 @@ export const useAdminStore = create<AdminStore>()(
               }
               if (u2.data && u2.data.length > 0) {
                 set({
-                  upsells: u2.data.map((u) => ({
+                  upsells: u2.data.map((u: {
+                    id: string;
+                    title_he: string;
+                    description_he?: string | null;
+                    price_hint?: string | null;
+                    cta_text_he?: string | null;
+                    placement?: Upsell["placement"] | null;
+                    is_active?: boolean | null;
+                    sort_order?: number | null;
+                  }) => ({
                     id: u.id, titleHe: u.title_he, descriptionHe: u.description_he ?? "",
                     priceHint: u.price_hint ?? "", ctaTextHe: u.cta_text_he ?? "",
                     placement: u.placement ?? "stage_4", isActive: u.is_active ?? true,
@@ -476,46 +548,6 @@ export const useAdminStore = create<AdminStore>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.isAuthenticated = false;
-
-          const q1 = state.questions.find((q) => q.id === "q1");
-          if (q1) {
-            q1.questionType = "multi_select";
-
-            const desiredOptions = [
-              { label: "חפלה - נסרין המוזמנת הראשית 🪘", value: "party" },
-              { label: "אפטר של החיים 😎", value: "after" },
-              { label: "מיינסטרים של מיאמי 🏖️🍹", value: "miami_mainstream" },
-              { label: "היפ הופ שחורה / R&B (בשחורהה) 🎤�", value: "black_rb" },
-              { label: "80s funky שלמה ארצי והחברים 🪩", value: "shlomo_funky_80s" },
-              { label: "שלב את הכל 🔀", value: "mix" },
-            ];
-
-            const valueMap: Record<string, string> = {
-              nostalgic: "party",
-              elegant: "miami_mainstream",
-              classic_israeli: "shlomo_funky_80s",
-            };
-
-            const existing = Array.isArray(q1.options) ? q1.options : [];
-            const normalizedExisting = existing
-              .map((o) => ({
-                ...o,
-                value: valueMap[o.value] ?? o.value,
-              }))
-              .filter((o) => desiredOptions.some((d) => d.value === o.value));
-
-            const merged = desiredOptions.map((d) => {
-              const found = normalizedExisting.find((o) => o.value === d.value);
-              return found ? { ...found, label: d.label, value: d.value } : d;
-            });
-
-            q1.options = merged;
-          }
-
-          const q5 = state.questions.find((q) => q.id === "q5");
-          if (q5 && q5.questionType === "slider") {
-            q5.sliderLabels = ["רגוע 🧘", "זורם 🌊", "מקפיץ ⚡", "שיאים 🔥", "פסטיבל 💥"];
-          }
         }
       },
     }

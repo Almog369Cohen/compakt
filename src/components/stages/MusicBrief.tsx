@@ -143,9 +143,32 @@ export function MusicBrief() {
     return names ? `${label} ${names}` : label;
   }, [event]);
 
+  const journeyLink = useMemo(() => {
+    if (!event?.magicToken) return "";
+    const djSlug =
+      typeof window !== "undefined"
+        ? window.sessionStorage.getItem("compakt_dj_slug")?.trim() || ""
+        : "";
+    return djSlug
+      ? `${getSafeOrigin()}/dj/${djSlug}?token=${event.magicToken}`
+      : `${getSafeOrigin()}?token=${event.magicToken}`;
+  }, [event?.magicToken]);
+
+  const technicalDetails = useMemo(() => {
+    if (!event) return [];
+    return [
+      { label: "מספר אירוע", value: event.eventNumber || "—" },
+      { label: "מזהה אירוע", value: event.id || "—" },
+      { label: "Magic Token", value: event.magicToken || "—" },
+      { label: "DJ ID", value: event.djId || "—" },
+      { label: "שלב נוכחי", value: String(event.currentStage ?? 0) },
+      { label: "נוצר בתאריך", value: event.createdAt || "—" },
+      { label: "לינק אירוע", value: journeyLink || "—" },
+    ];
+  }, [event, journeyLink]);
+
   const handleCopyLink = () => {
-    const url = `${getSafeOrigin()}?token=${event?.magicToken}`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(journeyLink);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
@@ -157,7 +180,7 @@ export function MusicBrief() {
       html2pdf()
         .set({
           margin: [10, 10],
-          filename: `music-brief-${event?.magicToken?.slice(0, 8) || "draft"}.pdf`,
+          filename: `music-brief-${event?.eventNumber || event?.magicToken?.slice(0, 8) || "draft"}.pdf`,
           image: { type: "jpeg", quality: 0.95 },
           html2canvas: { scale: 2, useCORS: true },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
@@ -172,6 +195,7 @@ export function MusicBrief() {
   const buildTextSummary = () => {
     const lines: string[] = [];
     lines.push(`🎵 Music Brief — ${eventTitle}`);
+    if (event?.eventNumber) lines.push(`🆔 מספר אירוע: ${event.eventNumber}`);
     if (event?.eventDate) lines.push(`📅 ${event.eventDate}`);
     if (event?.venue) lines.push(`📍 ${event.venue}`);
     lines.push("");
@@ -197,8 +221,10 @@ export function MusicBrief() {
       dontRequests.forEach((r) => lines.push(`  • ${r.content}`));
       lines.push("");
     }
-    const url = `${getSafeOrigin()}?token=${event?.magicToken}`;
-    lines.push(`🔗 ${url}`);
+    if (event?.id) lines.push(`Event ID: ${event.id}`);
+    if (event?.magicToken) lines.push(`Magic Token: ${event.magicToken}`);
+    if (event?.djId) lines.push(`DJ ID: ${event.djId}`);
+    lines.push(`🔗 ${journeyLink}`);
     return lines.join("\n");
   };
 
@@ -246,6 +272,7 @@ export function MusicBrief() {
         </button>
         <button
           onClick={handleCopyLink}
+          disabled={!journeyLink}
           className="btn-secondary text-sm flex items-center gap-2 py-2 px-4"
         >
           {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -302,6 +329,26 @@ export function MusicBrief() {
           {event?.venue && (
             <p className="text-sm text-muted">{event.venue}</p>
           )}
+          {event?.eventNumber && (
+            <p className="text-sm text-brand-blue mt-2">מספר אירוע: {event.eventNumber}</p>
+          )}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+          className="glass-card p-5"
+        >
+          <h3 className="font-bold text-sm mb-3">פרטים טכניים לאימות</h3>
+          <div className="space-y-2">
+            {technicalDetails.map((item) => (
+              <div key={item.label} className="text-sm">
+                <span className="text-muted">{item.label}</span>
+                <p className="font-medium break-all" dir="ltr">{item.value}</p>
+              </div>
+            ))}
+          </div>
         </motion.div>
 
         {/* Preferences Summary */}

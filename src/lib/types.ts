@@ -22,6 +22,9 @@ export interface EventData {
   city?: string;
   coupleNameA?: string;
   coupleNameB?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  djId?: string;
   currentStage: number;
   theme: ThemeMode;
   createdAt: string;

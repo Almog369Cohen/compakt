@@ -85,7 +85,16 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
   const [copied, setCopied] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  const accentColor = profile.accentColor || "#059cc0";
+  const brandColors = profile.brandColors || {
+    primary: profile.accentColor || "#059cc0",
+    secondary: "#03b28c",
+    accent: profile.accentColor || "#059cc0",
+    surface: "#1f2937",
+  };
+  const primaryColor = brandColors.primary || "#059cc0";
+  const secondaryColor = brandColors.secondary || "#03b28c";
+  const accentColor = brandColors.accent || primaryColor;
+  const surfaceColor = brandColors.surface || "#1f2937";
 
   const activeSocials = socialLinks.filter((s) => {
     const val = profile[s.key];
@@ -153,7 +162,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
           <div
             className="h-48 sm:h-64 w-full"
             style={{
-              background: `linear-gradient(135deg, ${accentColor}33, ${accentColor}11)`,
+              background: `linear-gradient(135deg, ${primaryColor}55, ${secondaryColor}33 55%, ${surfaceColor}88)`,
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--bg-primary)]" />
@@ -175,7 +184,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
             ) : (
               <div
                 className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-3 -mt-12"
-                style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
               >
                 <Headphones className="w-8 h-8 text-white" />
               </div>
@@ -203,7 +212,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
               <a
                 href={`/?dj=${effectiveSlug}`}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-opacity hover:opacity-90"
-                style={{ background: accentColor }}
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
               >
                 <Music className="w-5 h-5" />
                 התחילו את המסע
@@ -211,7 +220,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
             ) : (
               <div
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white opacity-80 cursor-default"
-                style={{ background: accentColor }}
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
               >
                 <Music className="w-5 h-5" />
                 התחילו את המסע
@@ -219,7 +228,8 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
             )}
             <button
               onClick={handleShare}
-              className="px-4 py-3 rounded-xl border border-glass text-sm font-medium hover:border-brand-blue/50 transition-all"
+              className="px-4 py-3 rounded-xl border text-sm font-medium transition-all"
+              style={{ borderColor: `${accentColor}55`, color: accentColor }}
               type="button"
               title={copied ? "הועתק" : "שתפו / העתיקו"}
               disabled={mode === "preview"}
@@ -236,6 +246,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="glass-card p-5"
+            style={{ borderColor: `${surfaceColor}88` }}
           >
             <p className="text-sm text-secondary leading-relaxed whitespace-pre-line">
               {profile.bio}
@@ -311,8 +322,8 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
                     key={social.key}
                     {...linkProps}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${isPrimary
-                        ? "border-transparent shadow-sm"
-                        : "border-glass"
+                      ? "border-transparent shadow-sm"
+                      : "border-glass"
                       } ${mode === "public" ? "hover:scale-105 active:scale-95 cursor-pointer" : ""}`}
                     style={isPrimary ? { background: `${social.color}12`, borderColor: `${social.color}30` } : undefined}
                   >
@@ -389,9 +400,10 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
                     key={i}
                     onClick={() => setGalleryIndex(i)}
                     className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${i === galleryIndex % galleryPhotos.length
-                      ? "border-brand-blue scale-105"
+                      ? "scale-105"
                       : "border-transparent opacity-60 hover:opacity-100"
                       }`}
+                    style={i === galleryIndex % galleryPhotos.length ? { borderColor: primaryColor } : undefined}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt={`thumb ${i + 1}`} className="w-full h-full object-cover" />
@@ -427,7 +439,8 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-glass text-sm font-medium hover:border-brand-blue/50 transition-all hover:scale-[1.01]"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-glass text-sm font-medium transition-all hover:scale-[1.01]"
+                  style={{ borderColor: `${accentColor}33` }}
                 >
                   <Link2 className="w-4 h-4" />
                   {link.label}

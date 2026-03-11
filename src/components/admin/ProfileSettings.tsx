@@ -19,11 +19,26 @@ const ACCENT_COLORS = [
   "#06b6d4",
 ];
 
+const BRAND_COLOR_FIELDS = [
+  { key: "primary", label: "ראשי" },
+  { key: "secondary", label: "משני" },
+  { key: "accent", label: "הדגשה" },
+  { key: "surface", label: "משטח" },
+] as const;
+
+const DEFAULT_BRAND_COLORS = {
+  primary: "#059cc0",
+  secondary: "#03b28c",
+  accent: "#8b5cf6",
+  surface: "#1f2937",
+};
+
 export function ProfileSettings() {
   const profile = useProfileStore((s) => s.profile);
   const setProfile = useProfileStore((s) => s.setProfile);
   const saveProfileToDB = useProfileStore((s) => s.saveProfileToDB);
   const userId = useAdminStore((s) => s.userId);
+  const brandColors = profile.brandColors || DEFAULT_BRAND_COLORS;
 
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -82,6 +97,20 @@ export function ProfileSettings() {
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
   };
+
+  const updateBrandColor = (
+    key: keyof typeof DEFAULT_BRAND_COLORS,
+    value: string
+  ) => {
+    setProfile({
+      brandColors: {
+        ...brandColors,
+        [key]: value,
+      },
+    });
+  };
+
+  const uploaderUserId = userId || "legacy";
 
   return (
     <div className="space-y-4">
@@ -183,13 +212,39 @@ export function ProfileSettings() {
             </h3>
 
             <div>
-              <label className="block text-xs text-muted mb-2 font-medium">צבע מותג</label>
+              <label className="block text-xs text-muted mb-2 font-medium">פלטת צבעים</label>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {BRAND_COLOR_FIELDS.map((field) => (
+                  <div key={field.key} className="space-y-2">
+                    <label className="block text-xs text-muted font-medium">{field.label}</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={brandColors[field.key]}
+                        onChange={(e) => updateBrandColor(field.key, e.target.value)}
+                        className="h-10 w-12 rounded-lg border border-glass bg-transparent p-1"
+                      />
+                      <input
+                        type="text"
+                        value={brandColors[field.key]}
+                        onChange={(e) => updateBrandColor(field.key, e.target.value)}
+                        className={`${inputClass} flex-1`}
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-muted mb-2 font-medium">בחירה מהירה לצבע הראשי</label>
               <div className="flex flex-wrap gap-3">
                 {ACCENT_COLORS.map((color) => (
                   <button
                     key={color}
-                    onClick={() => setProfile({ accentColor: color })}
-                    className={`w-10 h-10 rounded-xl transition-all ${profile.accentColor === color
+                    onClick={() => updateBrandColor("primary", color)}
+                    className={`w-10 h-10 rounded-xl transition-all ${brandColors.primary === color
                       ? "ring-2 ring-offset-2 ring-offset-[var(--bg-primary)] scale-110"
                       : "hover:scale-105"
                       }`}
@@ -242,6 +297,15 @@ export function ProfileSettings() {
                 <code className="text-xs text-secondary truncate flex-1" dir="ltr">
                   {djLink}
                 </code>
+                <a
+                  href={djLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-brand-blue hover:underline flex items-center gap-1"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  פתח
+                </a>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(
                     `היי! הנה הפרופיל שלי 🎵\n${djLink}`
@@ -349,24 +413,38 @@ export function ProfileSettings() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1.5 font-medium">תמונת קאבר (URL)</label>
+                <label className="block text-xs text-muted mb-1.5 font-medium">תמונת קאבר</label>
+                <ImageUploader
+                  images={profile.coverUrl ? [profile.coverUrl] : []}
+                  onChange={(imgs) => setProfile({ coverUrl: imgs[0] || "" })}
+                  userId={uploaderUserId}
+                  maxImages={1}
+                  folder="cover"
+                />
                 <input
                   type="url"
                   value={profile.coverUrl}
                   onChange={(e) => setProfile({ coverUrl: e.target.value })}
-                  placeholder="https://..."
-                  className={inputClass}
+                  placeholder="או הדבק URL ישיר"
+                  className={`${inputClass} mt-2`}
                   dir="ltr"
                 />
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1.5 font-medium">לוגו (URL)</label>
+                <label className="block text-xs text-muted mb-1.5 font-medium">תמונה קטנה / לוגו</label>
+                <ImageUploader
+                  images={profile.logoUrl ? [profile.logoUrl] : []}
+                  onChange={(imgs) => setProfile({ logoUrl: imgs[0] || "" })}
+                  userId={uploaderUserId}
+                  maxImages={1}
+                  folder="logo"
+                />
                 <input
                   type="url"
                   value={profile.logoUrl}
                   onChange={(e) => setProfile({ logoUrl: e.target.value })}
-                  placeholder="https://..."
-                  className={inputClass}
+                  placeholder="או הדבק URL ישיר"
+                  className={`${inputClass} mt-2`}
                   dir="ltr"
                 />
               </div>
@@ -379,11 +457,11 @@ export function ProfileSettings() {
               <ImageIcon className="w-4 h-4 text-brand-blue" />
               תיק עבודות (גלריית תמונות)
             </h3>
-            {userId ? (
+            {uploaderUserId ? (
               <ImageUploader
                 images={profile.galleryPhotos}
                 onChange={(imgs) => setProfile({ galleryPhotos: imgs })}
-                userId={userId}
+                userId={uploaderUserId}
                 maxImages={10}
                 folder="gallery"
               />

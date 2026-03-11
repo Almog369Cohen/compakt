@@ -1,12 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { supabase } from "@/lib/supabase";
-
 export type ProfileState = {
   businessName: string;
   tagline: string;
   bio: string;
   accentColor: string;
+  brandColors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    surface: string;
+  };
   djSlug: string;
   instagramUrl: string;
   tiktokUrl: string;
@@ -31,6 +35,60 @@ interface ProfileStore {
   loadProfileFromDB: (userId: string) => Promise<void>;
   saveProfileToDB: (userId: string) => Promise<void>;
   loadProfileBySlug: (slug: string) => Promise<ProfileState | null>;
+  loadProfileRecordBySlug: (slug: string) => Promise<{ id: string; profile: ProfileState } | null>;
+}
+
+const DEFAULT_BRAND_COLORS = {
+  primary: "#059cc0",
+  secondary: "#03b28c",
+  accent: "#8b5cf6",
+  surface: "#1f2937",
+};
+
+function parseBrandColors(value: unknown): ProfileState["brandColors"] {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return DEFAULT_BRAND_COLORS;
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed) as Partial<ProfileState["brandColors"]>;
+        return {
+          primary: typeof parsed.primary === "string" ? parsed.primary : DEFAULT_BRAND_COLORS.primary,
+          secondary: typeof parsed.secondary === "string" ? parsed.secondary : DEFAULT_BRAND_COLORS.secondary,
+          accent: typeof parsed.accent === "string" ? parsed.accent : DEFAULT_BRAND_COLORS.accent,
+          surface: typeof parsed.surface === "string" ? parsed.surface : DEFAULT_BRAND_COLORS.surface,
+        };
+      } catch {
+        return DEFAULT_BRAND_COLORS;
+      }
+    }
+    return {
+      ...DEFAULT_BRAND_COLORS,
+      primary: trimmed,
+      accent: trimmed,
+    };
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const parsed = value as Partial<ProfileState["brandColors"]>;
+    return {
+      primary: typeof parsed.primary === "string" ? parsed.primary : DEFAULT_BRAND_COLORS.primary,
+      secondary: typeof parsed.secondary === "string" ? parsed.secondary : DEFAULT_BRAND_COLORS.secondary,
+      accent: typeof parsed.accent === "string" ? parsed.accent : DEFAULT_BRAND_COLORS.accent,
+      surface: typeof parsed.surface === "string" ? parsed.surface : DEFAULT_BRAND_COLORS.surface,
+    };
+  }
+
+  return DEFAULT_BRAND_COLORS;
+}
+
+function serializeBrandColors(colors: ProfileState["brandColors"]): string {
+  return JSON.stringify({
+    primary: colors.primary || DEFAULT_BRAND_COLORS.primary,
+    secondary: colors.secondary || DEFAULT_BRAND_COLORS.secondary,
+    accent: colors.accent || DEFAULT_BRAND_COLORS.accent,
+    surface: colors.surface || DEFAULT_BRAND_COLORS.surface,
+  });
 }
 
 const DEFAULT_PROFILE: ProfileState = {
@@ -38,6 +96,7 @@ const DEFAULT_PROFILE: ProfileState = {
   tagline: "",
   bio: "",
   accentColor: "#059cc0",
+  brandColors: DEFAULT_BRAND_COLORS,
   djSlug: "",
   instagramUrl: "",
   tiktokUrl: "",
@@ -59,7 +118,20 @@ export const useProfileStore = create<ProfileStore>()(
       profile: DEFAULT_PROFILE,
       profileId: null,
       loading: false,
-      setProfile: (patch) => set({ profile: { ...get().profile, ...patch } }),
+      setProfile: (patch) => set((state) => {
+        const nextProfile = { ...state.profile, ...patch };
+        if (patch.brandColors) {
+          nextProfile.brandColors = patch.brandColors;
+          nextProfile.accentColor = patch.brandColors.primary;
+        } else if (typeof patch.accentColor === "string") {
+          nextProfile.brandColors = {
+            ...state.profile.brandColors,
+            primary: patch.accentColor,
+            accent: patch.accentColor,
+          };
+        }
+        return { profile: nextProfile };
+      }),
       resetProfile: () => set({ profile: DEFAULT_PROFILE, profileId: null }),
 
       loadProfileFromDB: async () => {
@@ -77,13 +149,16 @@ export const useProfileStore = create<ProfileStore>()(
             return;
           }
 
+          const brandColors = parseBrandColors(data.accent_color);
+
           set({
             profileId: data.id,
             profile: {
               businessName: data.business_name ?? "",
               tagline: data.tagline ?? "",
               bio: data.bio ?? "",
-              accentColor: data.accent_color ?? "#059cc0",
+              accentColor: brandColors.primary,
+              brandColors,
               djSlug: data.dj_slug ?? "",
               instagramUrl: data.instagram_url ?? "",
               tiktokUrl: data.tiktok_url ?? "",
@@ -111,7 +186,7 @@ export const useProfileStore = create<ProfileStore>()(
           business_name: profile.businessName,
           tagline: profile.tagline,
           bio: profile.bio,
-          accent_color: profile.accentColor,
+          accent_color: serializeBrandColors(profile.brandColors),
           dj_slug: profile.djSlug || null,
           instagram_url: profile.instagramUrl,
           tiktok_url: profile.tiktokUrl,
@@ -139,33 +214,49 @@ export const useProfileStore = create<ProfileStore>()(
       },
 
       loadProfileBySlug: async (slug: string): Promise<ProfileState | null> => {
-        if (!supabase) return null;
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("dj_slug", slug)
-          .single();
+        const result = await get().loadProfileRecordBySlug(slug);
+        return result?.profile ?? null;
+      },
 
-        if (error || !data) return null;
+      loadProfileRecordBySlug: async (slug: string): Promise<{ id: string; profile: ProfileState } | null> => {
+        const normalizedSlug = slug.trim().toLowerCase();
+        if (!normalizedSlug) return null;
+
+        const response = await fetch(`/api/public/dj/${encodeURIComponent(normalizedSlug)}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!response.ok) return null;
+
+        const result = await response.json();
+        const data = result.data;
+        if (!data) return null;
+
+        const brandColors = parseBrandColors(data.accent_color);
 
         return {
-          businessName: data.business_name ?? "",
-          tagline: data.tagline ?? "",
-          bio: data.bio ?? "",
-          accentColor: data.accent_color ?? "#059cc0",
-          djSlug: data.dj_slug ?? "",
-          instagramUrl: data.instagram_url ?? "",
-          tiktokUrl: data.tiktok_url ?? "",
-          soundcloudUrl: data.soundcloud_url ?? "",
-          spotifyUrl: data.spotify_url ?? "",
-          youtubeUrl: data.youtube_url ?? "",
-          websiteUrl: data.website_url ?? "",
-          whatsappNumber: data.whatsapp_number ?? "",
-          coverUrl: data.cover_url ?? "",
-          logoUrl: data.logo_url ?? "",
-          customLinks: Array.isArray(data.custom_links) ? data.custom_links : [],
-          galleryPhotos: Array.isArray(data.gallery_photos) ? data.gallery_photos : [],
-          reviews: Array.isArray(data.reviews) ? data.reviews : [],
+          id: data.id,
+          profile: {
+            businessName: data.business_name ?? "",
+            tagline: data.tagline ?? "",
+            bio: data.bio ?? "",
+            accentColor: brandColors.primary,
+            brandColors,
+            djSlug: data.dj_slug ?? "",
+            instagramUrl: data.instagram_url ?? "",
+            tiktokUrl: data.tiktok_url ?? "",
+            soundcloudUrl: data.soundcloud_url ?? "",
+            spotifyUrl: data.spotify_url ?? "",
+            youtubeUrl: data.youtube_url ?? "",
+            websiteUrl: data.website_url ?? "",
+            whatsappNumber: data.whatsapp_number ?? "",
+            coverUrl: data.cover_url ?? "",
+            logoUrl: data.logo_url ?? "",
+            customLinks: Array.isArray(data.custom_links) ? data.custom_links : [],
+            galleryPhotos: Array.isArray(data.gallery_photos) ? data.gallery_photos : [],
+            reviews: Array.isArray(data.reviews) ? data.reviews : [],
+          },
         };
       },
     }),

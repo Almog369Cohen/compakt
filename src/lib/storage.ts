@@ -9,7 +9,7 @@ const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "dj-media";
 export async function uploadImage(
   file: File,
   userId: string,
-  folder: "gallery" | "screenshots" = "gallery",
+  folder = "gallery",
   onProgress?: (pct: number) => void
 ): Promise<string> {
   // Basic validation (client-side, before sending)

@@ -1,18 +1,16 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, SkipForward, Home, Shield } from "lucide-react";
+import { ChevronRight, ChevronLeft, Home } from "lucide-react";
 import type { Question } from "@/lib/types";
 
 const ETHNIC_MUSIC_Q_ID = "ethnic_music";
 const ETHNIC_MUSIC_TEXT_ID = "ethnic_music_edah";
 
 export function QuestionFlow() {
-  const router = useRouter();
   const event = useEventStore((s) => s.event);
   const saveAnswer = useEventStore((s) => s.saveAnswer);
   const getAnswer = useEventStore((s) => s.getAnswer);
@@ -72,11 +70,6 @@ export function QuestionFlow() {
     }
   }, [currentIndex, setStage]);
 
-  const skip = useCallback(() => {
-    trackEvent("question_skip", { questionId: question?.id });
-    goNext();
-  }, [goNext, trackEvent, question]);
-
   if (!question) return null;
 
   return (
@@ -87,25 +80,12 @@ export function QuestionFlow() {
             onClick={() => {
               trackEvent("navigate_home", { from: "questions" });
               setStage(0);
-              router.push("/");
             }}
             className="glass-card p-2 rounded-full transition-all hover:scale-110 active:scale-95"
             aria-label="חזרה למסך הבית"
             title="בית"
           >
             <Home className="w-4 h-4 text-muted" />
-          </button>
-
-          <button
-            onClick={() => {
-              trackEvent("navigate_admin", { from: "questions" });
-              router.push("/admin");
-            }}
-            className="glass-card p-2 rounded-full transition-all hover:scale-110 active:scale-95"
-            aria-label="כניסה ל-DJ"
-            title="DJ"
-          >
-            <Shield className="w-4 h-4 text-muted" />
           </button>
         </div>
         <div className="text-xs text-muted" />
@@ -149,12 +129,10 @@ export function QuestionFlow() {
                 saveAnswer(ETHNIC_MUSIC_Q_ID, "no");
                 saveAnswer(ETHNIC_MUSIC_TEXT_ID, "");
                 trackEvent("ethnic_music_no", {});
-                setTimeout(goNext, 300);
                 return;
               }
 
               saveAnswer(question.id, value);
-              if (question.questionType !== "text") setTimeout(goNext, 400);
             }}
             onSubmitText={() => goNext()}
           />
@@ -170,7 +148,6 @@ export function QuestionFlow() {
             onSave={() => {
               saveAnswer(ETHNIC_MUSIC_TEXT_ID, ethnicText.trim());
               setShowEthnicModal(false);
-              setTimeout(goNext, 200);
             }}
           />
         )}
@@ -187,22 +164,12 @@ export function QuestionFlow() {
         </button>
 
         <button
-          onClick={skip}
-          className="flex items-center gap-1 text-sm text-muted hover:text-secondary transition-colors"
+          onClick={goNext}
+          className="flex items-center gap-1 text-sm text-brand-blue hover:text-brand-blue/80 transition-colors font-medium"
         >
-          דלג
-          <SkipForward className="w-4 h-4" />
+          המשך
+          <ChevronLeft className="w-4 h-4" />
         </button>
-
-        {question.questionType === "text" && (
-          <button
-            onClick={goNext}
-            className="flex items-center gap-1 text-sm text-brand-blue hover:text-brand-blue/80 transition-colors font-medium"
-          >
-            הבא
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-        )}
       </div>
     </div>
   );
@@ -264,12 +231,11 @@ function QuestionCard({
   question,
   existingValue,
   onAnswer,
-  onSubmitText,
 }: {
   question: Question;
   existingValue?: string | string[] | number;
   onAnswer: (value: string | string[] | number) => void;
-  onSubmitText: () => void;
+  onSubmitText?: () => void;
 }) {
   const [multiSelected, setMultiSelected] = useState<string[]>(
     Array.isArray(existingValue) ? existingValue : typeof existingValue === "string" ? [existingValue] : []
@@ -309,6 +275,7 @@ function QuestionCard({
       {/* Multi Select */}
       {question.questionType === "multi_select" && question.options && (
         <div className="space-y-2">
+          <p className="text-xs text-center text-muted">אפשר לבחור כמה אפשרויות</p>
           {question.options.map((opt) => {
             const isSelected = multiSelected.includes(opt.value);
             return (
@@ -391,12 +358,6 @@ function QuestionCard({
             onChange={(e) => {
               setTextValue(e.target.value);
               onAnswer(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onSubmitText();
-              }
             }}
             placeholder="...ספרו לנו"
             rows={3}

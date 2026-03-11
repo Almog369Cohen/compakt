@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
 import { requireAuth, isAuthError } from "@/lib/requireAuth";
-import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
+import { loadResolvedAccessByUserId } from "@/lib/access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,8 +15,8 @@ export async function POST(req: Request) {
 
     const supabase = getServiceSupabase();
     const { access } = await loadResolvedAccessByUserId(supabase, auth.userId);
-    if (!access || !hasFeature(access, "image_uploads")) {
-      return NextResponse.json({ error: "Feature not enabled for this account" }, { status: 403 });
+    if (!access || !access.isActive) {
+      return NextResponse.json({ error: "Account is not active" }, { status: 403 });
     }
 
     const form = await req.formData();
