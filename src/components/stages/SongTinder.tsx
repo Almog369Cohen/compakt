@@ -1,16 +1,24 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { reasonChips } from "@/data/songs";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, PanInfo } from "framer-motion";
-import { Heart, X, Star, HelpCircle, Play, Pause, Volume2 } from "lucide-react";
+import { Heart, X, Star, HelpCircle, Play, Pause, Volume2, SkipForward, Undo2, ChevronUp, Music2 } from "lucide-react";
 import type { SwipeAction, Song, SongSwipe } from "@/lib/types";
 import { SwipeTutorial, useSwipeTutorial } from "@/components/ui/SwipeTutorial";
 
-const SWIPE_THRESHOLD = 100;
+const SWIPE_THRESHOLD = 80;
+const SWIPE_UP_THRESHOLD = 80;
 const MIN_SWIPES = 10;
+
+const categoryLabels: Record<string, { label: string; color: string }> = {
+  ceremony: { label: "טקס", color: "rgba(245,197,66,0.25)" },
+  dancing: { label: "רחבה", color: "rgba(3,178,140,0.25)" },
+  food: { label: "אוכל", color: "rgba(5,156,192,0.25)" },
+  reception: { label: "קבלת פנים", color: "rgba(168,85,247,0.25)" },
+};
 
 export function SongTinder() {
   const saveSwipe = useEventStore((s) => s.saveSwipe);
@@ -18,17 +26,14 @@ export function SongTinder() {
   const swipes = useEventStore((s) => s.swipes);
   const setStage = useEventStore((s) => s.setStage);
   const trackEvent = useEventStore((s) => s.trackEvent);
-
   const setSwipes = useEventStore((s) => s.setSwipes);
-
   const adminSongs = useAdminStore((s) => s.songs);
 
+  const allActive = useMemo(() => adminSongs.filter((s) => s.isActive), [adminSongs]);
   const swipedIds = getSwipedSongIds();
-  const availableSongs = adminSongs.filter(
-    (s) => s.isActive && !swipedIds.includes(s.id)
-  );
+  const availableSongs = allActive.filter((s) => !swipedIds.includes(s.id));
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // No currentIndex needed — availableSongs[0] is always the current card
   const [showReasons, setShowReasons] = useState(false);
   const [lastSwipedSongId, setLastSwipedSongId] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<SwipeAction | null>(null);
@@ -38,63 +43,55 @@ export function SongTinder() {
 
   const [lastUndo, setLastUndo] = useState<{
     songId: string;
-    prevSwipe?: { action: SwipeAction; reasonChips: string[] };
-    prevIndex: number;
     prevSwipes: SongSwipe[];
   } | null>(null);
 
   const likeCount = swipes.filter((s) => s.action === "like" || s.action === "super_like").length;
-  const currentSong = availableSongs[currentIndex];
+  const superLikeCount = swipes.filter((s) => s.action === "super_like").length;
+  const totalActive = allActive.length;
+  const progress = totalActive > 0 ? swipes.length / totalActive : 0;
+  const currentSong = availableSongs[0];
   const isDone = !currentSong;
 
   const handleSwipe = useCallback(
     (songId: string, action: SwipeAction) => {
-      const existing = swipes.find((s) => s.songId === songId);
       setLastSwipedSongId(songId);
       setLastAction(action);
 
       if (action === "dislike") {
         setShowReasons(true);
         saveSwipe(songId, action, []);
+      } else if (action === "like") {
+        saveSwipe(songId, action, []);
+        setShowReasons(false);
+      } else if (action === "super_like") {
+        saveSwipe(songId, action, []);
+        setShowReasons(false);
+        setShowSuperBurst(true);
+        setTimeout(() => setShowSuperBurst(false), 1200);
       } else {
         saveSwipe(songId, action, []);
         setShowReasons(false);
-        if (action === "super_like") {
-          setShowSuperBurst(true);
-          setTimeout(() => setShowSuperBurst(false), 1200);
-        }
       }
 
-      // Prepare undo snapshot (one-level)
-      setLastUndo({
-        songId,
-        prevSwipe: existing ? { action: existing.action, reasonChips: existing.reasonChips } : undefined,
-        prevIndex: currentIndex,
-        prevSwipes: swipes,
-      });
-
+      setLastUndo({ songId, prevSwipes: swipes });
       setIsPlaying(false);
-      setCurrentIndex((i) => i + 1);
       trackEvent("song_swipe", { songId, action });
 
-      // Haptic feedback on mobile
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
         navigator.vibrate(action === "super_like" ? [30, 50, 30] : 15);
       }
     },
-    [saveSwipe, trackEvent, swipes, currentIndex]
+    [saveSwipe, trackEvent, swipes]
   );
 
   const handleUndo = useCallback(() => {
     if (!lastUndo) return;
-
     setSwipes(lastUndo.prevSwipes);
-
     setShowReasons(false);
     setLastSwipedSongId(null);
     setLastAction(null);
     setIsPlaying(false);
-    setCurrentIndex(lastUndo.prevIndex);
     trackEvent("song_undo", { songId: lastUndo.songId });
     setLastUndo(null);
   }, [lastUndo, setSwipes, trackEvent]);
@@ -161,16 +158,42 @@ export function SongTinder() {
         animate={{ opacity: 1, scale: 1 }}
         className="glass-card p-8 text-center max-w-md mx-auto"
       >
-        <div className="text-4xl mb-4">🎉</div>
-        <h2 className="text-xl font-bold mb-2">!סיימנו את השירים</h2>
-        <p className="text-secondary text-sm mb-2">
-          אהבתם {likeCount} שירים
-        </p>
-        <p className="text-muted text-xs mb-6">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 10, delay: 0.2 }}
+          className="text-6xl mb-6"
+        >
+          🎉
+        </motion.div>
+        <h2 className="text-2xl font-bold mb-3">!סיימנו את השירים</h2>
+        <div className="flex items-center justify-center gap-6 mb-4">
+          <div className="text-center">
+            <div className="flex items-center gap-1 justify-center">
+              <Heart className="w-5 h-5 text-brand-green" fill="var(--accent-secondary)" />
+              <span className="text-2xl font-bold text-brand-green">{likeCount}</span>
+            </div>
+            <span className="text-xs text-muted">אהבתם</span>
+          </div>
+          {superLikeCount > 0 && (
+            <div className="text-center">
+              <div className="flex items-center gap-1 justify-center">
+                <Star className="w-5 h-5" style={{ color: "var(--accent-gold)" }} fill="var(--accent-gold)" />
+                <span className="text-2xl font-bold" style={{ color: "var(--accent-gold)" }}>{superLikeCount}</span>
+              </div>
+              <span className="text-xs text-muted">חובה!</span>
+            </div>
+          )}
+          <div className="text-center">
+            <span className="text-2xl font-bold text-muted">{swipes.length}</span>
+            <span className="text-xs text-muted block">סה&quot;כ</span>
+          </div>
+        </div>
+        <p className="text-muted text-sm mb-6">
           עכשיו בואו נדבר על הרגעים המיוחדים
         </p>
-        <button onClick={handleFinish} className="btn-primary w-full">
-          ← המשיכו לבקשות
+        <button onClick={handleFinish} className="btn-primary w-full text-lg py-4">
+          המשיכו לבקשות
         </button>
       </motion.div>
     );
@@ -183,153 +206,212 @@ export function SongTinder() {
         {showTutorial && <SwipeTutorial onDismiss={dismissTutorial} />}
       </AnimatePresence>
 
-      {/* Counters */}
-      <div className="flex justify-between items-center mb-4 px-2">
-        <div className="flex items-center gap-1 text-sm">
-          <Heart className="w-4 h-4 text-brand-green" fill="var(--accent-secondary)" />
-          <span className="text-brand-green font-bold">{likeCount}</span>
+      {/* Progress Bar */}
+      <div className="mb-4 px-2">
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <Heart className="w-4 h-4 text-brand-green" fill="var(--accent-secondary)" />
+              <span className="text-brand-green font-bold text-sm">{likeCount}</span>
+            </div>
+            {superLikeCount > 0 && (
+              <div className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5" style={{ color: "var(--accent-gold)" }} fill="var(--accent-gold)" />
+                <span className="font-bold text-sm" style={{ color: "var(--accent-gold)" }}>{superLikeCount}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleUndo}
+              disabled={!lastUndo}
+              className={`p-1.5 rounded-lg transition-all ${lastUndo ? "text-muted hover:text-brand-blue hover:bg-brand-blue/10" : "opacity-30 cursor-not-allowed"}`}
+              aria-label="בטל פעולה אחרונה"
+              title="בטל"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <span className="text-xs text-muted tabular-nums">
+              {swipes.length} / {totalActive}
+            </span>
+          </div>
         </div>
-        <button
-          onClick={handleUndo}
-          disabled={!lastUndo}
-          className={`text-xs px-2 py-1 rounded-lg transition-colors ${lastUndo ? "glass-card text-muted hover:text-brand-blue" : "opacity-40 cursor-not-allowed"
-            }`}
-          aria-label="בטל פעולה אחרונה"
-          title="בטל"
-        >
-          ↩
-        </button>
-        <span className="text-xs text-muted">
-          {swipes.length} / {adminSongs.filter((s) => s.isActive).length}
-        </span>
-        {swipes.length >= MIN_SWIPES && (
-          <button
-            onClick={handleFinish}
-            className="text-xs text-brand-blue font-medium"
-          >
-            !סיימנו →
-          </button>
-        )}
+
+        {/* Animated progress bar */}
+        <div className="h-1.5 rounded-full bg-glass overflow-hidden">
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: "linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))" }}
+            initial={false}
+            animate={{ width: `${progress * 100}%` }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          />
+        </div>
       </div>
 
-      {/* Super Like Burst */}
-      {showSuperBurst && (
+      {swipes.length >= MIN_SWIPES && (
         <motion.div
-          initial={{ scale: 0.5, opacity: 1 }}
-          animate={{ scale: 3, opacity: 0 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-center mb-3"
         >
-          <div className="text-6xl">⭐</div>
+          <button
+            onClick={handleFinish}
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full border border-brand-blue text-brand-blue hover:bg-brand-blue/10 transition-colors"
+          >
+            <SkipForward className="w-4 h-4" />
+            אפשר להמשיך לשלב הבא
+          </button>
         </motion.div>
       )}
 
+      {/* Super Like Burst */}
+      <AnimatePresence>
+        {showSuperBurst && (
+          <motion.div
+            initial={{ scale: 0.5, opacity: 1 }}
+            animate={{ scale: 3, opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+          >
+            <div className="text-7xl">⭐</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Card Stack */}
-      <div className="relative h-[480px] w-full">
+      <div className="relative h-[500px] w-full">
         {/* Third card (deepest) */}
-        {availableSongs[currentIndex + 2] && (
-          <div className="absolute inset-0 glass-card rounded-swipe overflow-hidden scale-[0.90] opacity-30 translate-y-2">
-            <SongCardStatic song={availableSongs[currentIndex + 2]} />
-          </div>
+        {availableSongs[2] && (
+          <motion.div
+            className="absolute inset-0 glass-card overflow-hidden rounded-[24px]"
+            style={{ scale: 0.88, opacity: 0.2, y: 16 }}
+          >
+            <SongCardStatic song={availableSongs[2]} />
+          </motion.div>
         )}
         {/* Second card */}
-        {availableSongs[currentIndex + 1] && (
-          <div className="absolute inset-0 glass-card rounded-swipe overflow-hidden scale-[0.95] opacity-50 translate-y-1">
-            <SongCardStatic song={availableSongs[currentIndex + 1]} />
-          </div>
+        {availableSongs[1] && (
+          <motion.div
+            className="absolute inset-0 glass-card overflow-hidden rounded-[24px]"
+            initial={false}
+            animate={{ scale: 0.94, opacity: 0.5, y: 8 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
+            <SongCardStatic song={availableSongs[1]} />
+          </motion.div>
         )}
 
         {/* Current card */}
-        <SwipeCard
-          key={currentSong.id}
-          song={currentSong}
-          onSwipe={handleSwipe}
-          isPlaying={isPlaying}
-          onTogglePlay={() => setIsPlaying(!isPlaying)}
-        />
+        <AnimatePresence mode="popLayout">
+          <SwipeCard
+            key={currentSong.id}
+            song={currentSong}
+            onSwipe={handleSwipe}
+            isPlaying={isPlaying}
+            onTogglePlay={() => setIsPlaying(!isPlaying)}
+          />
+        </AnimatePresence>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-center gap-4 mt-6">
+      <div className="flex items-center justify-center gap-3 mt-5">
         <motion.button
+          whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.85 }}
           onClick={() => handleSwipe(currentSong.id, "dislike")}
-          className="w-14 h-14 rounded-full border-2 flex items-center justify-center transition-colors"
-          style={{ borderColor: "var(--accent-danger)", color: "var(--accent-danger)" }}
+          className="w-[56px] h-[56px] rounded-full border-2 flex items-center justify-center transition-all shadow-lg"
+          style={{ borderColor: "var(--accent-danger)", color: "var(--accent-danger)", background: "rgba(255,68,102,0.08)" }}
           aria-label="לא אוהב"
         >
-          <X className="w-6 h-6" />
+          <X className="w-7 h-7" strokeWidth={2.5} />
         </motion.button>
 
         <motion.button
+          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.85 }}
           onClick={() => handleSwipe(currentSong.id, "unsure")}
-          className="w-10 h-10 rounded-full border-2 border-glass flex items-center justify-center text-muted"
+          className="w-11 h-11 rounded-full border-2 border-glass flex items-center justify-center text-muted hover:text-brand-blue hover:border-brand-blue transition-all"
           aria-label="לא בטוח"
         >
           <HelpCircle className="w-5 h-5" />
         </motion.button>
 
         <motion.button
+          whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.85 }}
           onClick={() => handleSwipe(currentSong.id, "super_like")}
-          className="w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors"
-          style={{ borderColor: "var(--accent-gold)", color: "var(--accent-gold)" }}
+          className="w-[52px] h-[52px] rounded-full border-2 flex items-center justify-center transition-all shadow-lg"
+          style={{ borderColor: "var(--accent-gold)", color: "var(--accent-gold)", background: "rgba(245,197,66,0.08)" }}
           aria-label="סופר לייק"
         >
-          <Star className="w-5 h-5" fill="var(--accent-gold)" />
+          <Star className="w-6 h-6" fill="var(--accent-gold)" />
         </motion.button>
 
         <motion.button
+          whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.85 }}
           onClick={() => handleSwipe(currentSong.id, "like")}
-          className="w-14 h-14 rounded-full border-2 flex items-center justify-center transition-colors"
-          style={{ borderColor: "var(--accent-secondary)", color: "var(--accent-secondary)" }}
+          className="w-[56px] h-[56px] rounded-full border-2 flex items-center justify-center transition-all shadow-lg"
+          style={{ borderColor: "var(--accent-secondary)", color: "var(--accent-secondary)", background: "rgba(3,178,140,0.08)" }}
           aria-label="אהבתי"
         >
-          <Heart className="w-6 h-6" fill="var(--accent-secondary)" />
+          <Heart className="w-7 h-7" fill="var(--accent-secondary)" />
         </motion.button>
       </div>
 
       {/* Keyboard Hints (desktop only) */}
-      <div className="hidden sm:flex items-center justify-center gap-6 mt-2 text-[10px] text-muted">
+      <div className="hidden sm:flex items-center justify-center gap-6 mt-3 text-[10px] text-muted">
         <span>← לא</span>
         <span>↓ לא בטוח</span>
         <span>↑ סופר</span>
         <span>→ אהבתי</span>
       </div>
 
+      {/* Swipe-up hint on mobile */}
+      <div className="sm:hidden flex items-center justify-center mt-2">
+        <span className="text-[10px] text-muted flex items-center gap-1">
+          <ChevronUp className="w-3 h-3" /> החליקו למעלה לסופר לייק
+        </span>
+      </div>
+
       {/* Reason Chips Overlay */}
-      {showReasons && lastAction === "dislike" && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute inset-x-0 bottom-0 glass-card p-4 rounded-t-card"
-        >
-          <p className="text-xs text-muted text-center mb-3">?למה לא</p>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {reasonChips.map((chip) => {
-              const swipe = swipes.find((s) => s.songId === lastSwipedSongId);
-              const isActive = swipe?.reasonChips.includes(chip);
-              return (
-                <button
-                  key={chip}
-                  onClick={() => handleReasonChip(chip)}
-                  className={`chip ${isActive ? "active" : ""}`}
-                >
-                  {chip}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            onClick={dismissReasons}
-            className="mt-3 text-xs text-brand-blue w-full text-center"
+      <AnimatePresence>
+        {showReasons && lastAction === "dislike" && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="absolute inset-x-0 bottom-0 glass-card p-5 rounded-t-[24px] z-20"
           >
-            המשך →
-          </button>
-        </motion.div>
-      )}
+            <p className="text-sm text-muted text-center mb-3 font-medium">?למה לא אהבתם</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {reasonChips.map((chip) => {
+                const swipe = swipes.find((s) => s.songId === lastSwipedSongId);
+                const isActive = swipe?.reasonChips.includes(chip);
+                return (
+                  <motion.button
+                    key={chip}
+                    whileTap={{ scale: 0.92 }}
+                    onClick={() => handleReasonChip(chip)}
+                    className={`chip ${isActive ? "active" : ""}`}
+                  >
+                    {chip}
+                  </motion.button>
+                );
+              })}
+            </div>
+            <button
+              onClick={dismissReasons}
+              className="mt-4 btn-primary w-full text-sm py-3"
+            >
+              המשך
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -338,7 +420,9 @@ function SongCardStatic({ song }: { song: Song }) {
   const [imgError, setImgError] = useState(false);
   return (
     <div className="h-full flex flex-col items-center justify-center p-6">
-      <div className="w-48 h-48 rounded-2xl overflow-hidden shadow-lg mb-4 bg-brand-gray/30 flex items-center justify-center">
+      <div className="w-48 h-48 rounded-2xl overflow-hidden shadow-lg mb-4 flex items-center justify-center relative"
+        style={{ background: "rgba(31,31,33,0.3)" }}
+      >
         {!imgError ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
@@ -352,7 +436,7 @@ function SongCardStatic({ song }: { song: Song }) {
             className="w-full h-full flex items-center justify-center"
             style={{ background: "linear-gradient(135deg, rgba(5,156,192,0.25), rgba(3,178,140,0.18))" }}
           >
-            <span className="text-4xl">🎵</span>
+            <Music2 className="w-12 h-12 text-muted" />
           </div>
         )}
       </div>
@@ -374,43 +458,65 @@ function SwipeCard({
   onTogglePlay: () => void;
 }) {
   const [imgError, setImgError] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-300, 0, 300], [-15, 0, 15]);
-  const likeOpacity = useTransform(x, [0, 100], [0, 1]);
-  const dislikeOpacity = useTransform(x, [-100, 0], [1, 0]);
+  const y = useMotionValue(0);
+  const rotate = useTransform(x, [-300, 0, 300], [-18, 0, 18]);
+  const likeOpacity = useTransform(x, [0, 80], [0, 1]);
+  const dislikeOpacity = useTransform(x, [-80, 0], [1, 0]);
+  const superLikeOpacity = useTransform(y, [-80, 0], [1, 0]);
+  const cardScale = useTransform(
+    x,
+    [-200, 0, 200],
+    [0.97, 1, 0.97]
+  );
+
   const borderColor = useTransform(
     x,
     [-150, -50, 0, 50, 150],
     [
-      "rgba(255,68,102,0.6)",
+      "rgba(255,68,102,0.7)",
       "rgba(255,68,102,0.2)",
-      "rgba(5,156,192,0.15)",
+      "rgba(5,156,192,0.12)",
       "rgba(3,178,140,0.2)",
-      "rgba(3,178,140,0.6)",
+      "rgba(3,178,140,0.7)",
     ]
   );
   const boxShadowColor = useTransform(
     x,
     [-150, 0, 150],
     [
-      "0 0 30px rgba(255,68,102,0.3)",
+      "0 0 40px rgba(255,68,102,0.3)",
       "0 8px 32px rgba(0,0,0,0.4)",
-      "0 0 30px rgba(3,178,140,0.3)",
+      "0 0 40px rgba(3,178,140,0.3)",
     ]
   );
 
-  const handleDragEnd = (_: unknown, info: PanInfo) => {
-    const offset = info.offset.x;
-    const velocity = info.velocity.x;
+  const cat = categoryLabels[song.category];
 
-    if (offset > SWIPE_THRESHOLD || velocity > 500) {
-      animate(x, 500, { type: "spring" });
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    const offsetX = info.offset.x;
+    const offsetY = info.offset.y;
+    const velocityX = info.velocity.x;
+    const velocityY = info.velocity.y;
+
+    // Swipe up for super like
+    if (offsetY < -SWIPE_UP_THRESHOLD || velocityY < -500) {
+      animate(y, -600, { type: "spring" });
+      animate(x, 0, { type: "spring" });
+      onSwipe(song.id, "super_like");
+      return;
+    }
+
+    if (offsetX > SWIPE_THRESHOLD || velocityX > 500) {
+      animate(x, 600, { type: "spring" });
       onSwipe(song.id, "like");
-    } else if (offset < -SWIPE_THRESHOLD || velocity < -500) {
-      animate(x, -500, { type: "spring" });
+    } else if (offsetX < -SWIPE_THRESHOLD || velocityX < -500) {
+      animate(x, -600, { type: "spring" });
       onSwipe(song.id, "dislike");
     } else {
       animate(x, 0, { type: "spring", stiffness: 500, damping: 30 });
+      animate(y, 0, { type: "spring", stiffness: 500, damping: 30 });
     }
   };
 
@@ -422,94 +528,158 @@ function SwipeCard({
   };
 
   const youtubeId = song.previewUrl ? getYouTubeId(song.previewUrl) : null;
+  const hasAudioPreview = Boolean(song.previewUrl && !youtubeId);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !hasAudioPreview) return;
+
+    if (isPlaying) {
+      void audio.play().catch(() => {
+        onTogglePlay();
+      });
+      return;
+    }
+
+    audio.pause();
+  }, [hasAudioPreview, isPlaying, onTogglePlay]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, []);
 
   return (
     <motion.div
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.8}
+      drag
+      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+      dragElastic={0.9}
       onDragEnd={handleDragEnd}
-      style={{ x, rotate, borderColor, boxShadow: boxShadowColor, background: "var(--bg-surface)", backdropFilter: "blur(var(--glass-blur))" }}
-      className="absolute inset-0 rounded-swipe overflow-hidden cursor-grab active:cursor-grabbing touch-none border-2"
+      initial={{ scale: 0.95, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+      style={{
+        x, y, rotate, scale: cardScale, borderColor, boxShadow: boxShadowColor,
+        background: "var(--bg-surface)", backdropFilter: "blur(var(--glass-blur))",
+      }}
+      className="absolute inset-0 rounded-[24px] overflow-hidden cursor-grab active:cursor-grabbing touch-none border-2 z-10"
     >
       {/* Swipe Indicators */}
       <motion.div
         style={{ opacity: likeOpacity }}
-        className="absolute top-6 right-6 z-10 px-4 py-2 rounded-xl border-2 border-brand-green bg-brand-green/20 text-brand-green font-bold text-lg rotate-[-12deg]"
+        className="absolute top-6 right-6 z-20 px-5 py-2.5 rounded-2xl border-2 border-brand-green bg-brand-green/20 text-brand-green font-bold text-xl rotate-[-12deg]"
       >
-        💚 אהבתי
+        אהבתי
       </motion.div>
       <motion.div
-        style={{ opacity: dislikeOpacity, borderColor: "var(--accent-danger)", color: "var(--accent-danger)", background: "rgba(255,68,102,0.1)" }}
-        className="absolute top-6 left-6 z-10 px-4 py-2 rounded-xl border-2 text-lg font-bold rotate-[12deg]"
+        style={{ opacity: dislikeOpacity, borderColor: "var(--accent-danger)", color: "var(--accent-danger)", background: "rgba(255,68,102,0.12)" }}
+        className="absolute top-6 left-6 z-20 px-5 py-2.5 rounded-2xl border-2 text-xl font-bold rotate-[12deg]"
         dir="ltr"
       >
         ✕ לא
       </motion.div>
+      <motion.div
+        style={{ opacity: superLikeOpacity }}
+        className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 px-5 py-2.5 rounded-2xl border-2 font-bold text-xl"
+        dir="ltr"
+      >
+        <span style={{ color: "var(--accent-gold)" }}>⭐ חובה!</span>
+      </motion.div>
 
       {/* Card Content */}
-      <div className="h-full flex flex-col items-center justify-center p-6 relative">
-        {/* Cover Art */}
-        <div className="w-52 h-52 rounded-2xl overflow-hidden shadow-xl mb-5 relative group">
-          {!imgError ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={song.coverUrl}
-              alt={`${song.title} - ${song.artist}`}
-              className="w-full h-full object-cover"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div
-              className="w-full h-full flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(5,156,192,0.25), rgba(3,178,140,0.18))" }}
-            >
-              <span className="text-5xl">🎵</span>
-            </div>
-          )}
-          {/* Play overlay */}
-          {youtubeId && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onTogglePlay();
-              }}
-              className="absolute inset-0 flex items-center justify-center bg-black/40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-              aria-label={isPlaying ? "השהה" : "נגן"}
-            >
-              {isPlaying ? (
-                <Pause className="w-12 h-12 text-white" />
-              ) : (
-                <Play className="w-12 h-12 text-white" fill="white" />
-              )}
-            </button>
-          )}
+      <div className="h-full flex flex-col items-center justify-center px-6 py-5 relative">
+        {/* Category badge */}
+        {cat && (
+          <div
+            className="absolute top-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-medium"
+            style={{ background: cat.color, color: "var(--text-secondary)" }}
+          >
+            {cat.label}
+          </div>
+        )}
+
+        {/* Cover Art — larger, with vinyl shadow effect */}
+        <div className="relative mt-6 mb-5">
+          <div className="w-56 h-56 sm:w-60 sm:h-60 rounded-2xl overflow-hidden shadow-2xl relative group ring-1 ring-white/5">
+            {!imgError ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={song.coverUrl}
+                alt={`${song.title} - ${song.artist}`}
+                className="w-full h-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg, rgba(5,156,192,0.25), rgba(3,178,140,0.18))" }}
+              >
+                <Music2 className="w-16 h-16 text-muted" />
+              </div>
+            )}
+            {/* Play overlay */}
+            {(youtubeId || hasAudioPreview) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePlay();
+                }}
+                className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity"
+                aria-label={isPlaying ? "השהה" : "נגן"}
+              >
+                <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  {isPlaying ? (
+                    <Pause className="w-8 h-8 text-white" />
+                  ) : (
+                    <Play className="w-8 h-8 text-white ml-1" fill="white" />
+                  )}
+                </div>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Song Info */}
-        <h3 className="text-xl font-bold mb-1">{song.title}</h3>
+        <h3 className="text-xl font-bold mb-0.5 text-center leading-tight">{song.title}</h3>
         <p className="text-secondary text-sm mb-3">{song.artist}</p>
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1.5 justify-center mb-4">
+        {/* Tags + Energy */}
+        <div className="flex flex-wrap gap-1.5 justify-center mb-3">
           {song.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="text-xs px-2.5 py-1 rounded-full border border-glass text-muted"
+              className="text-[11px] px-2.5 py-0.5 rounded-full border border-glass text-muted"
             >
               {tag}
             </span>
           ))}
-          {/* Energy */}
-          <span className="text-xs px-2.5 py-1 rounded-full border border-glass text-muted">
-            {"⚡".repeat(song.energy)}
-          </span>
         </div>
 
-        {/* Audio Preview Player */}
-        {youtubeId && (
+        {/* Energy meter */}
+        <div className="flex items-center gap-1 mb-3">
+          {[1, 2, 3, 4, 5].map((level) => (
+            <div
+              key={level}
+              className="w-5 h-1.5 rounded-full transition-all"
+              style={{
+                background: level <= song.energy
+                  ? `var(--accent-${song.energy >= 4 ? "secondary" : "primary"})`
+                  : "rgba(255,255,255,0.1)",
+              }}
+            />
+          ))}
+          <span className="text-[10px] text-muted mr-1">אנרגיה</span>
+        </div>
+
+        {/* Audio Preview */}
+        {(youtubeId || hasAudioPreview) && (
           <div className="w-full max-w-[280px]">
-            {isPlaying ? (
+            {youtubeId && isPlaying ? (
               <div className="rounded-xl overflow-hidden">
                 <iframe
                   width="100%"
@@ -520,13 +690,35 @@ function SwipeCard({
                   title={`${song.title} preview`}
                 />
               </div>
+            ) : hasAudioPreview ? (
+              <div className="space-y-2">
+                <button
+                  onClick={onTogglePlay}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-glass text-xs text-secondary hover:text-brand-blue hover:border-brand-blue transition-all group"
+                >
+                  <Volume2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
+                  {isPlaying ? "השהה קטע" : "שמעו קטע"}
+                </button>
+                <audio
+                  ref={audioRef}
+                  src={song.previewUrl}
+                  preload="metadata"
+                  onEnded={() => {
+                    if (isPlaying) {
+                      onTogglePlay();
+                    }
+                  }}
+                  className="w-full"
+                  controls
+                />
+              </div>
             ) : (
               <button
                 onClick={onTogglePlay}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-glass text-sm text-secondary hover:text-brand-blue hover:border-brand-blue transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-glass text-xs text-secondary hover:text-brand-blue hover:border-brand-blue transition-all group"
               >
-                <Volume2 className="w-4 h-4" />
-                שמעו קטע (30 שניות)
+                <Volume2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
+                שמעו קטע
               </button>
             )}
           </div>

@@ -865,21 +865,22 @@ function SongModal({
   const [metaError, setMetaError] = useState<string | null>(null);
   const [uploadingKind, setUploadingKind] = useState<"audio" | "cover" | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const canAutoFillFromYoutube = /(?:youtube\.com|youtu\.be)/i.test(previewUrl.trim());
 
   const uploadFile = async (kind: "audio" | "cover", file: File) => {
     setUploadingKind(kind);
     setUploadError(null);
     try {
       const form = new FormData();
-      form.set("kind", kind);
       form.set("file", file);
-      const res = await fetch("/api/uploads", {
+      form.set("folder", kind === "cover" ? "songs/covers" : "songs/audio");
+      const res = await fetch("/api/admin/upload", {
         method: "POST",
         body: form,
       });
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error((text || "Upload failed").trim());
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error((data?.error || "Upload failed").trim());
       }
       const data = (await res.json()) as { url?: string };
       if (!data.url) throw new Error("Upload failed");
@@ -1027,7 +1028,7 @@ function SongModal({
         </div>
 
         <div>
-          <label className="block text-xs text-muted mb-1">Audio Preview URL (YouTube / Spotify)</label>
+          <label className="block text-xs text-muted mb-1">Audio Preview URL (YouTube / קובץ אודיו)</label>
           <input
             type="url"
             value={previewUrl}
@@ -1056,8 +1057,8 @@ function SongModal({
             <button
               type="button"
               onClick={handleAutoFill}
-              disabled={metaLoading || !previewUrl.trim()}
-              className={`btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 ${metaLoading || !previewUrl.trim() ? "opacity-60 cursor-not-allowed" : ""}`}
+              disabled={metaLoading || !canAutoFillFromYoutube}
+              className={`btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 ${metaLoading || !canAutoFillFromYoutube ? "opacity-60 cursor-not-allowed" : ""}`}
             >
               <Wand2 className="w-3.5 h-3.5" />
               {metaLoading ? "ממלא..." : "מלא פרטים מיוטיוב"}

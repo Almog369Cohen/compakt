@@ -11,6 +11,10 @@ function generateMagicToken(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
+function isUuid(value: string | null | undefined) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 /**
  * POST /api/admin/couple-link
  * Body: { profileId, eventType?, coupleNameA?, coupleNameB?, eventDate?, venue? }
@@ -30,9 +34,10 @@ export async function POST(req: Request) {
     if (!profileId) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
+    const eventOwnerId = isUuid(auth.userId) ? auth.userId : profileId;
 
     const body = await req.json();
-    const { eventType, coupleNameA, coupleNameB, eventDate, venue } = body;
+    const { eventType, coupleNameA, coupleNameB, eventDate, venue, contactPhone } = body;
 
     const token = generateMagicToken();
     const eventNumber = generateEventNumber();
@@ -40,7 +45,7 @@ export async function POST(req: Request) {
     const { data, error } = await supabase
       .from("events")
       .insert({
-        dj_id: profileId,
+        dj_id: eventOwnerId,
         magic_token: token,
         token: eventNumber,
         event_type: eventType || "wedding",
@@ -48,6 +53,7 @@ export async function POST(req: Request) {
         couple_name_b: coupleNameB || "",
         event_date: eventDate || "",
         venue: venue || "",
+        phone_number: contactPhone || "",
         current_stage: 0,
       })
       .select("id, magic_token, token")
@@ -89,13 +95,13 @@ export async function GET() {
     if (!profileId) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
+    const ownerIds = Array.from(new Set([auth.userId, profileId].filter((value): value is string => Boolean(value))));
 
-    // Fetch events linked to this DJ + unlinked events (created directly by couples)
     let data: Record<string, unknown>[] | null = null;
     const { data: d, error } = await supabase
       .from("events")
       .select("*")
-      .or(`dj_id.eq.${profileId},dj_id.is.null`)
+      .in("dj_id", ownerIds)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -120,10 +126,16 @@ export async function GET() {
           .select("*", { count: "exact", head: true })
           .eq("event_id", event.id);
 
+        const { count: requestCount } = await supabase
+          .from("requests")
+          .select("*", { count: "exact", head: true })
+          .eq("event_id", event.id);
+
         return {
           ...event,
           answerCount: answerCount || 0,
           swipeCount: swipeCount || 0,
+          requestCount: requestCount || 0,
           isComplete: (event.current_stage as number) >= 4,
         };
       })

@@ -1,17 +1,21 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useProfileStore } from "@/stores/profileStore";
 import { motion } from "framer-motion";
 import { Music, Headphones } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DJProfilePreview } from "@/components/dj/DJProfilePreview";
 import type { ProfileState } from "@/stores/profileStore";
+import { JourneyApp } from "@/components/journey/JourneyApp";
+import { HydrationGuard } from "@/components/ui/HydrationGuard";
 
 export default function DJPublicPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = params.slug as string;
-  const loadProfileBySlug = useProfileStore((s) => s.loadProfileBySlug);
+  const token = searchParams.get("token");
+  const loadProfileRecordBySlug = useProfileStore((s) => s.loadProfileRecordBySlug);
   const [profile, setProfile] = useState<ProfileState | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,9 +23,14 @@ export default function DJPublicPage() {
     let cancelled = false;
 
     async function load() {
-      // Try Supabase first
-      const dbProfile = await loadProfileBySlug(slug);
-      if (!cancelled && dbProfile && dbProfile.businessName) {
+      const dbProfileRecord = await loadProfileRecordBySlug(slug);
+      const dbProfile = dbProfileRecord?.profile ?? null;
+      if (!cancelled && dbProfile) {
+        sessionStorage.setItem("compakt_dj_slug", slug);
+        sessionStorage.setItem("compakt_dj_name", dbProfile.businessName || slug);
+        if (dbProfileRecord?.id) {
+          sessionStorage.setItem("compakt_dj_profile_id", dbProfileRecord.id);
+        }
         setProfile(dbProfile);
         setLoading(false);
         return;
@@ -35,7 +44,7 @@ export default function DJPublicPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [slug, loadProfileBySlug]);
+  }, [slug, loadProfileRecordBySlug]);
 
   if (loading) {
     return (
@@ -47,7 +56,7 @@ export default function DJPublicPage() {
     );
   }
 
-  if (!profile || !profile.businessName) {
+  if (!profile) {
     return (
       <div className="min-h-dvh gradient-hero flex items-center justify-center px-4">
         <motion.div
@@ -70,6 +79,18 @@ export default function DJPublicPage() {
           </a>
         </motion.div>
       </div>
+    );
+  }
+
+  if (token) {
+    return (
+      <HydrationGuard>
+        <JourneyApp
+          initialToken={token}
+          initialDjSlug={slug}
+          initialDjName={profile.businessName || slug}
+        />
+      </HydrationGuard>
     );
   }
 

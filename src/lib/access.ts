@@ -140,7 +140,11 @@ export function hasFeature(access: ResolvedAccess, feature: FeatureKey): boolean
 }
 
 export async function loadResolvedAccessByUserId(service: SupabaseClient, userId: string) {
-  const profile = await loadAccessProfileByIdentity(service, { userId });
+  const bypassEmail = userId.startsWith("bypass-") ? userId.slice("bypass-".length) : null;
+  const profile = await loadAccessProfileByIdentity(service, {
+    userId,
+    email: bypassEmail,
+  });
   return {
     profile,
     access: profile ? resolveAccess(profile) : null,

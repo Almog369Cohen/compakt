@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/nextjs";
+import type { Session } from "@supabase/supabase-js";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Calendar, Eye, EyeOff, User, Link, TrendingUp } from "lucide-react";
@@ -19,6 +20,7 @@ import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import { useProfileStore } from "@/stores/profileStore";
 import { supabase } from "@/lib/supabase";
 import type { FeatureKey } from "@/lib/access";
+import { HydrationGuard } from "@/components/ui/HydrationGuard";
 
 type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "events" | "couples" | "analytics";
 
@@ -85,10 +87,17 @@ function ClerkAdminLogoutButton() {
   );
 }
 
-export default function AdminPage() {
-  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+type AdminPageContentProps = {
+  clerkEnabled: boolean;
+  clerkLoaded: boolean;
+  clerkSignedIn: boolean;
+};
+
+function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPageContentProps) {
   const isAuthenticated = useAdminStore((s) => s.isAuthenticated);
   const userId = useAdminStore((s) => s.userId);
+  const setAuthState = useAdminStore((s) => s.setAuthState);
+  const resetAuthState = useAdminStore((s) => s.resetAuthState);
   useAdminStore((s) => s.userEmail);
   const login = useAdminStore((s) => s.login);
   const loginWithEmail = useAdminStore((s) => s.loginWithEmail);
@@ -100,6 +109,7 @@ export default function AdminPage() {
   const logout = useAdminStore((s) => s.logout);
   const loadProfileFromDB = useProfileStore((s) => s.loadProfileFromDB);
   const profileId = useProfileStore((s) => s.profileId);
+  const djSlug = useProfileStore((s) => s.profile.djSlug);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -116,6 +126,7 @@ export default function AdminPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [access, setAccess] = useState<AdminAccess | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const theme = useEventStore((s) => s.theme);
 
   useEffect(() => {
@@ -123,10 +134,19 @@ export default function AdminPage() {
   }, [theme]);
 
   useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
     if (!clerkEnabled) {
-      checkSession();
+      void checkSession();
+      return;
     }
-  }, [checkSession, clerkEnabled]);
+
+    if (clerkLoaded && !clerkSignedIn) {
+      void checkSession();
+    }
+  }, [checkSession, clerkEnabled, clerkLoaded, clerkSignedIn]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -146,7 +166,7 @@ export default function AdminPage() {
     const {
       data: { subscription },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } = supabase.auth.onAuthStateChange((event: any) => {
+    } = supabase.auth.onAuthStateChange((event: any, session: Session | null) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryMode(true);
         setAuthMode("email");
@@ -155,11 +175,26 @@ export default function AdminPage() {
         setNewPassword("");
         setConfirmPassword("");
         setResetMessage(null);
+        return;
+      }
+
+      if (session?.user) {
+        setAuthState({
+          isAuthenticated: true,
+          userId: session.user.id,
+          userEmail: session.user.email ?? null,
+          authError: null,
+        });
+        return;
+      }
+
+      if (event === "SIGNED_OUT") {
+        resetAuthState();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [resetAuthState, setAuthState]);
 
   const router = useRouter();
 
@@ -242,12 +277,20 @@ export default function AdminPage() {
 
     // Email/password mode
     setLoading(true);
-    const ok = isSignUp
+    const result = isSignUp
       ? await signUp(email, password)
       : await loginWithEmail(email, password);
     setLoading(false);
 
-    if (!ok) {
+    if (isSignUp && result === "pending_confirmation") {
+      setResetTone("success");
+      setResetMessage("החשבון נוצר. אם נדרש אישור מייל, בדוק את תיבת הדואר ואז התחבר.");
+      setIsSignUp(false);
+      setPassword("");
+      return;
+    }
+
+    if (result !== true && result !== "authenticated") {
       setError(true);
       setTimeout(() => setError(false), 3000);
     }
@@ -330,6 +373,14 @@ export default function AdminPage() {
       window.history.replaceState({}, "", url.toString());
     }
   };
+
+  if (!hydrated) {
+    return (
+      <HydrationGuard>
+        <div />
+      </HydrationGuard>
+    );
+  }
 
   if ((!isAuthenticated || isRecoveryMode) && clerkEnabled && !bypassClerk) {
     return (
@@ -625,10 +676,14 @@ export default function AdminPage() {
       <header className="sticky top-0 z-50 glass-card rounded-none border-x-0 border-t-0 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href="/" className="text-sm text-secondary hover:text-foreground flex items-center gap-1">
-              <ChevronLeft className="w-4 h-4" />
-              חזרה
-            </a>
+            {djSlug ? (
+              <a href={`/dj/${djSlug}`} className="text-sm text-secondary hover:text-foreground flex items-center gap-1">
+                <ChevronLeft className="w-4 h-4" />
+                הפרופיל שלי
+              </a>
+            ) : (
+              <span className="text-sm text-muted">Compakt</span>
+            )}
             <h1 className="font-bold text-lg">Compakt Admin</h1>
           </div>
 
@@ -751,4 +806,32 @@ export default function AdminPage() {
       </main>
     </div>
   );
+}
+
+function AdminPageWithClerk() {
+  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useAuth();
+
+  return (
+    <AdminPageContent
+      clerkEnabled={true}
+      clerkLoaded={clerkLoaded}
+      clerkSignedIn={Boolean(clerkSignedIn)}
+    />
+  );
+}
+
+export default function AdminPage() {
+  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
+  if (!clerkEnabled) {
+    return (
+      <AdminPageContent
+        clerkEnabled={false}
+        clerkLoaded={false}
+        clerkSignedIn={false}
+      />
+    );
+  }
+
+  return <AdminPageWithClerk />;
 }
