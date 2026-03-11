@@ -217,10 +217,10 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
       }));
 
       if (data.dj_id) {
-        sessionStorage.setItem("compakt_dj_profile_id", data.dj_id);
         const profileData = await loadPublicDjById(data.dj_id);
 
         if (profileData?.id) {
+          sessionStorage.setItem("compakt_dj_profile_id", profileData.id);
           if (profileData.dj_slug) {
             sessionStorage.setItem("compakt_dj_slug", profileData.dj_slug);
           }
@@ -267,6 +267,7 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
           const storedProfile = await loadPublicDjById(storedDjProfileId);
 
           if (storedProfile?.id) {
+            sessionStorage.setItem("compakt_dj_profile_id", storedProfile.id);
             if (storedProfile.dj_slug) {
               sessionStorage.setItem("compakt_dj_slug", storedProfile.dj_slug);
             }
@@ -276,7 +277,7 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
                 setEntryDjName(storedProfile.business_name);
               }
             }
-            await loadContentFromDB(storedDjProfileId);
+            await loadContentFromDB(storedProfile.id);
             return;
           }
 

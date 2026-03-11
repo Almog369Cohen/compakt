@@ -15,7 +15,7 @@ export async function GET(req: Request) {
       let query = supabase.from("profiles").select("id, business_name, dj_slug");
 
       if (id) {
-        query = query.eq("id", id);
+        query = query.or(`id.eq.${id},user_id.eq.${id}`);
       } else {
         query = query.eq("dj_slug", slug);
       }
@@ -49,17 +49,17 @@ export async function GET(req: Request) {
 
     const rows = Array.isArray(data)
       ? data
-          .filter(
-            (row) =>
-              typeof row.id === "string" &&
-              typeof row.dj_slug === "string" &&
-              row.dj_slug.trim().length > 0
-          )
-          .map((row) => ({
-            id: row.id,
-            business_name: typeof row.business_name === "string" ? row.business_name : "",
-            dj_slug: row.dj_slug,
-          }))
+        .filter(
+          (row) =>
+            typeof row.id === "string" &&
+            typeof row.dj_slug === "string" &&
+            row.dj_slug.trim().length > 0
+        )
+        .map((row) => ({
+          id: row.id,
+          business_name: typeof row.business_name === "string" ? row.business_name : "",
+          dj_slug: row.dj_slug,
+        }))
       : [];
 
     return NextResponse.json({ data: rows });

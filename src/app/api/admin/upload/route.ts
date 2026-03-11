@@ -29,12 +29,17 @@ export async function POST(req: Request) {
     const folder = String(form.get("folder") || "gallery");
     const userId = auth.userId;
 
-    // Validate
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "הקובץ חייב להיות תמונה" }, { status: 400 });
+    const isImage = file.type.startsWith("image/");
+    const isAudio = file.type.startsWith("audio/");
+
+    if (!isImage && !isAudio) {
+      return NextResponse.json({ error: "הקובץ חייב להיות תמונה או אודיו" }, { status: 400 });
     }
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "גודל הקובץ חייב להיות עד 5MB" }, { status: 400 });
+    if (isImage && file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "גודל תמונה חייב להיות עד 5MB" }, { status: 400 });
+    }
+    if (isAudio && file.size > 20 * 1024 * 1024) {
+      return NextResponse.json({ error: "גודל קובץ אודיו חייב להיות עד 20MB" }, { status: 400 });
     }
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";

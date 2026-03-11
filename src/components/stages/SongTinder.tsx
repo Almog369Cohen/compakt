@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { reasonChips } from "@/data/songs";
@@ -458,6 +458,7 @@ function SwipeCard({
   onTogglePlay: () => void;
 }) {
   const [imgError, setImgError] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-300, 0, 300], [-18, 0, 18]);
@@ -527,6 +528,31 @@ function SwipeCard({
   };
 
   const youtubeId = song.previewUrl ? getYouTubeId(song.previewUrl) : null;
+  const hasAudioPreview = Boolean(song.previewUrl && !youtubeId);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !hasAudioPreview) return;
+
+    if (isPlaying) {
+      void audio.play().catch(() => {
+        onTogglePlay();
+      });
+      return;
+    }
+
+    audio.pause();
+  }, [hasAudioPreview, isPlaying, onTogglePlay]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, []);
 
   return (
     <motion.div
@@ -597,7 +623,7 @@ function SwipeCard({
               </div>
             )}
             {/* Play overlay */}
-            {youtubeId && (
+            {(youtubeId || hasAudioPreview) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -651,9 +677,9 @@ function SwipeCard({
         </div>
 
         {/* Audio Preview */}
-        {youtubeId && (
+        {(youtubeId || hasAudioPreview) && (
           <div className="w-full max-w-[280px]">
-            {isPlaying ? (
+            {youtubeId && isPlaying ? (
               <div className="rounded-xl overflow-hidden">
                 <iframe
                   width="100%"
@@ -662,6 +688,28 @@ function SwipeCard({
                   allow="autoplay; encrypted-media"
                   className="rounded-xl"
                   title={`${song.title} preview`}
+                />
+              </div>
+            ) : hasAudioPreview ? (
+              <div className="space-y-2">
+                <button
+                  onClick={onTogglePlay}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-glass text-xs text-secondary hover:text-brand-blue hover:border-brand-blue transition-all group"
+                >
+                  <Volume2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
+                  {isPlaying ? "השהה קטע" : "שמעו קטע"}
+                </button>
+                <audio
+                  ref={audioRef}
+                  src={song.previewUrl}
+                  preload="metadata"
+                  onEnded={() => {
+                    if (isPlaying) {
+                      onTogglePlay();
+                    }
+                  }}
+                  className="w-full"
+                  controls
                 />
               </div>
             ) : (
