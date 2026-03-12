@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { createMiddlewareSupabase } from "@/lib/supabase-server";
 
+const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+
 /**
  * Next.js Middleware — runs on every matched route.
  * Validates Supabase auth session for protected paths.
@@ -20,7 +23,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   const clerkAuth = await auth();
   const hasClerkUser = Boolean(clerkAuth.userId);
-  const bypassCookie = req.cookies.get('compakt-admin-bypass')?.value;
+  const bypassCookie = req.cookies.get("compakt-admin-bypass")?.value;
 
   let hasSupabaseUser = false;
   if (requiresAdminAuth) {
@@ -61,6 +64,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   }
 
   return res;
+}, {
+  publishableKey: clerkPublishableKey,
+  secretKey: clerkSecretKey,
 });
 
 export const config = {
