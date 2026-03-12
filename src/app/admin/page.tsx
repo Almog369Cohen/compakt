@@ -117,7 +117,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authMode, setAuthMode] = useState<"email" | "legacy">("email");
-  const [bypassClerk, setBypassClerk] = useState(false);
+  const [bypassClerk, setBypassClerk] = useState(true);
   const [isSignUp, setIsSignUp] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [resetMessage, setResetMessage] = useState<string | null>(null);
@@ -135,6 +135,21 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
   useEffect(() => {
     setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    const handleTabChange = (event: Event) => {
+      const nextTab = (event as CustomEvent<AdminTab>).detail;
+      if (!nextTab) return;
+      if (tabs.some((tab) => tab.id === nextTab)) {
+        setActiveTab(nextTab);
+      }
+    };
+
+    window.addEventListener("compakt-admin-tab-change", handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener("compakt-admin-tab-change", handleTabChange as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -267,8 +282,37 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     setError(false);
     setResetMessage(null);
 
+    const normalizedEmail = email.trim();
+    const normalizedPassword = password.trim();
+
+    if ((authMode === "email" || bypassClerk) && !normalizedEmail) {
+      setResetTone("error");
+      setResetMessage("הזן אימייל כדי להמשיך");
+      return;
+    }
+
+    if (!isRecoveryMode && !normalizedPassword) {
+      setResetTone("error");
+      setResetMessage("הזן סיסמה כדי להמשיך");
+      return;
+    }
+
+    if (isSignUp) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        setResetTone("error");
+        setResetMessage("כתובת האימייל לא תקינה");
+        return;
+      }
+
+      if (normalizedPassword.length < 8 || !/[A-Za-z]/.test(normalizedPassword) || !/\d/.test(normalizedPassword)) {
+        setResetTone("error");
+        setResetMessage("בחר סיסמה של לפחות 8 תווים עם אות באנגלית ומספר");
+        return;
+      }
+    }
+
     if (bypassClerk || authMode === "legacy") {
-      if (!login(email || "admin@compakt.app", password)) {
+      if (!login(normalizedEmail || "admin@compakt.app", normalizedPassword)) {
         setError(true);
         setTimeout(() => setError(false), 2000);
       }
@@ -278,8 +322,8 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     // Email/password mode
     setLoading(true);
     const result = isSignUp
-      ? await signUp(email, password)
-      : await loginWithEmail(email, password);
+      ? await signUp(normalizedEmail, normalizedPassword)
+      : await loginWithEmail(normalizedEmail, normalizedPassword);
     setLoading(false);
 
     if (isSignUp && result === "pending_confirmation") {
@@ -291,6 +335,11 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     }
 
     if (result !== true && result !== "authenticated") {
+      const latestAuthError = useAdminStore.getState().authError;
+      setResetTone("error");
+      setResetMessage(
+        latestAuthError || (isSignUp ? "לא הצלחנו ליצור חשבון חדש." : "לא הצלחנו להתחבר לחשבון.")
+      );
       setError(true);
       setTimeout(() => setError(false), 3000);
     }
@@ -534,7 +583,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
           {(error || authError) && (
             <p className="text-xs mb-3" style={{ color: "var(--accent-danger)" }}>
-              {authError || "סיסמה שגויה"}
+              {authError || (isSignUp ? "לא הצלחנו ליצור חשבון חדש." : "סיסמה שגויה")}
             </p>
           )}
 
@@ -642,6 +691,18 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                 className="text-[11px] text-muted hover:text-secondary transition-colors"
               >
                 {authMode === "email" ? "כניסה עם סיסמת מנהל" : "כניסה עם אימייל"}
+              </button>
+            </div>
+          )}
+
+          {clerkEnabled && !isRecoveryMode && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setBypassClerk(false)}
+                className="text-[11px] text-muted hover:text-secondary transition-colors"
+              >
+                התחברות עם Clerk
               </button>
             </div>
           )}

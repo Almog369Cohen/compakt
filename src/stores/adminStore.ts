@@ -6,6 +6,37 @@ import { defaultQuestions } from "@/data/questions";
 import { defaultUpsells } from "@/data/upsells";
 import { supabase } from "@/lib/supabase";
 
+function normalizeSupabaseAuthError(message: string): string {
+  const normalized = message.trim().toLowerCase();
+
+  if (
+    normalized.includes("password should") ||
+    normalized.includes("password must") ||
+    normalized.includes("weak password") ||
+    normalized.includes("password is too weak")
+  ) {
+    return "הסיסמה חלשה מדי. בחרו לפחות 8 תווים עם אות באנגלית ומספר.";
+  }
+
+  if (normalized.includes("user already registered")) {
+    return "קיים כבר חשבון עם האימייל הזה. נסו להתחבר או לאפס סיסמה.";
+  }
+
+  if (normalized.includes("invalid login credentials")) {
+    return "האימייל או הסיסמה שגויים.";
+  }
+
+  if (normalized.includes("email not confirmed")) {
+    return "האימייל עדיין לא אומת. בדקו את תיבת הדואר ואז נסו שוב.";
+  }
+
+  if (normalized.includes("unable to validate email address")) {
+    return "כתובת האימייל לא תקינה.";
+  }
+
+  return message;
+}
+
 interface AdminStore {
   isAuthenticated: boolean;
   userId: string | null;
@@ -109,7 +140,7 @@ export const useAdminStore = create<AdminStore>()(
         set({ authError: null });
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          set({ authError: error.message });
+          set({ authError: normalizeSupabaseAuthError(error.message) });
           return false;
         }
         set({ isAuthenticated: true, userId: data.user?.id ?? null, userEmail: data.user?.email ?? null, authError: null });
@@ -129,7 +160,7 @@ export const useAdminStore = create<AdminStore>()(
           },
         });
         if (error) {
-          set({ authError: error.message });
+          set({ authError: normalizeSupabaseAuthError(error.message) });
         }
       },
 
@@ -141,7 +172,7 @@ export const useAdminStore = create<AdminStore>()(
         set({ authError: null });
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) {
-          set({ authError: error.message });
+          set({ authError: normalizeSupabaseAuthError(error.message) });
           return "error";
         }
         if (data.session?.user) {
