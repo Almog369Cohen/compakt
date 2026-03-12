@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAdminStore } from "@/stores/adminStore";
+import { useProfileStore } from "@/stores/profileStore";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -19,21 +20,23 @@ import {
   LogIn,
   ListMusic,
   Wand2,
+  CheckSquare,
+  Square,
+  Save,
 } from "lucide-react";
 import type { Song, SongCategory } from "@/lib/types";
 import type { FeatureKey } from "@/lib/access";
+import { resolveSongMedia } from "@/lib/songMedia";
+import {
+  getSongCategoryOptions,
+  DEFAULT_SONG_CATEGORY_LABELS,
+  type SongCategoryLabels,
+} from "@/lib/songCategories";
 
 type AdminAccess = {
   isActive: boolean;
   features: Record<FeatureKey, boolean>;
 };
-
-const categories: { value: SongCategory; label: string }[] = [
-  { value: "reception", label: "קבלת פנים" },
-  { value: "food", label: "אוכל" },
-  { value: "dancing", label: "רחבה" },
-  { value: "ceremony", label: "טקס" },
-];
 
 const languages = [
   { value: "hebrew", label: "עברית" },
@@ -47,6 +50,10 @@ export function SongManager() {
   const addSong = useAdminStore((s) => s.addSong);
   const updateSong = useAdminStore((s) => s.updateSong);
   const deleteSong = useAdminStore((s) => s.deleteSong);
+  const userId = useAdminStore((s) => s.userId);
+  const profile = useProfileStore((s) => s.profile);
+  const setProfile = useProfileStore((s) => s.setProfile);
+  const saveProfileToDB = useProfileStore((s) => s.saveProfileToDB);
 
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -55,6 +62,11 @@ export function SongManager() {
   const [showPreview, setShowPreview] = useState(false);
   const [showSpotifyImport, setShowSpotifyImport] = useState(false);
   const [access, setAccess] = useState<AdminAccess | null>(null);
+  const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
+  const [bulkCategory, setBulkCategory] = useState<SongCategory>("dancing");
+  const [savingCategoryLabels, setSavingCategoryLabels] = useState(false);
+  const [categoryLabelsSaved, setCategoryLabelsSaved] = useState(false);
+  const [categoryLabelsError, setCategoryLabelsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +90,11 @@ export function SongManager() {
   }, []);
 
   const canUseSpotifyImport = Boolean(access?.isActive && access.features.spotify_import);
+  const songCategoryLabels = profile.songCategoryLabels || DEFAULT_SONG_CATEGORY_LABELS;
+  const categories = useMemo(
+    () => getSongCategoryOptions(songCategoryLabels),
+    [songCategoryLabels]
+  );
 
   const filtered = songs.filter((s) => {
     const q = search.toLowerCase();
@@ -90,6 +107,48 @@ export function SongManager() {
       filterCategory === "all" || s.category === filterCategory;
     return matchSearch && matchCategory;
   });
+
+  const selectedCount = selectedSongIds.length;
+  const allFilteredSelected = filtered.length > 0 && filtered.every((song) => selectedSongIds.includes(song.id));
+
+  const toggleSongSelection = (songId: string) => {
+    setSelectedSongIds((current) =>
+      current.includes(songId) ? current.filter((id) => id !== songId) : [...current, songId]
+    );
+  };
+
+  const toggleSelectAllFiltered = () => {
+    if (allFilteredSelected) {
+      setSelectedSongIds((current) => current.filter((id) => !filtered.some((song) => song.id === id)));
+      return;
+    }
+    setSelectedSongIds((current) => Array.from(new Set([...current, ...filtered.map((song) => song.id)])));
+  };
+
+  const runBulkUpdate = (patch: Partial<Song>) => {
+    selectedSongIds.forEach((songId) => updateSong(songId, patch));
+  };
+
+  const runBulkDelete = () => {
+    if (selectedSongIds.length === 0) return;
+    if (!confirm(`למחוק ${selectedSongIds.length} שירים?`)) return;
+    selectedSongIds.forEach((songId) => deleteSong(songId));
+    setSelectedSongIds([]);
+  };
+
+  const handleSaveCategoryLabels = async () => {
+    setCategoryLabelsError(null);
+    setSavingCategoryLabels(true);
+    try {
+      await saveProfileToDB(userId || "legacy");
+      setCategoryLabelsSaved(true);
+      setTimeout(() => setCategoryLabelsSaved(false), 1500);
+    } catch (e) {
+      setCategoryLabelsError(e instanceof Error ? e.message : "שמירת שמות הקטגוריות נכשלה");
+    } finally {
+      setSavingCategoryLabels(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -194,6 +253,54 @@ export function SongManager() {
         </div>
       )}
 
+      <div className="glass-card p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="text-sm font-bold">שמות קטגוריות לשירים</h3>
+          <button
+            type="button"
+            onClick={handleSaveCategoryLabels}
+            disabled={savingCategoryLabels}
+            className={`btn-secondary text-sm flex items-center gap-2 py-2 px-4 ${savingCategoryLabels ? "opacity-60 cursor-not-allowed" : ""}`}
+          >
+            <Save className="w-4 h-4" />
+            {savingCategoryLabels ? "שומר..." : categoryLabelsSaved ? "נשמר" : "שמור שמות"}
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          {categories.map((category) => (
+            <div key={category.value}>
+              <label className="block text-xs text-muted mb-1">
+                {category.value === "reception"
+                  ? "קבלת פנים"
+                  : category.value === "food"
+                    ? "אוכל"
+                    : category.value === "dancing"
+                      ? "רחבה"
+                      : "חופה / טקס"}
+              </label>
+              <input
+                type="text"
+                value={songCategoryLabels[category.value]}
+                onChange={(e) =>
+                  setProfile({
+                    songCategoryLabels: {
+                      ...songCategoryLabels,
+                      [category.value]: e.target.value,
+                    } as SongCategoryLabels,
+                  })
+                }
+                className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+              />
+            </div>
+          ))}
+        </div>
+        {categoryLabelsError && (
+          <div className="text-xs" style={{ color: "var(--accent-danger)" }}>
+            {categoryLabelsError}
+          </div>
+        )}
+      </div>
+
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">
         <div className="flex-1 min-w-[200px] relative">
@@ -225,12 +332,75 @@ export function SongManager() {
         </div>
       </div>
 
+      {selectedCount > 0 && (
+        <div className="glass-card p-4 flex flex-wrap items-center gap-2">
+          <div className="text-sm font-medium ml-2">נבחרו {selectedCount} שירים</div>
+          <button
+            type="button"
+            onClick={() => runBulkUpdate({ isActive: false })}
+            className="btn-secondary text-sm py-2 px-3"
+          >
+            הסתר
+          </button>
+          <button
+            type="button"
+            onClick={() => runBulkUpdate({ isActive: true })}
+            className="btn-secondary text-sm py-2 px-3"
+          >
+            הצג
+          </button>
+          <select
+            value={bulkCategory}
+            onChange={(e) => setBulkCategory(e.target.value as SongCategory)}
+            className="px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+          >
+            {categories.map((category) => (
+              <option key={category.value} value={category.value}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => runBulkUpdate({ category: bulkCategory })}
+            className="btn-secondary text-sm py-2 px-3"
+          >
+            העבר לקטגוריה
+          </button>
+          <button
+            type="button"
+            onClick={runBulkDelete}
+            className="btn-secondary text-sm py-2 px-3"
+            style={{ color: "var(--accent-danger)" }}
+          >
+            מחק נבחרים
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedSongIds([])}
+            className="text-xs text-muted hover:text-foreground transition-colors mr-auto"
+          >
+            נקה בחירה
+          </button>
+        </div>
+      )}
+
       {/* Songs Table */}
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-glass text-right">
+                <th className="px-4 py-3 font-medium text-muted w-12">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAllFiltered}
+                    className="text-muted hover:text-foreground transition-colors"
+                    aria-label={allFilteredSelected ? "בטל בחירה" : "בחר הכל"}
+                  >
+                    {allFilteredSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                  </button>
+                </th>
                 <th className="px-4 py-3 font-medium text-muted">שיר</th>
                 <th className="px-4 py-3 font-medium text-muted hidden sm:table-cell">קטגוריה</th>
                 <th className="px-4 py-3 font-medium text-muted hidden md:table-cell">תגיות</th>
@@ -244,6 +414,16 @@ export function SongManager() {
                   key={song.id}
                   className="border-b border-glass/50 hover:bg-surface-hover transition-colors"
                 >
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleSongSelection(song.id)}
+                      className="text-muted hover:text-foreground transition-colors"
+                      aria-label={selectedSongIds.includes(song.id) ? "בטל בחירה" : "בחר שיר"}
+                    >
+                      {selectedSongIds.includes(song.id) ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                    </button>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-brand-gray/30 flex-shrink-0">
@@ -321,6 +501,7 @@ export function SongManager() {
         {(showAddModal || editingSong) && (
           <SongModal
             song={editingSong}
+            categories={categories}
             onSave={(data) => {
               if (editingSong) {
                 updateSong(editingSong.id, data);
@@ -342,6 +523,7 @@ export function SongManager() {
         {showPreview && (
           <PreviewModal
             songs={songs}
+            categories={categories}
             onToggleActive={(id, isActive) => updateSong(id, { isActive })}
             onClose={() => setShowPreview(false)}
           />
@@ -364,10 +546,12 @@ export function SongManager() {
 
 function PreviewModal({
   songs,
+  categories,
   onToggleActive,
   onClose,
 }: {
   songs: Song[];
+  categories: { value: SongCategory; label: string }[];
   onToggleActive: (id: string, isActive: boolean) => void;
   onClose: () => void;
 }) {
@@ -429,6 +613,7 @@ function PreviewModal({
                   const scale = 1 - depth * 0.035;
                   const y = depth * 10;
                   const opacity = 1 - depth * 0.08;
+                  const media = resolveSongMedia(song.previewUrl, song.externalLink);
 
                   return (
                     <motion.div
@@ -461,6 +646,7 @@ function PreviewModal({
                           <span className="chip text-xs">
                             {categories.find((c) => c.value === song.category)?.label}
                           </span>
+                          <span className="chip text-xs">{media.sourceLabel}</span>
                           {!song.isSafe && (
                             <span className="chip text-xs" style={{ borderColor: "var(--accent-danger)", color: "var(--accent-danger)" }}>
                               לא בטוח
@@ -469,21 +655,22 @@ function PreviewModal({
                         </div>
 
                         <div className="mt-auto w-full space-y-2">
+                          <div className="text-[11px] text-muted min-h-[32px]">{media.helperText}</div>
                           <button
                             onClick={() => onToggleActive(song.id, !song.isActive)}
                             className="btn-secondary w-full text-sm"
                           >
                             {song.isActive ? "הפוך ללא פעיל" : "הפוך לפעיל"}
                           </button>
-                          {song.externalLink && (
+                          {media.externalUrl && (
                             <a
-                              href={song.externalLink}
+                              href={media.externalUrl}
                               target="_blank"
                               rel="noreferrer"
                               className="text-xs text-brand-blue hover:underline block"
                               dir="ltr"
                             >
-                              {song.externalLink}
+                              {media.externalUrl}
                             </a>
                           )}
                         </div>
@@ -844,10 +1031,12 @@ function SpotifyImportModal({
 
 function SongModal({
   song,
+  categories,
   onSave,
   onClose,
 }: {
   song: Song | null;
+  categories: { value: SongCategory; label: string }[];
   onSave: (data: Partial<Song>) => void;
   onClose: () => void;
 }) {
@@ -865,7 +1054,8 @@ function SongModal({
   const [metaError, setMetaError] = useState<string | null>(null);
   const [uploadingKind, setUploadingKind] = useState<"audio" | "cover" | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const canAutoFillFromYoutube = /(?:youtube\.com|youtu\.be)/i.test(previewUrl.trim());
+  const resolvedMedia = resolveSongMedia(previewUrl, externalLink);
+  const canAutoFillFromYoutube = resolvedMedia.canAutoFillFromYoutube;
 
   const uploadFile = async (kind: "audio" | "cover", file: File) => {
     setUploadingKind(kind);
@@ -894,7 +1084,7 @@ function SongModal({
   };
 
   const handleAutoFill = async () => {
-    const url = previewUrl.trim();
+    const url = resolvedMedia.inlineUrl || previewUrl.trim();
     if (!url) return;
     setMetaLoading(true);
     setMetaError(null);
@@ -1028,7 +1218,7 @@ function SongModal({
         </div>
 
         <div>
-          <label className="block text-xs text-muted mb-1">Audio Preview URL (YouTube / קובץ אודיו)</label>
+          <label className="block text-xs text-muted mb-1">פריוויו לנגן (YouTube / קובץ אודיו)</label>
           <input
             type="url"
             value={previewUrl}
@@ -1069,10 +1259,11 @@ function SongModal({
               </span>
             )}
           </div>
+          <p className="mt-2 text-[11px] text-muted">{resolvedMedia.helperText}</p>
         </div>
 
         <div>
-          <label className="block text-xs text-muted mb-1">לינק חיצוני (Spotify / YouTube)</label>
+          <label className="block text-xs text-muted mb-1">לינק חיצוני (Spotify / YouTube / פתיחה מחוץ לנגן)</label>
           <input
             type="url"
             value={externalLink}
@@ -1081,6 +1272,20 @@ function SongModal({
             placeholder="https://open.spotify.com/track/..."
             className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
           />
+          <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+            <span className="text-muted">זוהה: {resolvedMedia.sourceLabel}</span>
+            {resolvedMedia.externalUrl && (
+              <a
+                href={resolvedMedia.externalUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-brand-blue hover:underline"
+                dir="ltr"
+              >
+                פתח לינק
+              </a>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

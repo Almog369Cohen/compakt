@@ -1,5 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import {
+  DEFAULT_SONG_CATEGORY_LABELS,
+  normalizeSongCategoryLabels,
+  type SongCategoryLabels,
+} from "@/lib/songCategories";
+
 export type ProfileState = {
   businessName: string;
   tagline: string;
@@ -21,6 +27,7 @@ export type ProfileState = {
   whatsappNumber: string;
   coverUrl: string;
   logoUrl: string;
+  songCategoryLabels: SongCategoryLabels;
   customLinks: { label: string; url: string }[];
   galleryPhotos: string[];
   reviews: { name: string; text: string; rating: number }[];
@@ -82,12 +89,33 @@ function parseBrandColors(value: unknown): ProfileState["brandColors"] {
   return DEFAULT_BRAND_COLORS;
 }
 
-function serializeBrandColors(colors: ProfileState["brandColors"]): string {
+function parseSongCategoryLabels(value: unknown): SongCategoryLabels {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed.startsWith("{")) return DEFAULT_SONG_CATEGORY_LABELS;
+    try {
+      const parsed = JSON.parse(trimmed) as { songCategoryLabels?: unknown };
+      return normalizeSongCategoryLabels(parsed.songCategoryLabels);
+    } catch {
+      return DEFAULT_SONG_CATEGORY_LABELS;
+    }
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const parsed = value as { songCategoryLabels?: unknown };
+    return normalizeSongCategoryLabels(parsed.songCategoryLabels);
+  }
+
+  return DEFAULT_SONG_CATEGORY_LABELS;
+}
+
+function serializeBrandColors(colors: ProfileState["brandColors"], songCategoryLabels: SongCategoryLabels): string {
   return JSON.stringify({
     primary: colors.primary || DEFAULT_BRAND_COLORS.primary,
     secondary: colors.secondary || DEFAULT_BRAND_COLORS.secondary,
     accent: colors.accent || DEFAULT_BRAND_COLORS.accent,
     surface: colors.surface || DEFAULT_BRAND_COLORS.surface,
+    songCategoryLabels: normalizeSongCategoryLabels(songCategoryLabels),
   });
 }
 
@@ -107,6 +135,7 @@ const DEFAULT_PROFILE: ProfileState = {
   whatsappNumber: "",
   coverUrl: "",
   logoUrl: "",
+  songCategoryLabels: DEFAULT_SONG_CATEGORY_LABELS,
   customLinks: [],
   galleryPhotos: [],
   reviews: [],
@@ -150,6 +179,7 @@ export const useProfileStore = create<ProfileStore>()(
           }
 
           const brandColors = parseBrandColors(data.accent_color);
+          const songCategoryLabels = parseSongCategoryLabels(data.accent_color);
 
           set({
             profileId: data.id,
@@ -169,6 +199,7 @@ export const useProfileStore = create<ProfileStore>()(
               whatsappNumber: data.whatsapp_number ?? "",
               coverUrl: data.cover_url ?? "",
               logoUrl: data.logo_url ?? "",
+              songCategoryLabels,
               customLinks: Array.isArray(data.custom_links) ? data.custom_links : [],
               galleryPhotos: Array.isArray(data.gallery_photos) ? data.gallery_photos : [],
               reviews: Array.isArray(data.reviews) ? data.reviews : [],
@@ -186,7 +217,7 @@ export const useProfileStore = create<ProfileStore>()(
           business_name: profile.businessName,
           tagline: profile.tagline,
           bio: profile.bio,
-          accent_color: serializeBrandColors(profile.brandColors),
+          accent_color: serializeBrandColors(profile.brandColors, profile.songCategoryLabels),
           dj_slug: profile.djSlug || null,
           instagram_url: profile.instagramUrl,
           tiktok_url: profile.tiktokUrl,
@@ -234,6 +265,7 @@ export const useProfileStore = create<ProfileStore>()(
         if (!data) return null;
 
         const brandColors = parseBrandColors(data.accent_color);
+        const songCategoryLabels = parseSongCategoryLabels(data.accent_color);
 
         return {
           id: data.id,
@@ -253,6 +285,7 @@ export const useProfileStore = create<ProfileStore>()(
             whatsappNumber: data.whatsapp_number ?? "",
             coverUrl: data.cover_url ?? "",
             logoUrl: data.logo_url ?? "",
+            songCategoryLabels,
             customLinks: Array.isArray(data.custom_links) ? data.custom_links : [],
             galleryPhotos: Array.isArray(data.gallery_photos) ? data.gallery_photos : [],
             reviews: Array.isArray(data.reviews) ? data.reviews : [],
