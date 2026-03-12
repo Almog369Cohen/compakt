@@ -67,6 +67,7 @@ export function SongManager() {
   const [savingCategoryLabels, setSavingCategoryLabels] = useState(false);
   const [categoryLabelsSaved, setCategoryLabelsSaved] = useState(false);
   const [categoryLabelsError, setCategoryLabelsError] = useState<string | null>(null);
+  const [bulkActionMessage, setBulkActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,8 +126,18 @@ export function SongManager() {
     setSelectedSongIds((current) => Array.from(new Set([...current, ...filtered.map((song) => song.id)])));
   };
 
-  const runBulkUpdate = (patch: Partial<Song>) => {
+  const showBulkFeedback = (message: string) => {
+    setBulkActionMessage(message);
+    window.setTimeout(() => {
+      setBulkActionMessage((current) => (current === message ? null : current));
+    }, 2200);
+  };
+
+  const runBulkUpdate = (patch: Partial<Song>, successMessage: string) => {
+    if (selectedSongIds.length === 0) return;
     selectedSongIds.forEach((songId) => updateSong(songId, patch));
+    setSelectedSongIds([]);
+    showBulkFeedback(successMessage);
   };
 
   const runBulkDelete = () => {
@@ -134,6 +145,7 @@ export function SongManager() {
     if (!confirm(`למחוק ${selectedSongIds.length} שירים?`)) return;
     selectedSongIds.forEach((songId) => deleteSong(songId));
     setSelectedSongIds([]);
+    showBulkFeedback("השירים שנבחרו נמחקו");
   };
 
   const handleSaveCategoryLabels = async () => {
@@ -337,14 +349,14 @@ export function SongManager() {
           <div className="text-sm font-medium ml-2">נבחרו {selectedCount} שירים</div>
           <button
             type="button"
-            onClick={() => runBulkUpdate({ isActive: false })}
+            onClick={() => runBulkUpdate({ isActive: false }, "השירים סומנו כמוסתרים")}
             className="btn-secondary text-sm py-2 px-3"
           >
             הסתר
           </button>
           <button
             type="button"
-            onClick={() => runBulkUpdate({ isActive: true })}
+            onClick={() => runBulkUpdate({ isActive: true }, "השירים סומנו כפעילים")}
             className="btn-secondary text-sm py-2 px-3"
           >
             הצג
@@ -362,7 +374,12 @@ export function SongManager() {
           </select>
           <button
             type="button"
-            onClick={() => runBulkUpdate({ category: bulkCategory })}
+            onClick={() =>
+              runBulkUpdate(
+                { category: bulkCategory },
+                `השירים הועברו לקטגוריית ${categories.find((category) => category.value === bulkCategory)?.label || ""}`
+              )
+            }
             className="btn-secondary text-sm py-2 px-3"
           >
             העבר לקטגוריה
@@ -382,6 +399,12 @@ export function SongManager() {
           >
             נקה בחירה
           </button>
+        </div>
+      )}
+
+      {bulkActionMessage && (
+        <div className="glass-card p-3 text-sm text-brand-blue">
+          {bulkActionMessage}
         </div>
       )}
 
@@ -412,7 +435,7 @@ export function SongManager() {
               {filtered.map((song) => (
                 <tr
                   key={song.id}
-                  className="border-b border-glass/50 hover:bg-surface-hover transition-colors"
+                  className={`border-b border-glass/50 hover:bg-surface-hover transition-colors ${!song.isActive ? "opacity-55" : ""}`}
                 >
                   <td className="px-4 py-3">
                     <button
@@ -461,8 +484,9 @@ export function SongManager() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => updateSong(song.id, { isActive: !song.isActive })}
-                        className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
+                        className={`p-1.5 rounded-lg transition-colors ${song.isActive ? "text-brand-blue hover:text-brand-blue/80" : "text-accent-danger hover:text-accent-danger/80"}`}
                         aria-label={song.isActive ? "הסתר" : "הצג"}
+                        title={song.isActive ? "הסתר שיר" : "הצג שיר"}
                       >
                         {song.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       </button>
