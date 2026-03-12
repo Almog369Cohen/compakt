@@ -15,6 +15,7 @@ export default function DJPublicPage() {
   const searchParams = useSearchParams();
   const slug = params.slug as string;
   const token = searchParams.get("token");
+  const resume = searchParams.get("resume");
   const loadProfileRecordBySlug = useProfileStore((s) => s.loadProfileRecordBySlug);
   const [profile, setProfile] = useState<ProfileState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,6 +90,18 @@ export default function DJPublicPage() {
           initialToken={token}
           initialDjSlug={slug}
           initialDjName={profile.businessName || slug}
+        />
+      </HydrationGuard>
+    );
+  }
+
+  if (resume) {
+    return (
+      <HydrationGuard>
+        <JourneyApp
+          initialDjSlug={slug}
+          initialDjName={profile.businessName || slug}
+          initialMode="resume"
         />
       </HydrationGuard>
     );

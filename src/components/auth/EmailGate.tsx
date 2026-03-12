@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
+import { Mail, ArrowLeft, Loader2, CheckCircle, KeyRound } from "lucide-react";
 
 interface EmailGateProps {
   eventId?: string;
@@ -26,10 +26,14 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
   const [step, setStep] = useState<Step>("email");
   const [eventNumber, setEventNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [sessionId, setSessionId] = useState("");
+  const [resolvedEventKey, setResolvedEventKey] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleVerify = async () => {
+  const handleSendOtp = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     const lookupKey = (eventId || eventNumber).trim();
 
@@ -59,12 +63,43 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
         return;
       }
 
+      setSessionId(sendData.sessionId);
+      setResolvedEventKey(sendData.eventKey || lookupKey);
+      setOtpSent(true);
+
+      if (sendData.devOtp) {
+        setOtp(sendData.devOtp);
+      }
+    } catch {
+      setError("שגיאה בשליחת הקוד");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!sessionId) {
+      setError("חסר סשן אימות. נסו לשלוח קוד מחדש.");
+      return;
+    }
+
+    if (!otp.trim()) {
+      setError("הזינו את קוד האימות");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
       const verifyRes = await fetch("/api/auth/email/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: sendData.sessionId,
-          otp: sendData.devOtp || "000000",
+          sessionId,
+          otp: otp.trim(),
           email: normalizedEmail,
         }),
       });
@@ -80,7 +115,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
         onVerified({
           sessionId: verifyData.sessionId,
           email: normalizedEmail,
-          eventKey: verifyData.eventKey || sendData.eventKey || lookupKey,
+          eventKey: verifyData.eventKey || resolvedEventKey,
           resumeData: verifyData.resumeData,
         });
       }, 800);
@@ -116,14 +151,14 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
                 >
                   <Mail className="w-7 h-7 text-white" />
                 </motion.div>
-                <h2 className="text-xl font-bold mb-1">!ברוכים הבאים</h2>
+                <h2 className="text-xl font-bold mb-1">חזרה לאירוע שלכם</h2>
                 {djName && (
                   <p className="text-sm text-secondary mb-1">
                     השאלון של <span className="font-semibold text-brand-blue">{djName}</span>
                   </p>
                 )}
                 <p className="text-xs text-muted">
-                  הזינו מספר אירוע ומייל כדי לחזור לשאלון ולהמשיך בכל זמן
+                  הזינו מספר אירוע ומייל ונשלח לכם קוד כניסה כדי להמשיך מאיפה שעצרתם
                 </p>
               </div>
 
@@ -137,7 +172,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
                         setEventNumber(e.target.value.replace(/\D/g, "").slice(0, 8));
                         setError(null);
                       }}
-                      onKeyDown={(e) => e.key === "Enter" && handleVerify()}
+                      onKeyDown={(e) => e.key === "Enter" && !otpSent && handleSendOtp()}
                       placeholder="מספר אירוע"
                       dir="ltr"
                       className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-center text-base focus:outline-none focus:border-brand-blue transition-colors mb-3"
@@ -153,13 +188,36 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
                       setEmail(e.target.value);
                       setError(null);
                     }}
-                    onKeyDown={(e) => e.key === "Enter" && handleVerify()}
+                    onKeyDown={(e) => e.key === "Enter" && (otpSent ? handleVerifyOtp() : handleSendOtp())}
                     placeholder="you@example.com"
                     dir="ltr"
                     className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-center text-base focus:outline-none focus:border-brand-blue transition-colors"
                     autoFocus={Boolean(eventId)}
                   />
                 </div>
+
+                {otpSent && (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={otp}
+                        onChange={(e) => {
+                          setOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
+                          setError(null);
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && handleVerifyOtp()}
+                        placeholder="קוד אימות"
+                        dir="ltr"
+                        className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-center text-base tracking-[0.3em] focus:outline-none focus:border-brand-blue transition-colors"
+                      />
+                      <KeyRound className="w-4 h-4 text-muted absolute left-4 top-1/2 -translate-y-1/2" />
+                    </div>
+                    <p className="text-[11px] text-center text-muted">
+                      שלחנו קוד למייל שהזנתם. הזינו אותו כאן כדי להיכנס לאירוע.
+                    </p>
+                  </div>
+                )}
 
                 {error && (
                   <motion.p
@@ -173,7 +231,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
                 )}
 
                 <button
-                  onClick={handleVerify}
+                  onClick={otpSent ? handleVerifyOtp : handleSendOtp}
                   disabled={loading}
                   className="btn-primary w-full flex items-center justify-center gap-2"
                 >
@@ -181,11 +239,21 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      המשיכו לשאלון
+                      {otpSent ? "אמתו והיכנסו" : "שלחו קוד כניסה"}
                       <ArrowLeft className="w-4 h-4" />
                     </>
                   )}
                 </button>
+
+                {otpSent && (
+                  <button
+                    onClick={handleSendOtp}
+                    disabled={loading}
+                    className="w-full text-xs text-secondary hover:text-brand-blue transition-colors"
+                  >
+                    שלחו קוד חדש
+                  </button>
+                )}
               </div>
             </motion.div>
           )}

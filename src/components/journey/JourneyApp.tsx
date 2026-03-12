@@ -56,6 +56,7 @@ export type JourneyAppProps = {
   initialToken?: string | null;
   initialDjSlug?: string | null;
   initialDjName?: string | null;
+  initialMode?: "new" | "resume";
 };
 
 function parseMaybeJson(value: string | null): string | string[] | number | "" {
@@ -115,7 +116,12 @@ function restoreResumeData(resumeData: RawResumeData) {
   });
 }
 
-export function JourneyApp({ initialToken = null, initialDjSlug = null, initialDjName = null }: JourneyAppProps) {
+export function JourneyApp({
+  initialToken = null,
+  initialDjSlug = null,
+  initialDjName = null,
+  initialMode = "new",
+}: JourneyAppProps) {
   const event = useEventStore((s) => s.event);
   const theme = useEventStore((s) => s.theme);
   const loadEvent = useEventStore((s) => s.loadEvent);
@@ -125,7 +131,7 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
   const loadContentFromDB = useAdminStore((s) => s.loadContentFromDB);
   const currentStage = event?.currentStage ?? 0;
   const [showReset, setShowReset] = useState(false);
-  const [showReturnGate, setShowReturnGate] = useState(false);
+  const [showReturnGate, setShowReturnGate] = useState(initialMode === "resume");
   const [entryDjName, setEntryDjName] = useState<string | null>(initialDjName);
 
   const [pendingToken, setPendingToken] = useState<string | null>(null);
@@ -161,6 +167,11 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
     const params = new URLSearchParams(window.location.search);
     const token = initialToken ?? params.get("token");
     const dj = initialDjSlug ?? params.get("dj");
+    const resume = params.get("resume");
+
+    if (!initialToken && !event && initialMode !== "resume" && resume) {
+      setShowReturnGate(true);
+    }
 
     const storedDjProfileId = sessionStorage.getItem("compakt_dj_profile_id");
     const storedDjSlug = sessionStorage.getItem("compakt_dj_slug");
@@ -174,7 +185,7 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
       });
       if (!response.ok) return null;
       const result = await response.json();
-      return result.data as { id: string; business_name: string; dj_slug: string } | null;
+      return result.data as { id: string; business_name: string; dj_slug: string; logo_url?: string } | null;
     };
 
     const loadPublicDjById = async (idToLoad: string) => {
@@ -184,7 +195,7 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
       });
       if (!response.ok) return null;
       const result = await response.json();
-      return result.data as { id: string; business_name: string; dj_slug: string } | null;
+      return result.data as { id: string; business_name: string; dj_slug: string; logo_url?: string } | null;
     };
 
     const loadEventContext = async (eventToken: string) => {
@@ -230,6 +241,9 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
               setEntryDjName(profileData.business_name);
             }
           }
+          if (profileData.logo_url) {
+            sessionStorage.setItem("compakt_dj_logo_url", profileData.logo_url);
+          }
           await loadContentFromDB(profileData.id);
           return;
         }
@@ -237,6 +251,7 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
         sessionStorage.removeItem("compakt_dj_profile_id");
         sessionStorage.removeItem("compakt_dj_slug");
         sessionStorage.removeItem("compakt_dj_name");
+        sessionStorage.removeItem("compakt_dj_logo_url");
       }
     };
 
@@ -254,6 +269,9 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
                 setEntryDjName(data.business_name);
               }
             }
+            if (data.logo_url) {
+              sessionStorage.setItem("compakt_dj_logo_url", data.logo_url);
+            }
             await loadContentFromDB(data.id);
             return;
           }
@@ -261,6 +279,7 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
           sessionStorage.removeItem("compakt_dj_profile_id");
           sessionStorage.removeItem("compakt_dj_slug");
           sessionStorage.removeItem("compakt_dj_name");
+          sessionStorage.removeItem("compakt_dj_logo_url");
         }
 
         if (storedDjProfileId && !dj) {
@@ -276,6 +295,9 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
               if (!entryDjName) {
                 setEntryDjName(storedProfile.business_name);
               }
+            }
+            if (storedProfile.logo_url) {
+              sessionStorage.setItem("compakt_dj_logo_url", storedProfile.logo_url);
             }
             await loadContentFromDB(storedProfile.id);
             return;
@@ -296,6 +318,9 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
             }
           } else if (!entryDjName && typeof window !== "undefined" && initialDjSlug) {
             setEntryDjName(initialDjSlug);
+          }
+          if (data.logo_url) {
+            sessionStorage.setItem("compakt_dj_logo_url", data.logo_url);
           }
           await loadContentFromDB(data.id);
         }
@@ -324,10 +349,10 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
       return;
     }
 
-    if (dj && !initialDjSlug) {
+    if ((dj || resume) && !initialDjSlug) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [entryDjName, initialDjSlug, initialToken, loadEvent, track, loadContentFromDB]);
+  }, [entryDjName, event, initialDjSlug, initialMode, initialToken, loadEvent, track, loadContentFromDB]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -423,7 +448,6 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
   }
 
   const stageKey = `stage-${currentStage}`;
-
   const renderStage = () => {
     if (!event) {
       return <EventSetup initialDjSlug={initialDjSlug} initialDjName={entryDjName} />;
@@ -440,7 +464,7 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
 
   return (
     <main className="min-h-dvh gradient-hero relative">
-      <div className="fixed top-4 left-4 z-50 flex items-center gap-2">
+      <div className="fixed top-3 left-4 z-50 pointer-events-auto flex items-center gap-2">
         <ThemeToggle />
         {event && (
           <button
@@ -453,26 +477,34 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
         )}
       </div>
 
-      <AnimatePresence>
-        {showReset && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="fixed top-16 left-4 z-50 glass-card p-3 rounded-xl text-sm"
-          >
-            <p className="text-xs text-secondary mb-2">?להתחיל מחדש</p>
-            <div className="flex gap-2">
-              <button onClick={handleReset} className="text-xs px-3 py-1 rounded-lg text-white" style={{ background: "var(--accent-danger)" }}>
-                כן, מחק הכל
-              </button>
-              <button onClick={() => setShowReset(false)} className="text-xs px-3 py-1 rounded-lg border border-glass text-muted">
-                ביטול
-              </button>
-            </div>
-          </motion.div>
+      <div className="fixed top-14 left-4 z-50">
+        {event && (
+          <AnimatePresence>
+            {showReset && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="glass-card p-3 rounded-xl text-sm"
+              >
+                <p className="text-xs text-secondary mb-2">?להתחיל מחדש</p>
+                <div className="flex gap-2">
+                  <button onClick={handleReset} className="text-xs px-3 py-1 rounded-lg text-white" style={{ background: "var(--accent-danger)" }}>
+                    כן, מחק הכל
+                  </button>
+                  <button onClick={() => setShowReset(false)} className="text-xs px-3 py-1 rounded-lg border border-glass text-muted">
+                    ביטול
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
-      </AnimatePresence>
+      </div>
+
+      <div className="fixed top-4 left-4 z-50 flex items-center gap-2 sr-only">
+        <ThemeToggle />
+      </div>
 
       <AnimatePresence>
         {showResumePrompt && (
@@ -506,12 +538,12 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
       </AnimatePresence>
 
       {event && currentStage > 0 && currentStage <= 4 && (
-        <div className="fixed top-4 right-4 left-28 z-40">
+        <div className="fixed top-[3.25rem] right-4 left-4 z-40">
           <StageNav />
         </div>
       )}
 
-      <div className="flex items-center justify-center min-h-dvh px-4 py-16">
+      <div className="flex items-center justify-center min-h-dvh px-4 py-20 sm:py-24 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={stageKey}
@@ -524,7 +556,7 @@ export function JourneyApp({ initialToken = null, initialDjSlug = null, initialD
             <ErrorBoundary>
               {renderStage()}
               {!event && (
-                <div className="mt-4 text-center">
+                <div className="mb-4 text-center">
                   <button
                     onClick={() => setShowReturnGate(true)}
                     className="text-sm text-brand-blue hover:underline"

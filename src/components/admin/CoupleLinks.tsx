@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useProfileStore } from "@/stores/profileStore";
 import { trackAnalytics } from "@/hooks/useAnalytics";
+import { safeCopyText } from "@/lib/clipboard";
 import { getSafeOrigin } from "@/lib/utils";
 import type { EventRequest, Question, SongSwipe } from "@/lib/types";
 import {
@@ -163,6 +164,20 @@ function formatDateLabel(value?: string | null): string {
   }
 }
 
+function getLoadErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (message === "Authentication required") {
+    return "ההתחברות פגה. רענן את העמוד והתחבר מחדש כדי לראות את קישורי הזוגות.";
+  }
+
+  if (message === "Forbidden: insufficient role" || message === "Forbidden: profile not found") {
+    return "אין לך הרשאה לצפות בקישורי הזוגות בחשבון הזה.";
+  }
+
+  return message || "שגיאה בטעינת קישורי שאלון";
+}
+
 export function CoupleLinks() {
   const profileId = useProfileStore((s) => s.profileId);
   const djSlug = useProfileStore((s) => s.profile.djSlug);
@@ -185,6 +200,7 @@ export function CoupleLinks() {
   const [newVenue, setNewVenue] = useState("");
 
   const loadEvents = useCallback(async () => {
+    if (!profileId) return;
     setLoading(true);
     setLoadError(null);
     try {
@@ -196,12 +212,13 @@ export function CoupleLinks() {
       setEvents(data.events || []);
     } catch (error) {
       setEvents([]);
-      setLoadError(error instanceof Error ? error.message : "שגיאה בטעינת קישורי שאלון");
+      setLoadError(getLoadErrorMessage(error));
     }
     setLoading(false);
-  }, []);
+  }, [profileId]);
 
   useEffect(() => {
+    if (!profileId) return;
     void loadEvents();
   }, [loadEvents, profileId]);
 
@@ -266,8 +283,9 @@ export function CoupleLinks() {
       : `${getSafeOrigin()}/?token=${token}`
   );
 
-  const copyLink = (token: string, eventId: string) => {
-    navigator.clipboard.writeText(getLink(token));
+  const copyLink = async (token: string, eventId: string) => {
+    const copiedOk = await safeCopyText(getLink(token));
+    if (!copiedOk) return;
     setCopiedId(eventId);
     trackAnalytics("couple_link_copied", {
       category: "admin",
@@ -277,9 +295,11 @@ export function CoupleLinks() {
   };
 
   const shareWhatsApp = (token: string, nameA: string, nameB: string) => {
+    const eventNumber = events.find((event) => event.magic_token === token)?.token;
     const names = [nameA, nameB].filter(Boolean).join(" & ");
     const greeting = names ? `שלום ${names}!` : "שלום!";
-    const text = `${greeting} 🎵\nהכנתי לכם שאלון מוזיקלי לאירוע — מלאו אותו ונדייק את הפלייליסט:\n${getLink(token)}`;
+    const eventNumberLine = eventNumber ? `מספר האירוע שלכם: ${eventNumber}\n` : "";
+    const text = `${greeting} 🎵\nהכנתי לכם שאלון מוזיקלי לאירוע — מלאו אותו ונדייק את הפלייליסט.\n${eventNumberLine}${getLink(token)}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     trackAnalytics("couple_link_shared_whatsapp", {
       category: "admin",
@@ -405,7 +425,13 @@ export function CoupleLinks() {
       </AnimatePresence>
 
       {/* Loading */}
-      {loading && events.length === 0 && (
+      {!profileId && (
+        <div className="glass-card p-4 text-center">
+          <p className="text-sm text-muted">טוען את סביבת הזוגות שלך...</p>
+        </div>
+      )}
+
+      {profileId && loading && events.length === 0 && (
         <div className="flex justify-center py-8">
           <Loader2 className="w-5 h-5 animate-spin text-brand-blue" />
         </div>

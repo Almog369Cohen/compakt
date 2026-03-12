@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Heebo } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -32,19 +31,22 @@ export const viewport: Viewport = {
   themeColor: "#0a0a0f",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const bodyContent = clerkEnabled
+    ? await (async () => {
+      const { ClerkProvider } = await import("@clerk/nextjs");
+      return <ClerkProvider publishableKey={clerkPublishableKey}>{children}</ClerkProvider>;
+    })()
+    : children;
+
   return (
     <html lang="he" dir="rtl" data-theme="night" className={heebo.variable}>
       <body className="font-heebo antialiased min-h-dvh">
-        {clerkEnabled ? (
-          <ClerkProvider publishableKey={clerkPublishableKey}>{children}</ClerkProvider>
-        ) : (
-          children
-        )}
+        {bodyContent}
       </body>
     </html>
   );

@@ -207,16 +207,24 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
           transition={{ delay: 0.08 }}
           className="glass-card p-3"
         >
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             {mode === "public" ? (
-              <a
-                href={`/?dj=${effectiveSlug}`}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-opacity hover:opacity-90"
-                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
-              >
-                <Music className="w-5 h-5" />
-                התחילו את המסע
-              </a>
+              <>
+                <a
+                  href={`/?dj=${effectiveSlug}`}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-opacity hover:opacity-90"
+                  style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+                >
+                  <Music className="w-5 h-5" />
+                  התחילו עם ה-DJ הזה
+                </a>
+                <a
+                  href={`/dj/${effectiveSlug}?resume=1`}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-secondary transition-colors hover:text-white"
+                >
+                  כבר התחלתם? חזרו עם מספר אירוע
+                </a>
+              </>
             ) : (
               <div
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white opacity-80 cursor-default"
