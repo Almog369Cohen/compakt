@@ -6,7 +6,7 @@ import { SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/nextjs";
 import type { Session } from "@supabase/supabase-js";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Calendar, Eye, EyeOff, User, Link, TrendingUp } from "lucide-react";
+import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Eye, EyeOff, User, Link, TrendingUp } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useEventStore } from "@/stores/eventStore";
 import { SongManager } from "@/components/admin/SongManager";
@@ -14,7 +14,6 @@ import { QuestionManager } from "@/components/admin/QuestionManager";
 import { UpsellManager } from "@/components/admin/UpsellManager";
 import { Dashboard } from "@/components/admin/Dashboard";
 import { ProfileSettings } from "@/components/admin/ProfileSettings";
-import { EventsManager } from "@/components/admin/EventsManager";
 import { CoupleLinks } from "@/components/admin/CoupleLinks";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import { useProfileStore } from "@/stores/profileStore";
@@ -22,7 +21,7 @@ import { supabase } from "@/lib/supabase";
 import type { FeatureKey } from "@/lib/access";
 import { HydrationGuard } from "@/components/ui/HydrationGuard";
 
-type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "events" | "couples" | "analytics";
+type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "couples" | "analytics";
 
 type AdminAccess = {
   role: string;
@@ -35,7 +34,6 @@ const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "couples", label: "שאלונים", icon: <Link className="w-4 h-4" /> },
   { id: "analytics", label: "אנליטיקות", icon: <TrendingUp className="w-4 h-4" /> },
   { id: "profile", label: "פרופיל", icon: <User className="w-4 h-4" /> },
-  { id: "events", label: "אירועים", icon: <Calendar className="w-4 h-4" /> },
   { id: "songs", label: "שירים", icon: <Music className="w-4 h-4" /> },
   { id: "questions", label: "שאלות", icon: <HelpCircle className="w-4 h-4" /> },
   { id: "upsells", label: "שדרוגים", icon: <Sparkles className="w-4 h-4" /> },
@@ -781,7 +779,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
       </header>
 
       {/* Content */}
-      <main className={`mx-auto px-4 py-6 ${["profile", "events", "couples", "analytics"].includes(activeTab) ? "max-w-7xl" : "max-w-5xl"}`}>
+      <main className={`mx-auto px-4 py-6 ${["profile", "couples", "analytics"].includes(activeTab) ? "max-w-7xl" : "max-w-5xl"}`}>
         <AnimatePresence mode="wait">
           {activeTab === "profile" && (
             <motion.div
@@ -831,16 +829,6 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
               exit={{ opacity: 0, y: -10 }}
             >
               <UpsellManager />
-            </motion.div>
-          )}
-          {activeTab === "events" && (
-            <motion.div
-              key="events"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <EventsManager />
             </motion.div>
           )}
           {activeTab === "couples" && (
