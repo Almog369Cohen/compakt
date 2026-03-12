@@ -97,17 +97,26 @@ export function SongManager() {
     [songCategoryLabels]
   );
 
-  const filtered = songs.filter((s) => {
+  const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      s.title.toLowerCase().includes(q) ||
-      s.artist.toLowerCase().includes(q) ||
-      s.tags.some((t) => t.toLowerCase().includes(q));
-    const matchCategory =
-      filterCategory === "all" || s.category === filterCategory;
-    return matchSearch && matchCategory;
-  });
+    return songs
+      .filter((s) => {
+        const matchSearch =
+          !q ||
+          s.title.toLowerCase().includes(q) ||
+          s.artist.toLowerCase().includes(q) ||
+          s.tags.some((t) => t.toLowerCase().includes(q));
+        const matchCategory =
+          filterCategory === "all" || s.category === filterCategory;
+        return matchSearch && matchCategory;
+      })
+      .sort((a, b) => {
+        if (a.isActive !== b.isActive) {
+          return a.isActive ? -1 : 1;
+        }
+        return (a.sortOrder || 0) - (b.sortOrder || 0);
+      });
+  }, [songs, search, filterCategory]);
 
   const selectedCount = selectedSongIds.length;
   const allFilteredSelected = filtered.length > 0 && filtered.every((song) => selectedSongIds.includes(song.id));

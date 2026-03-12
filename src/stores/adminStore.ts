@@ -202,24 +202,16 @@ export const useAdminStore = create<AdminStore>()(
 
       // Songs
       addSong: (song) => {
-        const { songs, userId, userEmail } = get();
+        const { songs } = get();
         const id = crypto.randomUUID();
         const newSong = { ...song, id, sortOrder: songs.length + 1 };
         set({ songs: [...songs, newSong] });
 
-        if (supabase && (userId || userEmail)) {
-          resolveProfileId({ userId, userEmail }).then((profileId) => {
-            if (!profileId) return;
-            supabase!.from("songs").insert({
-              id, dj_id: profileId, title: song.title, artist: song.artist,
-              cover_url: song.coverUrl || "", preview_url: song.previewUrl || "",
-              external_link: song.externalLink || "", category: song.category,
-              tags: JSON.stringify(song.tags), energy: song.energy,
-              language: song.language, is_safe: song.isSafe, is_active: song.isActive,
-              sort_order: songs.length + 1,
-            }).then(() => { });
-          });
-        }
+        void fetch("/api/admin/songs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ song: newSong }),
+        });
       },
 
       updateSong: (id, data) => {
@@ -227,31 +219,18 @@ export const useAdminStore = create<AdminStore>()(
           songs: get().songs.map((s) => (s.id === id ? { ...s, ...data } : s)),
         });
 
-        if (supabase) {
-          const row: Record<string, unknown> = {};
-          if (data.title !== undefined) row.title = data.title;
-          if (data.artist !== undefined) row.artist = data.artist;
-          if (data.coverUrl !== undefined) row.cover_url = data.coverUrl;
-          if (data.previewUrl !== undefined) row.preview_url = data.previewUrl;
-          if (data.externalLink !== undefined) row.external_link = data.externalLink;
-          if (data.category !== undefined) row.category = data.category;
-          if (data.tags !== undefined) row.tags = JSON.stringify(data.tags);
-          if (data.energy !== undefined) row.energy = data.energy;
-          if (data.language !== undefined) row.language = data.language;
-          if (data.isSafe !== undefined) row.is_safe = data.isSafe;
-          if (data.isActive !== undefined) row.is_active = data.isActive;
-          if (data.sortOrder !== undefined) row.sort_order = data.sortOrder;
-          if (Object.keys(row).length > 0) {
-            supabase!.from("songs").update(row).eq("id", id).then(() => { });
-          }
-        }
+        void fetch(`/api/admin/songs/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data }),
+        });
       },
 
       deleteSong: (id) => {
         set({ songs: get().songs.filter((s) => s.id !== id) });
-        if (supabase) {
-          supabase!.from("songs").delete().eq("id", id).then(() => { });
-        }
+        void fetch(`/api/admin/songs/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        });
       },
 
       reorderSongs: (ids) => {
