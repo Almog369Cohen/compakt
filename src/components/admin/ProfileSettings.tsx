@@ -1,12 +1,15 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
-import { Check, Copy, Eye, Image as ImageIcon, Link2, MessageSquareQuote, Palette, Pencil, Plus, Save, Settings, Share2, Star, Trash2, User } from "lucide-react";
+import { Check, Copy, Eye, GripVertical, Image as ImageIcon, LayoutTemplate, Link2, MessageSquareQuote, Palette, Pencil, PlayCircle, Plus, Save, Settings, Share2, Star, Trash2, User } from "lucide-react";
 import { DJProfilePreview } from "@/components/dj/DJProfilePreview";
 import { useProfileStore } from "@/stores/profileStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { ImageUploader } from "@/components/ui/ImageUploader";
 import { getSafeOrigin } from "@/lib/utils";
+import { safeCopyText } from "@/lib/clipboard";
+import { DJ_PROFILE_STYLE_OPTIONS } from "@/lib/djProfileStyles";
 
 const ACCENT_COLORS = [
   "#059cc0",
@@ -39,6 +42,24 @@ export function ProfileSettings() {
   const saveProfileToDB = useProfileStore((s) => s.saveProfileToDB);
   const userId = useAdminStore((s) => s.userId);
   const brandColors = profile.brandColors || DEFAULT_BRAND_COLORS;
+  const businessName = profile.businessName || "";
+  const tagline = profile.tagline || "";
+  const bio = profile.bio || "";
+  const djSlugValue = profile.djSlug || "";
+  const instagramUrl = profile.instagramUrl || "";
+  const tiktokUrl = profile.tiktokUrl || "";
+  const soundcloudUrl = profile.soundcloudUrl || "";
+  const spotifyUrl = profile.spotifyUrl || "";
+  const youtubeUrl = profile.youtubeUrl || "";
+  const websiteUrl = profile.websiteUrl || "";
+  const whatsappNumber = profile.whatsappNumber || "";
+  const coverUrl = profile.coverUrl || "";
+  const logoUrl = profile.logoUrl || "";
+  const customLinks = Array.isArray(profile.customLinks) ? profile.customLinks : [];
+  const galleryPhotos = Array.isArray(profile.galleryPhotos) ? profile.galleryPhotos : [];
+  const reviews = Array.isArray(profile.reviews) ? profile.reviews : [];
+  const logoFit = profile.logoFit === "cover" ? "cover" : "contain";
+  const logoScale = typeof profile.logoScale === "number" ? profile.logoScale : 74;
 
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,18 +68,21 @@ export function ProfileSettings() {
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
 
   const djLink = useMemo(() => {
-    const slug = profile.djSlug.trim();
+    const slug = djSlugValue.trim();
     if (!slug) return "";
     return `${getSafeOrigin()}/dj/${slug}`;
-  }, [profile.djSlug]);
+  }, [djSlugValue]);
+
+  const selectedStyleMeta = DJ_PROFILE_STYLE_OPTIONS.find((option) => option.value === profile.profileStyle);
 
   const inputClass =
     "w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors";
+  const sectionClass = "rounded-[28px] border border-glass bg-white/[0.03] p-4 md:p-5 space-y-4";
 
   const handleSave = async () => {
     setSaveError(null);
 
-    if (!profile.djSlug.trim()) {
+    if (!djSlugValue.trim()) {
       setSaveError("חובה להגדיר כתובת (slug) כדי לפרסם דף DJ");
       return;
     }
@@ -93,7 +117,8 @@ export function ProfileSettings() {
 
   const copyLink = async () => {
     if (!djLink) return;
-    await navigator.clipboard.writeText(djLink);
+    const copiedOk = await safeCopyText(djLink);
+    if (!copiedOk) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
   };
@@ -113,21 +138,31 @@ export function ProfileSettings() {
   const uploaderUserId = userId || "legacy";
 
   return (
-    <div className="space-y-4">
-      {/* Header with save */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Settings className="w-5 h-5 text-brand-blue" />
-          פרופיל
-        </h2>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className={`btn-primary text-sm flex items-center gap-2 py-2.5 px-5 ${saving ? "opacity-70 cursor-not-allowed" : ""}`}
-        >
-          {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {saving ? "שומר..." : saved ? "נשמר!" : "שמור"}
-        </button>
+    <div className="space-y-5">
+      <div className="rounded-[28px] border border-glass bg-[linear-gradient(135deg,rgba(5,156,192,0.12),rgba(255,255,255,0.03),rgba(3,178,140,0.08))] p-5 md:p-6">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] text-secondary">
+              <LayoutTemplate className="w-3.5 h-3.5 text-brand-blue" />
+              DJ Profile Studio
+            </div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Settings className="w-5 h-5 text-brand-blue" />
+              עריכת פרופיל DJ
+            </h2>
+            <p className="text-sm text-secondary max-w-2xl leading-6">
+              בחר template חזק, שייף את המותג, ובדוק בלייב איך הפרופיל הציבורי מבין את ה-DJ שלך בתוך שניות.
+            </p>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`btn-primary text-sm flex items-center gap-2 py-2.5 px-5 ${saving ? "opacity-70 cursor-not-allowed" : ""}`}
+          >
+            {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+            {saving ? "שומר..." : saved ? "נשמר!" : "שמור"}
+          </button>
+        </div>
       </div>
 
       {saveError && (
@@ -136,7 +171,6 @@ export function ProfileSettings() {
         </div>
       )}
 
-      {/* Mobile tab switcher */}
       <div className="flex lg:hidden rounded-xl border border-glass overflow-hidden">
         <button
           onClick={() => setMobileTab("edit")}
@@ -160,12 +194,10 @@ export function ProfileSettings() {
         </button>
       </div>
 
-      {/* Split layout: form left, preview right */}
       <div className="flex gap-6 items-start">
-        {/* Left: Edit form */}
         <div className={`flex-1 min-w-0 space-y-6 ${mobileTab === "edit" ? "block" : "hidden lg:block"}`}>
 
-          <div className="glass-card p-4 space-y-4">
+          <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <User className="w-4 h-4 text-brand-blue" />
               פרטי עסק
@@ -175,7 +207,7 @@ export function ProfileSettings() {
               <label className="block text-xs text-muted mb-1.5 font-medium">שם העסק / שם DJ</label>
               <input
                 type="text"
-                value={profile.businessName}
+                value={businessName}
                 onChange={(e) => setProfile({ businessName: e.target.value })}
                 placeholder="DJ Almog"
                 className={inputClass}
@@ -186,7 +218,7 @@ export function ProfileSettings() {
               <label className="block text-xs text-muted mb-1.5 font-medium">סלוגן</label>
               <input
                 type="text"
-                value={profile.tagline}
+                value={tagline}
                 onChange={(e) => setProfile({ tagline: e.target.value })}
                 placeholder="המוזיקה שלכם, הדרך שלכם"
                 className={inputClass}
@@ -196,23 +228,81 @@ export function ProfileSettings() {
             <div>
               <label className="block text-xs text-muted mb-1.5 font-medium">Bio</label>
               <textarea
-                value={profile.bio}
+                value={bio}
                 onChange={(e) => setProfile({ bio: e.target.value })}
-                placeholder="ספרו קצת על הסגנון והניסיון שלכם..."
-                className={`${inputClass} min-h-[80px] resize-y`}
+                placeholder="ספרו קצת על הסגנון, האנרגיה והניסיון שלכם..."
+                className={`${inputClass} min-h-[88px] resize-y`}
                 rows={3}
               />
             </div>
           </div>
 
-          <div className="glass-card p-4 space-y-4">
+          <div className={`${sectionClass} space-y-5`}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Palette className="w-4 h-4 text-brand-blue" />
-              מיתוג
+              מיתוג ו-template
             </h3>
 
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-muted mb-1.5 font-medium">סגנון עיצוב</label>
+                <p className="text-xs text-muted">
+                  ה-template קובע מבנה, סדר מקטעים והיררכיית CTA. הצבעים למטה הם רק התאמה מעל המבנה.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {DJ_PROFILE_STYLE_OPTIONS.map((styleOption) => {
+                  const active = profile.profileStyle === styleOption.value;
+                  return (
+                    <button
+                      key={styleOption.value}
+                      type="button"
+                      onClick={() => setProfile({ profileStyle: styleOption.value })}
+                      className={`rounded-[24px] border p-3 text-right transition-all ${active
+                        ? "border-brand-blue bg-brand-blue/10 shadow-[0_0_0_1px_rgba(5,156,192,0.25)]"
+                        : "border-glass hover:border-brand-blue/30 hover:bg-white/[0.02]"
+                        }`}
+                    >
+                      <div
+                        className="h-24 rounded-xl border border-white/10 mb-3"
+                        style={{ background: styleOption.preview }}
+                      />
+                      <div className="space-y-1.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="text-sm font-semibold">{styleOption.shortName}</div>
+                          {active && (
+                            <span className="text-[11px] px-2 py-1 rounded-full bg-brand-blue/15 text-brand-blue">
+                              פעיל
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted leading-5">{styleOption.description}</div>
+                        <div className="text-[11px] text-secondary/90">{styleOption.hero}</div>
+                        <div className="text-[11px] text-muted">{styleOption.structure}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {selectedStyleMeta && (
+              <div className="rounded-[24px] border border-white/10 bg-black/20 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <GripVertical className="w-4 h-4 text-brand-blue" />
+                  המבנה הפעיל
+                </div>
+                <div className="text-xs text-secondary">{selectedStyleMeta.hero}</div>
+                <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3 text-xs text-muted">
+                  {selectedStyleMeta.structure}
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="block text-xs text-muted mb-2 font-medium">פלטת צבעים</label>
+              <label className="block text-xs text-muted mb-2 font-medium">צבעים מתקדמים</label>
+              <p className="text-xs text-muted mb-3">שכבת המיתוג הזאת משפיעה על האווירה, לא על ה-layout.</p>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {BRAND_COLOR_FIELDS.map((field) => (
                   <div key={field.key} className="space-y-2">
@@ -250,9 +340,8 @@ export function ProfileSettings() {
                       }`}
                     style={{
                       background: color,
-                      // @ts-expect-error -- ring color
                       "--tw-ring-color": color,
-                    }}
+                    } as CSSProperties}
                     aria-label={`בחר צבע ${color}`}
                     title={color}
                   />
@@ -261,7 +350,7 @@ export function ProfileSettings() {
             </div>
           </div>
 
-          <div className="glass-card p-4 space-y-4">
+          <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Link2 className="w-4 h-4 text-brand-blue" />
               כתובת אישית
@@ -278,7 +367,7 @@ export function ProfileSettings() {
                 </span>
                 <input
                   type="text"
-                  value={profile.djSlug}
+                  value={djSlugValue}
                   onChange={(e) =>
                     setProfile({
                       djSlug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
@@ -328,10 +417,10 @@ export function ProfileSettings() {
             )}
           </div>
 
-          <div className="glass-card p-4 space-y-4">
+          <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Link2 className="w-4 h-4 text-brand-blue" />
-              רשתות ויצירת קשר
+              רשתות, קאבר ולוגו
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -339,7 +428,7 @@ export function ProfileSettings() {
                 <label className="block text-xs text-muted mb-1.5 font-medium">אינסטגרם</label>
                 <input
                   type="url"
-                  value={profile.instagramUrl}
+                  value={instagramUrl}
                   onChange={(e) => setProfile({ instagramUrl: e.target.value })}
                   placeholder="https://instagram.com/..."
                   className={inputClass}
@@ -350,7 +439,7 @@ export function ProfileSettings() {
                 <label className="block text-xs text-muted mb-1.5 font-medium">טיקטוק</label>
                 <input
                   type="url"
-                  value={profile.tiktokUrl}
+                  value={tiktokUrl}
                   onChange={(e) => setProfile({ tiktokUrl: e.target.value })}
                   placeholder="https://tiktok.com/@..."
                   className={inputClass}
@@ -361,7 +450,7 @@ export function ProfileSettings() {
                 <label className="block text-xs text-muted mb-1.5 font-medium">SoundCloud</label>
                 <input
                   type="url"
-                  value={profile.soundcloudUrl}
+                  value={soundcloudUrl}
                   onChange={(e) => setProfile({ soundcloudUrl: e.target.value })}
                   placeholder="https://soundcloud.com/..."
                   className={inputClass}
@@ -372,7 +461,7 @@ export function ProfileSettings() {
                 <label className="block text-xs text-muted mb-1.5 font-medium">Spotify</label>
                 <input
                   type="url"
-                  value={profile.spotifyUrl}
+                  value={spotifyUrl}
                   onChange={(e) => setProfile({ spotifyUrl: e.target.value })}
                   placeholder="https://open.spotify.com/..."
                   className={inputClass}
@@ -383,7 +472,7 @@ export function ProfileSettings() {
                 <label className="block text-xs text-muted mb-1.5 font-medium">YouTube</label>
                 <input
                   type="url"
-                  value={profile.youtubeUrl}
+                  value={youtubeUrl}
                   onChange={(e) => setProfile({ youtubeUrl: e.target.value })}
                   placeholder="https://youtube.com/@..."
                   className={inputClass}
@@ -394,7 +483,7 @@ export function ProfileSettings() {
                 <label className="block text-xs text-muted mb-1.5 font-medium">אתר</label>
                 <input
                   type="url"
-                  value={profile.websiteUrl}
+                  value={websiteUrl}
                   onChange={(e) => setProfile({ websiteUrl: e.target.value })}
                   placeholder="https://..."
                   className={inputClass}
@@ -405,7 +494,7 @@ export function ProfileSettings() {
                 <label className="block text-xs text-muted mb-1.5 font-medium">וואטסאפ</label>
                 <input
                   type="tel"
-                  value={profile.whatsappNumber}
+                  value={whatsappNumber}
                   onChange={(e) => setProfile({ whatsappNumber: e.target.value })}
                   placeholder="0501234567"
                   className={inputClass}
@@ -415,7 +504,7 @@ export function ProfileSettings() {
               <div>
                 <label className="block text-xs text-muted mb-1.5 font-medium">תמונת קאבר</label>
                 <ImageUploader
-                  images={profile.coverUrl ? [profile.coverUrl] : []}
+                  images={coverUrl ? [coverUrl] : []}
                   onChange={(imgs) => setProfile({ coverUrl: imgs[0] || "" })}
                   userId={uploaderUserId}
                   maxImages={1}
@@ -423,7 +512,7 @@ export function ProfileSettings() {
                 />
                 <input
                   type="url"
-                  value={profile.coverUrl}
+                  value={coverUrl}
                   onChange={(e) => setProfile({ coverUrl: e.target.value })}
                   placeholder="או הדבק URL ישיר"
                   className={`${inputClass} mt-2`}
@@ -433,7 +522,7 @@ export function ProfileSettings() {
               <div>
                 <label className="block text-xs text-muted mb-1.5 font-medium">תמונה קטנה / לוגו</label>
                 <ImageUploader
-                  images={profile.logoUrl ? [profile.logoUrl] : []}
+                  images={logoUrl ? [logoUrl] : []}
                   onChange={(imgs) => setProfile({ logoUrl: imgs[0] || "" })}
                   userId={uploaderUserId}
                   maxImages={1}
@@ -441,25 +530,67 @@ export function ProfileSettings() {
                 />
                 <input
                   type="url"
-                  value={profile.logoUrl}
+                  value={logoUrl}
                   onChange={(e) => setProfile({ logoUrl: e.target.value })}
                   placeholder="או הדבק URL ישיר"
                   className={`${inputClass} mt-2`}
                   dir="ltr"
                 />
+                <div className="mt-3 space-y-3 rounded-2xl border border-glass p-3">
+                  <div>
+                    <label className="block text-xs text-muted mb-1.5 font-medium">התאמת לוגו</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setProfile({ logoFit: "contain" })}
+                        className={`flex-1 rounded-xl px-3 py-2 text-xs transition-colors ${logoFit === "contain"
+                          ? "bg-brand-blue text-white"
+                          : "border border-glass text-secondary hover:text-primary"
+                          }`}
+                      >
+                        שמור את כל הלוגו
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProfile({ logoFit: "cover" })}
+                        className={`flex-1 rounded-xl px-3 py-2 text-xs transition-colors ${logoFit === "cover"
+                          ? "bg-brand-blue text-white"
+                          : "border border-glass text-secondary hover:text-primary"
+                          }`}
+                      >
+                        מלא את המסגרת
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between gap-3 mb-1.5">
+                      <label className="block text-xs text-muted font-medium">גודל לוגו</label>
+                      <span className="text-xs text-muted">{logoScale}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="100"
+                      step="2"
+                      value={logoScale}
+                      onChange={(e) => setProfile({ logoScale: Number(e.target.value) })}
+                      className="w-full accent-brand-blue"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Gallery Photos */}
-          <div className="glass-card p-4 space-y-4">
+          <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <ImageIcon className="w-4 h-4 text-brand-blue" />
-              תיק עבודות (גלריית תמונות)
+              גלריית תמונות
             </h3>
             {uploaderUserId ? (
               <ImageUploader
-                images={profile.galleryPhotos}
+                images={galleryPhotos}
                 onChange={(imgs) => setProfile({ galleryPhotos: imgs })}
                 userId={uploaderUserId}
                 maxImages={10}
@@ -468,7 +599,6 @@ export function ProfileSettings() {
             ) : (
               <p className="text-xs text-muted">התחברו עם אימייל כדי להעלות תמונות</p>
             )}
-            {/* URL paste fallback */}
             <div className="flex gap-2">
               <input
                 type="url"
@@ -480,7 +610,7 @@ export function ProfileSettings() {
                   if (e.key === "Enter") {
                     const input = e.currentTarget;
                     if (input.value.trim()) {
-                      setProfile({ galleryPhotos: [...profile.galleryPhotos, input.value.trim()] });
+                      setProfile({ galleryPhotos: [...galleryPhotos, input.value.trim()] });
                       input.value = "";
                     }
                   }
@@ -488,9 +618,9 @@ export function ProfileSettings() {
               />
               <button
                 onClick={() => {
-                  const input = document.getElementById("gallery-url-input") as HTMLInputElement;
+                  const input = document.getElementById("gallery-url-input") as HTMLInputElement | null;
                   if (input?.value.trim()) {
-                    setProfile({ galleryPhotos: [...profile.galleryPhotos, input.value.trim()] });
+                    setProfile({ galleryPhotos: [...galleryPhotos, input.value.trim()] });
                     input.value = "";
                   }
                 }}
@@ -501,19 +631,21 @@ export function ProfileSettings() {
             </div>
           </div>
 
-          {/* Custom Links */}
-          <div className="glass-card p-4 space-y-4">
+          <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
-              <Link2 className="w-4 h-4 text-brand-blue" />
-              לינקים מותאמים
+              <PlayCircle className="w-4 h-4 text-brand-blue" />
+              לינקים מותאמים / showreel
             </h3>
-            {profile.customLinks.map((link, i) => (
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-secondary leading-6">
+              הדבק כאן לינקים ל-YouTube, Vimeo, Instagram Reels או TikTok. כשיש לינק YouTube, ה-preview יציג thumbnail אוטומטי.
+            </div>
+            {customLinks.map((link, i) => (
               <div key={i} className="flex gap-2 items-center">
                 <input
                   type="text"
                   value={link.label}
                   onChange={(e) => {
-                    const updated = [...profile.customLinks];
+                    const updated = [...customLinks];
                     updated[i] = { ...updated[i], label: e.target.value };
                     setProfile({ customLinks: updated });
                   }}
@@ -524,7 +656,7 @@ export function ProfileSettings() {
                   type="url"
                   value={link.url}
                   onChange={(e) => {
-                    const updated = [...profile.customLinks];
+                    const updated = [...customLinks];
                     updated[i] = { ...updated[i], url: e.target.value };
                     setProfile({ customLinks: updated });
                   }}
@@ -534,7 +666,7 @@ export function ProfileSettings() {
                 />
                 <button
                   onClick={() => {
-                    const updated = [...profile.customLinks];
+                    const updated = [...customLinks];
                     updated.splice(i, 1);
                     setProfile({ customLinks: updated });
                   }}
@@ -545,7 +677,7 @@ export function ProfileSettings() {
               </div>
             ))}
             <button
-              onClick={() => setProfile({ customLinks: [...profile.customLinks, { label: "", url: "" }] })}
+              onClick={() => setProfile({ customLinks: [...customLinks, { label: "", url: "" }] })}
               className="btn-secondary text-sm flex items-center gap-2 w-full justify-center"
             >
               <Plus className="w-4 h-4" />
@@ -553,20 +685,19 @@ export function ProfileSettings() {
             </button>
           </div>
 
-          {/* Reviews */}
-          <div className="glass-card p-4 space-y-4">
+          <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <MessageSquareQuote className="w-4 h-4 text-brand-blue" />
               ביקורות
             </h3>
-            {profile.reviews.map((review, i) => (
+            {reviews.map((review, i) => (
               <div key={i} className="space-y-2 p-3 rounded-xl border border-glass">
                 <div className="flex gap-2 items-center">
                   <input
                     type="text"
                     value={review.name}
                     onChange={(e) => {
-                      const updated = [...profile.reviews];
+                      const updated = [...reviews];
                       updated[i] = { ...updated[i], name: e.target.value };
                       setProfile({ reviews: updated });
                     }}
@@ -578,7 +709,7 @@ export function ProfileSettings() {
                       <button
                         key={star}
                         onClick={() => {
-                          const updated = [...profile.reviews];
+                          const updated = [...reviews];
                           updated[i] = { ...updated[i], rating: star };
                           setProfile({ reviews: updated });
                         }}
@@ -590,7 +721,7 @@ export function ProfileSettings() {
                   </div>
                   <button
                     onClick={() => {
-                      const updated = [...profile.reviews];
+                      const updated = [...reviews];
                       updated.splice(i, 1);
                       setProfile({ reviews: updated });
                     }}
@@ -602,7 +733,7 @@ export function ProfileSettings() {
                 <textarea
                   value={review.text}
                   onChange={(e) => {
-                    const updated = [...profile.reviews];
+                    const updated = [...reviews];
                     updated[i] = { ...updated[i], text: e.target.value };
                     setProfile({ reviews: updated });
                   }}
@@ -613,7 +744,7 @@ export function ProfileSettings() {
               </div>
             ))}
             <button
-              onClick={() => setProfile({ reviews: [...profile.reviews, { name: "", text: "", rating: 5 }] })}
+              onClick={() => setProfile({ reviews: [...reviews, { name: "", text: "", rating: 5 }] })}
               className="btn-secondary text-sm flex items-center gap-2 w-full justify-center"
             >
               <Plus className="w-4 h-4" />
@@ -622,13 +753,26 @@ export function ProfileSettings() {
           </div>
         </div>
 
-        {/* Right: Live Preview */}
         <div className={`w-[420px] flex-shrink-0 sticky top-4 ${mobileTab === "preview" ? "block" : "hidden lg:block"}`}>
-          <div className="rounded-2xl border border-glass overflow-hidden shadow-lg">
-            <div className="bg-white/[0.03] border-b border-glass px-4 py-2 flex items-center gap-2">
-              <Eye className="w-4 h-4 text-brand-blue" />
-              <span className="text-xs font-medium text-secondary">תצוגה מקדימה</span>
+          <div className="rounded-[28px] border border-glass overflow-hidden shadow-lg bg-black/20">
+            <div className="bg-white/[0.03] border-b border-glass px-4 py-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-brand-blue" />
+                <span className="text-xs font-medium text-secondary">תצוגה מקדימה</span>
+              </div>
+              {selectedStyleMeta && (
+                <span className="text-[11px] rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-muted">
+                  {selectedStyleMeta.shortName}
+                </span>
+              )}
             </div>
+            {selectedStyleMeta && (
+              <div className="px-4 py-3 border-b border-glass bg-black/20">
+                <div className="text-[11px] text-secondary leading-5">
+                  {selectedStyleMeta.structure}
+                </div>
+              </div>
+            )}
             <div className="max-h-[calc(100vh-160px)] overflow-y-auto">
               <DJProfilePreview profile={profile} mode="preview" />
             </div>

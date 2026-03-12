@@ -5,11 +5,19 @@ import {
   normalizeSongCategoryLabels,
   type SongCategoryLabels,
 } from "@/lib/songCategories";
+import {
+  DEFAULT_DJ_PROFILE_STYLE,
+  isDJProfileStyle,
+  type DJProfileStyle,
+} from "@/lib/djProfileStyles";
 
 export type ProfileState = {
   businessName: string;
   tagline: string;
   bio: string;
+  profileStyle: DJProfileStyle;
+  logoFit: "contain" | "cover";
+  logoScale: number;
   accentColor: string;
   brandColors: {
     primary: string;
@@ -109,12 +117,87 @@ function parseSongCategoryLabels(value: unknown): SongCategoryLabels {
   return DEFAULT_SONG_CATEGORY_LABELS;
 }
 
-function serializeBrandColors(colors: ProfileState["brandColors"], songCategoryLabels: SongCategoryLabels): string {
+function parseProfileStyle(value: unknown): DJProfileStyle {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return DEFAULT_DJ_PROFILE_STYLE;
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed) as { profileStyle?: unknown };
+        return isDJProfileStyle(parsed.profileStyle) ? parsed.profileStyle : DEFAULT_DJ_PROFILE_STYLE;
+      } catch {
+        return DEFAULT_DJ_PROFILE_STYLE;
+      }
+    }
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const parsed = value as { profileStyle?: unknown };
+    return isDJProfileStyle(parsed.profileStyle) ? parsed.profileStyle : DEFAULT_DJ_PROFILE_STYLE;
+  }
+
+  return DEFAULT_DJ_PROFILE_STYLE;
+}
+
+function parseLogoFit(value: unknown): "contain" | "cover" {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed) as { logoFit?: unknown };
+        return parsed.logoFit === "contain" ? "contain" : "cover";
+      } catch {
+        return "contain";
+      }
+    }
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const parsed = value as { logoFit?: unknown };
+    return parsed.logoFit === "contain" ? "contain" : "cover";
+  }
+
+  return "contain";
+}
+
+function parseLogoScale(value: unknown): number {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed) as { logoScale?: unknown };
+        const scale = typeof parsed.logoScale === "number" ? parsed.logoScale : 74;
+        return Math.min(100, Math.max(50, scale));
+      } catch {
+        return 74;
+      }
+    }
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const parsed = value as { logoScale?: unknown };
+    const scale = typeof parsed.logoScale === "number" ? parsed.logoScale : 74;
+    return Math.min(100, Math.max(50, scale));
+  }
+
+  return 74;
+}
+
+function serializeBrandColors(
+  colors: ProfileState["brandColors"],
+  songCategoryLabels: SongCategoryLabels,
+  profileStyle: DJProfileStyle,
+  logoFit: "contain" | "cover",
+  logoScale: number
+): string {
   return JSON.stringify({
     primary: colors.primary || DEFAULT_BRAND_COLORS.primary,
     secondary: colors.secondary || DEFAULT_BRAND_COLORS.secondary,
     accent: colors.accent || DEFAULT_BRAND_COLORS.accent,
     surface: colors.surface || DEFAULT_BRAND_COLORS.surface,
+    profileStyle,
+    logoFit,
+    logoScale: Math.min(100, Math.max(50, logoScale)),
     songCategoryLabels: normalizeSongCategoryLabels(songCategoryLabels),
   });
 }
@@ -123,6 +206,9 @@ const DEFAULT_PROFILE: ProfileState = {
   businessName: "",
   tagline: "",
   bio: "",
+  profileStyle: DEFAULT_DJ_PROFILE_STYLE,
+  logoFit: "contain",
+  logoScale: 74,
   accentColor: "#059cc0",
   brandColors: DEFAULT_BRAND_COLORS,
   djSlug: "",
@@ -174,12 +260,15 @@ export const useProfileStore = create<ProfileStore>()(
           const data = result.data;
 
           if (!response.ok || !data) {
-            set({ loading: false });
+            set({ profile: DEFAULT_PROFILE, profileId: null, loading: false });
             return;
           }
 
           const brandColors = parseBrandColors(data.accent_color);
           const songCategoryLabels = parseSongCategoryLabels(data.accent_color);
+          const profileStyle = parseProfileStyle(data.accent_color);
+          const logoFit = parseLogoFit(data.accent_color);
+          const logoScale = parseLogoScale(data.accent_color);
 
           set({
             profileId: data.id,
@@ -187,6 +276,9 @@ export const useProfileStore = create<ProfileStore>()(
               businessName: data.business_name ?? "",
               tagline: data.tagline ?? "",
               bio: data.bio ?? "",
+              profileStyle,
+              logoFit,
+              logoScale,
               accentColor: brandColors.primary,
               brandColors,
               djSlug: data.dj_slug ?? "",
@@ -207,7 +299,7 @@ export const useProfileStore = create<ProfileStore>()(
             loading: false,
           });
         } catch {
-          set({ loading: false });
+          set({ profile: DEFAULT_PROFILE, profileId: null, loading: false });
         }
       },
 
@@ -217,7 +309,13 @@ export const useProfileStore = create<ProfileStore>()(
           business_name: profile.businessName,
           tagline: profile.tagline,
           bio: profile.bio,
-          accent_color: serializeBrandColors(profile.brandColors, profile.songCategoryLabels),
+          accent_color: serializeBrandColors(
+            profile.brandColors,
+            profile.songCategoryLabels,
+            profile.profileStyle,
+            profile.logoFit,
+            profile.logoScale
+          ),
           dj_slug: profile.djSlug || null,
           instagram_url: profile.instagramUrl,
           tiktok_url: profile.tiktokUrl,
@@ -266,6 +364,9 @@ export const useProfileStore = create<ProfileStore>()(
 
         const brandColors = parseBrandColors(data.accent_color);
         const songCategoryLabels = parseSongCategoryLabels(data.accent_color);
+        const profileStyle = parseProfileStyle(data.accent_color);
+        const logoFit = parseLogoFit(data.accent_color);
+        const logoScale = parseLogoScale(data.accent_color);
 
         return {
           id: data.id,
@@ -273,6 +374,9 @@ export const useProfileStore = create<ProfileStore>()(
             businessName: data.business_name ?? "",
             tagline: data.tagline ?? "",
             bio: data.bio ?? "",
+            profileStyle,
+            logoFit,
+            logoScale,
             accentColor: brandColors.primary,
             brandColors,
             djSlug: data.dj_slug ?? "",

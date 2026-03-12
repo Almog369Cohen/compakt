@@ -13,28 +13,29 @@ import {
   ChevronRight,
   Link2,
   Maximize2,
+  Sparkles,
+  Play,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Lightbox } from "@/components/ui/Lightbox";
 import type { ProfileState } from "@/stores/profileStore";
+import {
+  DJ_PROFILE_STYLE_OPTIONS,
+  resolveDJProfileStyleTokens,
+} from "@/lib/djProfileStyles";
 
-/* ── social link config ── */
 const socialLinks = [
-  {
-    key: "instagramUrl" as const,
-    label: "Instagram",
-    icon: <Instagram className="w-5 h-5" />,
-    color: "#E1306C",
-  },
+  { key: "instagramUrl" as const, label: "Instagram", icon: <Instagram className="w-5 h-5" />, color: "#E1306C" },
   {
     key: "tiktokUrl" as const,
     label: "TikTok",
     icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.75a8.28 8.28 0 0 0 4.76 1.5V6.8a4.83 4.83 0 0 1-1-.11z" />
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" aria-hidden="true">
+        <path d="M14.5 3v9.6a3.6 3.6 0 1 1-3-3.55" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M14.5 3c.7 2.2 2.2 3.7 4.5 4.3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    color: "#000000",
+    color: "#ffffff",
   },
   {
     key: "youtubeUrl" as const,
@@ -61,17 +62,12 @@ const socialLinks = [
     label: "SoundCloud",
     icon: (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-        <path d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.04.099-.098l.255-2.105-.27-2.154c-.009-.06-.05-.1-.1-.1m-.899.828c-.06 0-.091.037-.104.094L0 14.479l.172 1.308c.013.06.045.094.104.094.057 0 .09-.037.104-.094l.192-1.308-.21-1.332c-.013-.06-.045-.094-.104-.094m1.8-1.035c-.065 0-.111.054-.12.12l-.214 2.34.227 2.274c.009.065.055.12.12.12.063 0 .111-.055.12-.12l.248-2.274-.263-2.34c-.009-.066-.055-.12-.12-.12m.899-.015c-.073 0-.126.06-.132.132l-.193 2.355.207 2.313c.006.075.06.132.132.132.072 0 .126-.057.131-.132l.227-2.313-.24-2.355c-.006-.072-.06-.132-.132-.132m.93-.222c-.081 0-.14.067-.147.146l-.174 2.577.186 2.31c.007.08.066.147.147.147.08 0 .14-.067.146-.147l.208-2.31-.22-2.577c-.007-.08-.067-.146-.147-.146m.942-.036c-.09 0-.155.074-.161.162l-.155 2.613.168 2.332c.006.09.072.162.162.162.088 0 .155-.074.16-.162l.184-2.332-.195-2.613c-.006-.09-.072-.162-.161-.162m.94.01c-.098 0-.168.08-.175.177l-.136 2.603.15 2.347c.006.098.076.177.174.177.098 0 .169-.08.176-.177l.167-2.347-.18-2.603c-.006-.098-.076-.177-.175-.177m.94-.11c-.106 0-.18.087-.187.192l-.12 2.713.132 2.35c.007.104.08.191.186.191.105 0 .18-.087.186-.192l.147-2.35-.16-2.713c-.006-.105-.08-.192-.186-.192m1.066.012c-.054 0-.102.025-.135.066-.033.04-.05.091-.05.145l-.003.023-.11 2.467.115 2.33c.002.057.025.108.066.146.04.038.093.06.15.06.054 0 .104-.023.142-.06.04-.04.063-.09.065-.147l.003-.023.127-2.307-.14-2.49c-.002-.057-.025-.106-.066-.145-.04-.04-.09-.06-.147-.06m.878-1.008c-.12 0-.214.098-.22.22l-.093 3.478.1 2.322c.006.12.1.22.22.22.12 0 .214-.098.22-.22l.112-2.322-.124-3.478c-.006-.12-.1-.22-.22-.22m1.088-.065c-.132 0-.24.108-.246.24l-.074 3.543.08 2.306c.006.132.114.24.246.24.13 0 .24-.108.245-.24l.09-2.306-.1-3.543c-.006-.132-.115-.24-.246-.24m1.108.014c-.144 0-.26.118-.264.262l-.056 3.529.06 2.286c.004.144.12.262.264.262.142 0 .26-.118.264-.262l.068-2.286-.08-3.53c-.004-.143-.12-.26-.264-.26m1.176-.138c-.078 0-.148.033-.2.088-.052.054-.082.126-.084.204l-.036 3.667.04 2.274c.002.078.033.15.088.2.054.054.126.082.204.084.078 0 .148-.033.2-.086.052-.054.082-.126.084-.204l.044-2.268-.054-3.667c-.002-.08-.033-.15-.086-.204-.054-.052-.126-.082-.204-.084m1.142-.226c-.16 0-.29.13-.295.29l-.018 3.893.02 2.242c.006.16.136.29.295.29.16 0 .29-.13.295-.29l.024-2.242-.034-3.893c-.006-.16-.136-.29-.295-.29m1.04-.006c-.082 0-.16.034-.215.09-.056.058-.088.136-.09.22v.008l-.014 3.893.016 2.233v.01c.002.066.03.128.074.178.058.062.14.098.228.098.08 0 .155-.03.212-.084.058-.06.09-.134.093-.22l.002-.02.02-2.195-.03-3.893v-.008c-.002-.084-.034-.16-.09-.22-.056-.056-.136-.09-.218-.09m1.816.167c-.234 0-.424.19-.428.424l-.005 3.722.01 2.215c.004.234.194.424.428.424.106 0 .2-.042.272-.11.07-.07.112-.166.116-.28l-.002-.043.014-2.206-.02-3.718c-.004-.236-.194-.428-.43-.428m1.348-.36c-.052 0-.104.006-.155.018-1.5.36-1.764.444-1.93.494-.154.048-.27.168-.3.33v3.47c0 .002 0 .006-.003.01v.54c.003.29.242.526.534.526 1.5 0 3.528-1.212 3.528-3.69 0-1.932-1.242-3.12-2.67-3.12" />
+        <path d="M4 15.5a2.5 2.5 0 1 1 .5-4.95A4.5 4.5 0 0 1 13 9a4 4 0 0 1 7.76 1.38A2.8 2.8 0 1 1 20.2 16H4Z" />
       </svg>
     ),
     color: "#FF5500",
   },
-  {
-    key: "websiteUrl" as const,
-    label: "אתר",
-    icon: <Globe className="w-5 h-5" />,
-    color: "#059cc0",
-  },
+  { key: "websiteUrl" as const, label: "אתר", icon: <Globe className="w-5 h-5" />, color: "#059cc0" },
 ];
 
 interface DJProfilePreviewProps {
@@ -80,47 +76,93 @@ interface DJProfilePreviewProps {
   slug?: string;
 }
 
+type VisibleLink = { label: string; url: string };
+
+function isVideoLink(url: string) {
+  const normalized = url.toLowerCase();
+  return normalized.includes("youtube.com") || normalized.includes("youtu.be") || normalized.includes("vimeo.com") || normalized.includes("instagram.com/reel") || normalized.includes("instagram.com/p/") || normalized.includes("tiktok.com");
+}
+
+function extractYoutubeVideoId(url: string) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host.includes("youtu.be")) return parsed.pathname.split("/").filter(Boolean)[0] || null;
+    if (host.includes("youtube.com")) {
+      if (parsed.pathname === "/watch") return parsed.searchParams.get("v");
+      if (parsed.pathname.startsWith("/shorts/") || parsed.pathname.startsWith("/embed/")) {
+        return parsed.pathname.split("/").filter(Boolean)[1] || null;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function getVideoThumbnail(url: string) {
+  const youtubeId = extractYoutubeVideoId(url);
+  return youtubeId ? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg` : null;
+}
+
+function getVideoSourceLabel(url: string) {
+  const normalized = url.toLowerCase();
+  if (normalized.includes("youtube.com") || normalized.includes("youtu.be")) return "YouTube";
+  if (normalized.includes("vimeo.com")) return "Vimeo";
+  if (normalized.includes("instagram.com")) return "Instagram";
+  if (normalized.includes("tiktok.com")) return "TikTok";
+  return "Video";
+}
+
 export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps) {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  const brandColors = profile.brandColors || {
-    primary: profile.accentColor || "#059cc0",
-    secondary: "#03b28c",
-    accent: profile.accentColor || "#059cc0",
-    surface: "#1f2937",
-  };
+  const brandColors = profile.brandColors || { primary: profile.accentColor || "#059cc0", secondary: "#03b28c", accent: profile.accentColor || "#059cc0", surface: "#1f2937" };
   const primaryColor = brandColors.primary || "#059cc0";
   const secondaryColor = brandColors.secondary || "#03b28c";
   const accentColor = brandColors.accent || primaryColor;
   const surfaceColor = brandColors.surface || "#1f2937";
+  const styleTokens = resolveDJProfileStyleTokens(profile.profileStyle);
+  const styleMeta = DJ_PROFILE_STYLE_OPTIONS.find((option) => option.value === profile.profileStyle);
+  const logoScale = Math.min(100, Math.max(50, profile.logoScale ?? 74));
 
-  const activeSocials = socialLinks.filter((s) => {
-    const val = profile[s.key];
-    return val && val.trim().length > 0;
+  const isLinktreePremium = profile.profileStyle === "glass_premium";
+  const isArtistStory = profile.profileStyle === "editorial_landing";
+  const isShowcaseMedia = profile.profileStyle === "club_neon";
+  const isMinimalLuxury = profile.profileStyle === "minimal_luxury";
+
+  const activeSocials = socialLinks.filter((social) => {
+    const value = profile[social.key];
+    return value && value.trim().length > 0;
   });
 
-  const customLinks = profile.customLinks || [];
+  const visibleCustomLinks = (profile.customLinks || []).filter((link) => link.label && link.url);
+  const videoLinks = visibleCustomLinks.filter((link) => isVideoLink(link.url));
+  const utilityLinks = visibleCustomLinks.filter((link) => !isVideoLink(link.url));
+  const featuredVideo = videoLinks[0] || null;
+  const secondaryVideos = featuredVideo ? videoLinks.slice(1) : [];
   const galleryPhotos = profile.galleryPhotos || [];
   const reviews = profile.reviews || [];
-
-  const whatsappLink = profile.whatsappNumber
-    ? `https://wa.me/${profile.whatsappNumber.replace(/[^0-9]/g, "")}`
-    : null;
-
-  const hasAnyContent = Boolean(
-    profile.bio?.trim() ||
-    whatsappLink ||
-    activeSocials.length > 0 ||
-    galleryPhotos.length > 0 ||
-    customLinks.length > 0 ||
-    reviews.length > 0
-  );
-
+  const whatsappLink = profile.whatsappNumber ? `https://wa.me/${profile.whatsappNumber.replace(/[^0-9]/g, "")}` : null;
   const effectiveSlug = slug || profile.djSlug || "";
-
   const pageUrl = typeof window !== "undefined" ? window.location.href : "";
+
+  const heroMeta = [
+    galleryPhotos.length > 0 ? `${galleryPhotos.length} תמונות` : null,
+    videoLinks.length > 0 ? `${videoLinks.length} סרטונים` : null,
+    reviews.length > 0 ? `${reviews.length} המלצות` : null,
+  ].filter(Boolean);
+
+  const orderedSections = useMemo(() => {
+    if (isArtistStory) return ["actions", "whatsapp", "reviews", "featuredVideo", "videoRail", "gallery", "socials", "links"] as const;
+    if (isShowcaseMedia) return ["featuredVideo", "videoRail", "actions", "whatsapp", "gallery", "reviews", "socials", "links"] as const;
+    if (isMinimalLuxury) return ["actions", "whatsapp", "featuredVideo", "reviews", "socials", "links", "gallery"] as const;
+    return ["actions", "whatsapp", "socials", "links", "featuredVideo", "videoRail", "gallery", "reviews"] as const;
+  }, [isArtistStory, isShowcaseMedia, isMinimalLuxury]);
+
+  const hasAnyContent = Boolean(profile.bio?.trim() || whatsappLink || activeSocials.length > 0 || galleryPhotos.length > 0 || visibleCustomLinks.length > 0 || reviews.length > 0);
 
   const handleShare = async () => {
     if (mode === "preview") return;
@@ -130,384 +172,355 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
         return;
       }
     } catch {
-      // ignore
+      return;
     }
-
     if (!pageUrl) return;
     try {
       await navigator.clipboard.writeText(pageUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      // ignore
+      return;
     }
   };
 
-  return (
-    <div className={mode === "preview" ? "gradient-hero" : "min-h-dvh gradient-hero"}>
-      {/* Hero Section */}
-      <div className="relative">
-        {/* Cover Image */}
-        {profile.coverUrl ? (
-          <div className="h-48 sm:h-64 w-full overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={profile.coverUrl}
-              alt="cover"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--bg-primary)]" />
-          </div>
+  const renderPrimaryActions = () => (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className={`${styleTokens.sectionCardClass} ${isMinimalLuxury ? "p-0 border-0 bg-transparent backdrop-blur-none" : "p-3 sm:p-4"}`}>
+      <div className={`flex flex-col gap-2 ${styleTokens.ctaVariant === "stacked" ? "" : "sm:flex-row"}`}>
+        {mode === "public" ? (
+          <>
+            <a href={`/?dj=${effectiveSlug}`} className={`flex-1 flex items-center justify-center gap-2 py-3.5 font-bold text-sm text-white transition-opacity hover:opacity-90 ${isMinimalLuxury ? "rounded-full" : "rounded-2xl"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+              <Music className="w-5 h-5" />
+              התחילו עם ה-DJ הזה
+            </a>
+            <a href={`/dj/${effectiveSlug}?resume=1`} className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-secondary transition-colors hover:text-white ${isMinimalLuxury ? "rounded-full border border-white/8 bg-white/[0.02]" : "rounded-2xl border border-white/10 bg-white/[0.04]"}`}>
+              כבר התחלתם? חזרו עם מספר אירוע
+            </a>
+          </>
         ) : (
-          <div
-            className="h-48 sm:h-64 w-full"
-            style={{
-              background: `linear-gradient(135deg, ${primaryColor}55, ${secondaryColor}33 55%, ${surfaceColor}88)`,
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--bg-primary)]" />
+          <div className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm text-white opacity-80 cursor-default ${isMinimalLuxury ? "rounded-full" : "rounded-xl"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+            <Music className="w-5 h-5" />
+            התחילו את המסע
           </div>
         )}
-
-        {/* Profile Info Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 translate-y-1/2">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-6 max-w-md mx-auto text-center"
-          >
-            {profile.logoUrl ? (
-              <div className="w-16 h-16 rounded-full mb-3 -mt-12 overflow-hidden border-2 border-glass mx-auto">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={profile.logoUrl} alt="logo" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div
-                className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-3 -mt-12"
-                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
-              >
-                <Headphones className="w-8 h-8 text-white" />
-              </div>
-            )}
-
-            <h1 className="text-2xl font-bold mb-1">{profile.businessName || "שם העסק שלך"}</h1>
-            {profile.tagline && (
-              <p className="text-secondary text-sm">{profile.tagline}</p>
-            )}
-          </motion.div>
-        </div>
+        <button onClick={handleShare} className={`px-4 py-3 text-sm font-medium transition-all ${isMinimalLuxury ? "rounded-full border border-white/10" : "rounded-xl border"}`} style={{ borderColor: `${accentColor}55`, color: accentColor }} type="button" title={copied ? "הועתק" : "שתפו / העתיקו"} disabled={mode === "preview"}>
+          {copied ? "הועתק" : "שיתוף"}
+        </button>
       </div>
+    </motion.div>
+  );
 
-      {/* Content — spaced below the hero card */}
-      <div className="pt-24 sm:pt-28 px-4 pb-12 max-w-md mx-auto space-y-4">
-        {/* Quick actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="glass-card p-3"
-        >
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {mode === "public" ? (
-              <>
-                <a
-                  href={`/?dj=${effectiveSlug}`}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-opacity hover:opacity-90"
-                  style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
-                >
-                  <Music className="w-5 h-5" />
-                  התחילו עם ה-DJ הזה
-                </a>
-                <a
-                  href={`/dj/${effectiveSlug}?resume=1`}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-secondary transition-colors hover:text-white"
-                >
-                  כבר התחלתם? חזרו עם מספר אירוע
-                </a>
-              </>
-            ) : (
-              <div
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white opacity-80 cursor-default"
-                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
-              >
-                <Music className="w-5 h-5" />
-                התחילו את המסע
-              </div>
-            )}
-            <button
-              onClick={handleShare}
-              className="px-4 py-3 rounded-xl border text-sm font-medium transition-all"
-              style={{ borderColor: `${accentColor}55`, color: accentColor }}
-              type="button"
-              title={copied ? "הועתק" : "שתפו / העתיקו"}
-              disabled={mode === "preview"}
-            >
-              {copied ? "הועתק" : "שיתוף"}
-            </button>
+  const renderWhatsapp = () =>
+    whatsappLink ? (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+        {mode === "public" ? (
+          <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className={`flex items-center justify-center gap-2 w-full py-4 text-white font-bold text-sm transition-opacity hover:opacity-90 ${isMinimalLuxury ? "rounded-full" : "rounded-[22px]"}`} style={{ background: "#25D366" }}>
+            <MessageCircle className="w-5 h-5" />
+            שלחו הודעה בוואטסאפ
+          </a>
+        ) : (
+          <div className={`flex items-center justify-center gap-2 w-full py-4 text-white font-bold text-sm opacity-80 cursor-default ${isMinimalLuxury ? "rounded-full" : "rounded-[22px]"}`} style={{ background: "#25D366" }}>
+            <MessageCircle className="w-5 h-5" />
+            שלחו הודעה בוואטסאפ
           </div>
-        </motion.div>
-
-        {/* Bio */}
-        {profile.bio && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass-card p-5"
-            style={{ borderColor: `${surfaceColor}88` }}
-          >
-            <p className="text-sm text-secondary leading-relaxed whitespace-pre-line">
-              {profile.bio}
-            </p>
-          </motion.div>
         )}
+      </motion.div>
+    ) : null;
 
-        {!hasAnyContent && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.12 }}
-            className="glass-card p-5 text-center"
-          >
-            <p className="text-sm text-secondary leading-relaxed">
-              {mode === "preview"
-                ? "הוסיפו תוכן בטופס משמאל כדי לראות איך הדף ייראה."
-                : "ה-DJ עדיין לא הוסיף פרטים נוספים — אבל אפשר כבר להתחיל את המסע המוזיקלי."}
-            </p>
-          </motion.div>
-        )}
+  const renderSocials = () =>
+    activeSocials.length > 0 ? (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className={isMinimalLuxury ? "flex justify-start" : "flex justify-center"}>
+        <div className={`flex flex-wrap items-center ${isMinimalLuxury ? "gap-3" : "gap-4 justify-center"}`}>
+          {activeSocials.map((social) => {
+            const Wrapper = mode === "public" ? "a" : "div";
+            const linkProps = mode === "public" ? { href: profile[social.key], target: "_blank" as const, rel: "noopener noreferrer" } : {};
+            return (
+              <Wrapper key={social.key} {...linkProps} className={`inline-flex items-center justify-center transition-all ${mode === "public" ? "hover:scale-[1.08] active:scale-[0.98] cursor-pointer" : ""}`} title={social.label}>
+                <span className={`flex items-center justify-center shrink-0 w-11 h-11 ${isMinimalLuxury ? "rounded-full border border-white/8 bg-white/[0.02]" : "rounded-2xl border border-white/10 bg-white/[0.03]"}`} style={{ color: social.color }}>
+                  {social.icon}
+                </span>
+              </Wrapper>
+            );
+          })}
+        </div>
+      </motion.div>
+    ) : null;
 
-        {/* WhatsApp CTA */}
-        {whatsappLink && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-          >
-            {mode === "public" ? (
-              <a
-                href={whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-bold text-sm transition-opacity hover:opacity-90"
-                style={{ background: "#25D366" }}
-              >
-                <MessageCircle className="w-5 h-5" />
-                שלחו הודעה בוואטסאפ
-              </a>
-            ) : (
-              <div
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-bold text-sm opacity-80 cursor-default"
-                style={{ background: "#25D366" }}
-              >
-                <MessageCircle className="w-5 h-5" />
-                שלחו הודעה בוואטסאפ
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* Social Links */}
-        {activeSocials.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card p-5"
-          >
-            <h3 className="text-sm font-bold mb-3 text-center">עקבו אחריי</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {activeSocials.map((social) => {
-                const isPrimary = social.key === "spotifyUrl" || social.key === "soundcloudUrl";
-                const Wrapper = mode === "public" ? "a" : "div";
-                const linkProps = mode === "public" ? {
-                  href: profile[social.key],
-                  target: "_blank" as const,
-                  rel: "noopener noreferrer",
-                } : {};
-                return (
-                  <Wrapper
-                    key={social.key}
-                    {...linkProps}
-                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${isPrimary
-                      ? "border-transparent shadow-sm"
-                      : "border-glass"
-                      } ${mode === "public" ? "hover:scale-105 active:scale-95 cursor-pointer" : ""}`}
-                    style={isPrimary ? { background: `${social.color}12`, borderColor: `${social.color}30` } : undefined}
-                  >
-                    <span
-                      className="w-10 h-10 flex items-center justify-center rounded-full transition-colors"
-                      style={{ color: social.color, background: `${social.color}15` }}
-                    >
-                      {social.icon}
-                    </span>
-                    <span className="text-xs text-secondary font-medium">{social.label}</span>
-                  </Wrapper>
-                );
-              })}
+  const renderUtilityLinks = () =>
+    utilityLinks.length > 0 ? (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className={isMinimalLuxury ? "flex flex-wrap gap-2 justify-start" : "flex flex-wrap gap-2 justify-center"}>
+        {utilityLinks.map((link, index) =>
+          mode === "public" ? (
+            <a key={`${link.label}-${index}`} href={link.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-2 text-xs font-medium transition-opacity hover:opacity-80 ${isMinimalLuxury ? "rounded-full border border-white/8 px-3 py-2" : ""}`} style={{ color: accentColor }}>
+              <Link2 className="w-4 h-4" />
+              {link.label}
+            </a>
+          ) : (
+            <div key={`${link.label}-${index}`} className={`inline-flex items-center gap-2 text-xs font-medium ${isMinimalLuxury ? "rounded-full border border-white/8 px-3 py-2" : ""}`} style={{ color: accentColor }}>
+              <Link2 className="w-4 h-4" />
+              {link.label}
             </div>
-          </motion.div>
+          )
         )}
+      </motion.div>
+    ) : null;
 
-        {/* Gallery / Portfolio */}
-        {galleryPhotos.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="glass-card p-4 space-y-3"
-          >
-            <h3 className="text-sm font-bold text-center">תיק עבודות</h3>
-            <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-black/20">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={galleryPhotos[galleryIndex % galleryPhotos.length]}
-                alt={`gallery ${galleryIndex + 1}`}
-                className="w-full h-full object-cover cursor-pointer transition-transform hover:scale-[1.02]"
-                onClick={() => setLightboxOpen(true)}
-              />
-              {/* Lightbox trigger */}
-              <button
-                onClick={() => setLightboxOpen(true)}
-                className="absolute top-2 left-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                title="הגדל תמונה"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-              </button>
-              {galleryPhotos.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setGalleryIndex((prev: number) => (prev - 1 + galleryPhotos.length) % galleryPhotos.length)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setGalleryIndex((prev: number) => (prev + 1) % galleryPhotos.length)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                    {galleryPhotos.map((_: string, i: number) => (
-                      <button
-                        key={i}
-                        onClick={() => setGalleryIndex(i)}
-                        className={`w-2 h-2 rounded-full transition-all ${i === galleryIndex % galleryPhotos.length ? "bg-white scale-125" : "bg-white/50"}`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-            {/* Thumbnail strip */}
-            {galleryPhotos.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                {galleryPhotos.map((url: string, i: number) => (
-                  <button
-                    key={i}
-                    onClick={() => setGalleryIndex(i)}
-                    className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${i === galleryIndex % galleryPhotos.length
-                      ? "scale-105"
-                      : "border-transparent opacity-60 hover:opacity-100"
-                      }`}
-                    style={i === galleryIndex % galleryPhotos.length ? { borderColor: primaryColor } : undefined}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={`thumb ${i + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
+  const renderVideoCard = (link: VisibleLink, index: number) => {
+    const Wrapper = mode === "public" ? "a" : "div";
+    const linkProps = mode === "public" ? { href: link.url, target: "_blank" as const, rel: "noopener noreferrer" } : {};
+    const thumbnail = getVideoThumbnail(link.url);
+    return (
+      <Wrapper key={`${link.label}-${index}`} {...linkProps} className={`min-w-[240px] max-w-[240px] snap-start overflow-hidden rounded-[24px] border border-white/10 ${isShowcaseMedia ? "bg-black/20" : "bg-white/[0.04]"} ${mode === "public" ? "hover:bg-white/[0.07] transition-colors" : ""}`}>
+        <div className="relative aspect-[16/10] overflow-hidden">
+          {thumbnail ? <img src={thumbnail} alt={link.label} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accentColor}35, ${secondaryColor}15 55%, ${surfaceColor})` }} />}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+          <div className="absolute left-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] text-white/85">{getVideoSourceLabel(link.url)}</div>
+          <div className="absolute right-3 top-3 w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white">
+            <Play className="w-4 h-4 fill-current" />
+          </div>
+        </div>
+        <div className="p-4 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-semibold line-clamp-2">{link.label}</div>
+            <ExternalLink className="w-4 h-4 text-muted shrink-0" />
+          </div>
+          <div className="text-xs text-muted">פתיחה ישירה לוידאו / קטע הופעה</div>
+        </div>
+      </Wrapper>
+    );
+  };
+
+  const renderFeaturedVideo = () =>
+    featuredVideo ? (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className={`${styleTokens.sectionCardClass} overflow-hidden p-0`}>
+        <div className="relative aspect-[16/10] overflow-hidden">
+          {getVideoThumbnail(featuredVideo.url) ? <img src={getVideoThumbnail(featuredVideo.url) || ""} alt={featuredVideo.label} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${primaryColor}33, ${secondaryColor}20 50%, ${surfaceColor})` }} />}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="absolute left-4 top-4">
+            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] ${styleTokens.highlightPillClass}`}>
+              <Play className="h-3.5 w-3.5" />
+              {getVideoSourceLabel(featuredVideo.url)}
+            </span>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+            <div className="flex items-end justify-between gap-4">
+              <div className="space-y-2">
+                <div className="text-lg font-bold text-white line-clamp-2">{featuredVideo.label}</div>
+                <div className="text-sm text-white/72">קטע נבחר מתוך ה-showreel שלך</div>
               </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* Lightbox */}
-        {lightboxOpen && galleryPhotos.length > 0 && (
-          <Lightbox
-            images={galleryPhotos}
-            currentIndex={galleryIndex % galleryPhotos.length}
-            onClose={() => setLightboxOpen(false)}
-            onNavigate={(i) => setGalleryIndex(i)}
-          />
-        )}
-
-        {/* Custom Links */}
-        {customLinks.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.28 }}
-            className="space-y-2"
-          >
-            {customLinks.filter((l: { label: string; url: string }) => l.label && l.url).map((link: { label: string; url: string }, i: number) => (
-              mode === "public" ? (
-                <a
-                  key={i}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-glass text-sm font-medium transition-all hover:scale-[1.01]"
-                  style={{ borderColor: `${accentColor}33` }}
-                >
-                  <Link2 className="w-4 h-4" />
-                  {link.label}
-                  <ExternalLink className="w-3 h-3 text-muted" />
+              {mode === "public" ? (
+                <a href={featuredVideo.url} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-full bg-white text-slate-950 px-4 py-2.5 text-sm font-semibold inline-flex items-center gap-2">
+                  <Play className="w-4 h-4 fill-current" />
+                  נגן
                 </a>
               ) : (
-                <div
-                  key={i}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-glass text-sm font-medium"
-                >
-                  <Link2 className="w-4 h-4" />
-                  {link.label}
-                  <ExternalLink className="w-3 h-3 text-muted" />
+                <div className="shrink-0 rounded-full bg-white text-slate-950 px-4 py-2.5 text-sm font-semibold inline-flex items-center gap-2 opacity-90">
+                  <Play className="w-4 h-4 fill-current" />
+                  נגן
                 </div>
-              )
-            ))}
-          </motion.div>
-        )}
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    ) : null;
 
-        {/* Reviews */}
-        {reviews.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass-card p-5 space-y-4"
-          >
-            <h3 className="text-sm font-bold text-center">מה אומרים עליי</h3>
-            {reviews.filter((r: { name: string; text: string; rating: number }) => r.text).map((review: { name: string; text: string; rating: number }, i: number) => (
-              <div key={i} className="p-3 rounded-xl border border-glass space-y-1.5">
-                <div className="flex items-center gap-2">
-                  {review.name && <span className="text-sm font-medium">{review.name}</span>}
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className={`w-3 h-3 ${star <= (review.rating || 5) ? "text-yellow-400 fill-yellow-400" : "text-muted"}`} />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-xs text-secondary leading-relaxed">{review.text}</p>
+  const renderVideoRail = (title: string, items: VisibleLink[], compact = false) =>
+    items.length > 0 ? (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }} className={`${styleTokens.sectionCardClass} ${compact ? "p-4 space-y-3" : "p-4 sm:p-5 space-y-3"}`}>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-bold">{title}</h3>
+          <div className={`px-3 py-1.5 rounded-2xl text-[11px] ${styleTokens.highlightPillClass}`}>{items.length} קטעים</div>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
+          {items.map((link, index) => renderVideoCard(link, index))}
+        </div>
+      </motion.div>
+    ) : null;
+
+  const renderGallery = () =>
+    galleryPhotos.length > 0 ? (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className={`${styleTokens.sectionCardClass} p-4 sm:p-5 space-y-4`}>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-bold">תיק עבודות</h3>
+          <div className={`px-3 py-1.5 rounded-2xl text-[11px] ${styleTokens.highlightPillClass}`}>{galleryPhotos.length} תמונות</div>
+        </div>
+        <div className={`relative ${isMinimalLuxury ? "aspect-[4/5]" : "aspect-[16/10]"} rounded-[24px] overflow-hidden bg-black/20`}>
+          <img src={galleryPhotos[galleryIndex % galleryPhotos.length]} alt={`gallery ${galleryIndex + 1}`} className="w-full h-full object-cover cursor-pointer transition-transform hover:scale-[1.02]" onClick={() => setLightboxOpen(true)} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10" />
+          <button onClick={() => setLightboxOpen(true)} className="absolute top-2 left-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors" title="הגדל תמונה">
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+          {galleryPhotos.length > 1 && (
+            <>
+              <button onClick={() => setGalleryIndex((prev) => (prev - 1 + galleryPhotos.length) % galleryPhotos.length)} className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button onClick={() => setGalleryIndex((prev) => (prev + 1) % galleryPhotos.length)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {galleryPhotos.map((_, index) => (
+                  <button key={index} onClick={() => setGalleryIndex(index)} className={`w-2 h-2 rounded-full transition-all ${index === galleryIndex % galleryPhotos.length ? "bg-white scale-125" : "bg-white/50"}`} />
+                ))}
               </div>
+            </>
+          )}
+        </div>
+        {galleryPhotos.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {galleryPhotos.map((url, index) => (
+              <button key={index} onClick={() => setGalleryIndex(index)} className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${index === galleryIndex % galleryPhotos.length ? "scale-105" : "border-transparent opacity-60 hover:opacity-100"}`} style={index === galleryIndex % galleryPhotos.length ? { borderColor: primaryColor } : undefined}>
+                <img src={url} alt={`thumb ${index + 1}`} className="w-full h-full object-cover" />
+              </button>
             ))}
-          </motion.div>
+          </div>
         )}
+      </motion.div>
+    ) : null;
 
-        {/* Powered by */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center pt-4"
-        >
-          <a
-            href="/"
-            className="text-xs text-muted hover:text-secondary transition-colors inline-flex items-center gap-1"
-          >
-            Powered by <span className="font-semibold">Compakt</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        </motion.div>
+  const renderReviews = () =>
+    reviews.length > 0 ? (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className={`${styleTokens.sectionCardClass} p-5 space-y-4`}>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-bold">מה אומרים עליי</h3>
+          <div className={`px-3 py-1.5 rounded-2xl text-[11px] ${styleTokens.highlightPillClass}`}>{reviews.length} ביקורות</div>
+        </div>
+        {reviews.filter((review) => review.text).map((review, index) => (
+          <div key={index} className={`space-y-2 ${isMinimalLuxury ? "border-b border-white/8 pb-4 last:border-b-0 last:pb-0" : "p-4 rounded-2xl border border-glass bg-white/[0.02]"}`}>
+            <div className="flex items-center gap-2">
+              {review.name && <span className="text-sm font-medium">{review.name}</span>}
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => <Star key={star} className={`w-3 h-3 ${star <= (review.rating || 5) ? "text-yellow-400 fill-yellow-400" : "text-muted"}`} />)}
+              </div>
+            </div>
+            <p className="text-xs text-secondary leading-relaxed">{review.text}</p>
+          </div>
+        ))}
+      </motion.div>
+    ) : null;
+
+  const renderEmpty = () =>
+    !hasAnyContent ? (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className={`${styleTokens.sectionCardClass} p-5 text-center`}>
+        <p className="text-sm text-secondary leading-relaxed">{mode === "preview" ? "הוסף תוכן כדי לראות איך הפרופיל ייראה כלפי חוץ." : "ה-DJ עדיין לא הוסיף פרטים נוספים — אבל אפשר כבר להתחיל את המסע המוזיקלי."}</p>
+      </motion.div>
+    ) : null;
+
+  const renderFooter = () => (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center pt-2">
+        <a href="/" className="text-xs text-muted hover:text-secondary transition-colors inline-flex items-center gap-1">
+          Powered by <span className="font-semibold">Compakt</span>
+          <ExternalLink className="w-3 h-3" />
+        </a>
+      </motion.div>
+      {lightboxOpen && galleryPhotos.length > 0 && <Lightbox images={galleryPhotos} currentIndex={galleryIndex % galleryPhotos.length} onClose={() => setLightboxOpen(false)} onNavigate={(index) => setGalleryIndex(index)} />}
+    </>
+  );
+
+  const sectionMap: Record<(typeof orderedSections)[number], JSX.Element | null> = {
+    actions: renderPrimaryActions(),
+    whatsapp: renderWhatsapp(),
+    socials: renderSocials(),
+    links: renderUtilityLinks(),
+    featuredVideo: renderFeaturedVideo(),
+    videoRail: renderVideoRail(isArtistStory ? "עוד קטעים" : "קטעי וידאו", isShowcaseMedia ? secondaryVideos : featuredVideo ? secondaryVideos : videoLinks, isMinimalLuxury),
+    gallery: renderGallery(),
+    reviews: renderReviews(),
+  };
+
+  return (
+    <div className={mode === "preview" ? "relative overflow-hidden" : "min-h-dvh relative overflow-hidden"} style={{ background: styleTokens.pageGradient }}>
+      <div className="absolute inset-0 pointer-events-none opacity-80" style={{ background: `radial-gradient(circle at top right, ${primaryColor}20, transparent 25%), radial-gradient(circle at top left, ${secondaryColor}14, transparent 20%)` }} />
+      <div className="relative max-w-md mx-auto px-4 py-4 sm:py-6">
+        <div className={`${styleTokens.frameClass} overflow-hidden`}>
+          <div className={`p-4 sm:p-5 ${isMinimalLuxury ? "space-y-6" : "space-y-4"}`}>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${styleTokens.heroCardClass} overflow-hidden`}>
+              <div className={`relative ${isArtistStory ? "min-h-[360px]" : isShowcaseMedia ? "min-h-[280px]" : isMinimalLuxury ? "min-h-[220px]" : "min-h-[240px]"}`}>
+                {profile.coverUrl ? (
+                  <>
+                    <img src={profile.coverUrl} alt="cover" className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0" style={{ background: isMinimalLuxury ? "linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.85))" : `linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.76)), linear-gradient(135deg, ${primaryColor}20, transparent 45%, ${secondaryColor}15)` }} />
+                  </>
+                ) : (
+                  <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${primaryColor}66, ${secondaryColor}33 55%, ${surfaceColor})` }} />
+                )}
+                <div className={`relative z-10 p-5 flex flex-col ${isArtistStory || isShowcaseMedia || isMinimalLuxury ? "justify-between" : "justify-end"} h-full`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] ${styleTokens.highlightPillClass}`}>
+                      <Sparkles className="w-3 h-3" />
+                      {styleMeta?.shortName ?? styleMeta?.label ?? "Style"}
+                    </span>
+                    {isShowcaseMedia && <span className="text-[11px] uppercase tracking-[0.28em] text-white/60">SHOWCASE</span>}
+                  </div>
+                  {isArtistStory ? (
+                    <div className="space-y-5">
+                      <div className="flex items-center gap-3">
+                        {profile.logoUrl ? (
+                          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/15 shadow-lg shrink-0">
+                            <img src={profile.logoUrl} alt="logo" className={`w-full h-full ${profile.logoFit === "cover" ? "object-cover" : "object-contain"}`} style={{ transform: `scale(${logoScale / 100})` }} />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+                            <Headphones className="w-8 h-8" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-[11px] uppercase tracking-[0.28em] text-white/55 mb-2">{heroMeta.join(" · ") || "ARTIST PAGE"}</div>
+                          <h1 className="text-3xl sm:text-4xl font-bold leading-tight text-white text-balance">{profile.businessName || "שם העסק שלך"}</h1>
+                          {profile.tagline && <p className="text-base text-white/82 mt-2 leading-7 max-w-[18rem]">{profile.tagline}</p>}
+                        </div>
+                      </div>
+                      {profile.bio && <p className="text-sm text-white/72 leading-7 max-w-[18rem]">{profile.bio}</p>}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-end gap-3">
+                        {profile.logoUrl ? (
+                          <div className={`rounded-2xl overflow-hidden border border-white/15 shadow-lg shrink-0 ${isMinimalLuxury ? "w-12 h-12" : "w-14 h-14"}`}>
+                            <img src={profile.logoUrl} alt="logo" className={`w-full h-full ${profile.logoFit === "cover" ? "object-cover" : "object-contain"}`} style={{ transform: `scale(${logoScale / 100})` }} />
+                          </div>
+                        ) : (
+                          <div className={`rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0 ${isMinimalLuxury ? "w-12 h-12" : "w-14 h-14"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+                            <Headphones className={isMinimalLuxury ? "w-6 h-6" : "w-7 h-7"} />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          {heroMeta.length > 0 && <div className="text-[11px] uppercase tracking-[0.28em] text-white/55 mb-2">{heroMeta.join(" · ")}</div>}
+                          <h1 className={`${isMinimalLuxury ? "text-xl" : "text-2xl"} font-bold leading-tight text-white text-balance`}>{profile.businessName || "שם העסק שלך"}</h1>
+                          {profile.tagline && <p className={`text-white/80 mt-1 ${isMinimalLuxury ? "text-xs" : "text-sm"}`}>{profile.tagline}</p>}
+                        </div>
+                      </div>
+                      {isShowcaseMedia && featuredVideo && (
+                        <div className="rounded-[22px] border border-white/10 bg-black/20 p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-white/12 flex items-center justify-center text-white">
+                              <Play className="w-5 h-5 fill-current" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-[11px] uppercase tracking-[0.18em] text-white/55">Featured showreel</div>
+                              <div className="text-sm font-semibold text-white line-clamp-1">{featuredVideo.label}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {isMinimalLuxury && profile.bio && <p className="max-w-[15rem] text-sm leading-7 text-white/76">{profile.bio}</p>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+            {!isArtistStory && profile.bio && isLinktreePremium && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }} className={`${styleTokens.sectionCardClass} p-4`} style={{ borderColor: `${surfaceColor}88` }}>
+                <p className="text-sm text-secondary leading-relaxed whitespace-pre-line">{profile.bio}</p>
+              </motion.div>
+            )}
+            {orderedSections.map((section) => <div key={section}>{sectionMap[section]}</div>)}
+            {renderEmpty()}
+            {renderFooter()}
+          </div>
+        </div>
       </div>
     </div>
   );

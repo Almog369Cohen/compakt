@@ -6,7 +6,7 @@ import { SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/nextjs";
 import type { Session } from "@supabase/supabase-js";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Eye, EyeOff, User, Link, TrendingUp } from "lucide-react";
+import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Eye, EyeOff, User, Link, CalendarDays } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useEventStore } from "@/stores/eventStore";
 import { SongManager } from "@/components/admin/SongManager";
@@ -16,12 +16,13 @@ import { Dashboard } from "@/components/admin/Dashboard";
 import { ProfileSettings } from "@/components/admin/ProfileSettings";
 import { CoupleLinks } from "@/components/admin/CoupleLinks";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
+import { EventsManager } from "@/components/admin/EventsManager";
 import { useProfileStore } from "@/stores/profileStore";
 import { supabase } from "@/lib/supabase";
 import type { FeatureKey } from "@/lib/access";
 import { HydrationGuard } from "@/components/ui/HydrationGuard";
 
-type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "couples" | "analytics";
+type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "couples" | "events" | "analytics";
 
 type AdminAccess = {
   role: string;
@@ -29,14 +30,15 @@ type AdminAccess = {
   features: Record<FeatureKey, boolean>;
 };
 
-const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
+const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode; launchReady?: boolean }> = [
   { id: "dashboard", label: "דשבורד", icon: <BarChart3 className="w-4 h-4" /> },
-  { id: "couples", label: "שאלונים", icon: <Link className="w-4 h-4" /> },
-  { id: "analytics", label: "אנליטיקות", icon: <TrendingUp className="w-4 h-4" /> },
+  { id: "couples", label: "שאלוני זוגות", icon: <Link className="w-4 h-4" />, launchReady: true },
+  { id: "events", label: "אירועי DJ", icon: <CalendarDays className="w-4 h-4" />, launchReady: true },
   { id: "profile", label: "פרופיל", icon: <User className="w-4 h-4" /> },
   { id: "songs", label: "שירים", icon: <Music className="w-4 h-4" /> },
   { id: "questions", label: "שאלות", icon: <HelpCircle className="w-4 h-4" /> },
-  { id: "upsells", label: "שדרוגים", icon: <Sparkles className="w-4 h-4" /> },
+  { id: "upsells", label: "שדרוגים", icon: <Sparkles className="w-4 h-4" />, launchReady: false },
+  { id: "analytics", label: "אנליטיקות", icon: <BarChart3 className="w-4 h-4" />, launchReady: false },
 ];
 
 function ClerkAdminAuthSync() {
@@ -103,9 +105,13 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
   const signUp = useAdminStore((s) => s.signUp);
   const checkSession = useAdminStore((s) => s.checkSession);
   const loadContentFromDB = useAdminStore((s) => s.loadContentFromDB);
+  const contentLoading = useAdminStore((s) => s.contentLoading);
+  const contentLoadedProfileId = useAdminStore((s) => s.contentLoadedProfileId);
   const authError = useAdminStore((s) => s.authError);
   const logout = useAdminStore((s) => s.logout);
+  const resetContent = useAdminStore((s) => s.resetContent);
   const loadProfileFromDB = useProfileStore((s) => s.loadProfileFromDB);
+  const resetProfile = useProfileStore((s) => s.resetProfile);
   const profileId = useProfileStore((s) => s.profileId);
   const djSlug = useProfileStore((s) => s.profile.djSlug);
 
@@ -251,6 +257,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
   useEffect(() => {
     const allowedTabs = tabs.filter((tab) => {
       if (!access) return true;
+      if (tab.launchReady === false) return false;
       if (tab.id === "analytics") return access.features.analytics;
       if (tab.id === "couples") return access.features.couple_links;
       return true;
@@ -262,6 +269,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
   }, [access, activeTab]);
 
   const visibleTabs = tabs.filter((tab) => {
+    if (tab.launchReady === false) return false;
     if (!access) return true;
     if (tab.id === "analytics") return access.features.analytics;
     if (tab.id === "couples") return access.features.couple_links;
@@ -274,6 +282,15 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
       loadContentFromDB(profileId);
     }
   }, [profileId, loadContentFromDB]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      resetProfile();
+      resetContent();
+    }
+  }, [isAuthenticated, resetContent, resetProfile]);
+
+  const isContentReady = !profileId || (!contentLoading && contentLoadedProfileId === profileId);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -468,7 +485,14 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
           <div className="mt-4 pt-4 border-t border-glass">
             <button
               type="button"
-              onClick={() => setBypassClerk(true)}
+              onClick={() => {
+                setBypassClerk(true);
+                setAuthMode("legacy");
+                setIsSignUp(false);
+                setIsRecoveryMode(false);
+                setResetMessage(null);
+                setError(false);
+              }}
               className="text-xs text-secondary hover:text-brand-blue transition-colors"
             >
               כניסה עם סיסמה
@@ -684,6 +708,9 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                 type="button"
                 onClick={() => {
                   setAuthMode((m) => (m === "email" ? "legacy" : "email"));
+                  setBypassClerk(true);
+                  setIsSignUp(false);
+                  setResetMessage(null);
                   setError(false);
                 }}
                 className="text-[11px] text-muted hover:text-secondary transition-colors"
@@ -697,7 +724,12 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
             <div className="mt-3">
               <button
                 type="button"
-                onClick={() => setBypassClerk(false)}
+                onClick={() => {
+                  setBypassClerk(false);
+                  setAuthMode("email");
+                  setResetMessage(null);
+                  setError(false);
+                }}
                 className="text-[11px] text-muted hover:text-secondary transition-colors"
               >
                 התחברות עם Clerk
@@ -728,13 +760,34 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     );
   }
 
+  if (!isContentReady && ["songs", "questions", "upsells", "couples", "analytics"].includes(activeTab)) {
+    return (
+      <div className="min-h-dvh gradient-hero">
+        {clerkEnabled ? <ClerkAdminAuthSync /> : null}
+        <header className="sticky top-0 z-50 glass-card rounded-none border-x-0 border-t-0 px-4 py-3">
+          <div className="max-w-5xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="font-bold text-lg">Compakt Admin</h1>
+            </div>
+            <ThemeToggle />
+          </div>
+        </header>
+        <main className="max-w-5xl mx-auto px-4 py-10">
+          <div className="glass-card p-8 text-center text-sm text-muted">
+            טוען את התוכן המעודכן של החשבון...
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh gradient-hero">
       {clerkEnabled ? <ClerkAdminAuthSync /> : null}
       {/* Header */}
       <header className="sticky top-0 z-50 glass-card rounded-none border-x-0 border-t-0 px-4 py-3">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
             {djSlug ? (
               <a href={`/dj/${djSlug}`} className="text-sm text-secondary hover:text-foreground flex items-center gap-1">
                 <ChevronLeft className="w-4 h-4" />
@@ -743,12 +796,15 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
             ) : (
               <span className="text-sm text-muted">Compakt</span>
             )}
-            <h1 className="font-bold text-lg">Compakt Admin</h1>
+            <div className="min-w-0">
+              <h1 className="font-bold text-lg">Compakt Admin</h1>
+              <p className="text-[11px] text-muted hidden md:block">אזור העבודה של הדיג׳יי לפני עלייה לאוויר</p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {/* Tabs */}
-            <nav className="flex gap-1 overflow-x-auto max-w-[70vw] sm:max-w-none scrollbar-hide">
+            <nav className="flex gap-1 overflow-x-auto max-w-[72vw] lg:max-w-none scrollbar-hide">
               {visibleTabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -779,7 +835,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
       </header>
 
       {/* Content */}
-      <main className={`mx-auto px-4 py-6 ${["profile", "couples", "analytics"].includes(activeTab) ? "max-w-7xl" : "max-w-5xl"}`}>
+      <main className={`mx-auto px-4 py-6 ${["profile", "couples", "events"].includes(activeTab) ? "max-w-7xl" : "max-w-5xl"}`}>
         <AnimatePresence mode="wait">
           {activeTab === "profile" && (
             <motion.div
@@ -839,6 +895,16 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
               exit={{ opacity: 0, y: -10 }}
             >
               <CoupleLinks />
+            </motion.div>
+          )}
+          {activeTab === "events" && (
+            <motion.div
+              key="events"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <EventsManager />
             </motion.div>
           )}
           {activeTab === "analytics" && (

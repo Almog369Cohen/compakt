@@ -1,9 +1,23 @@
 import type { Question } from "@/lib/types";
 
+export const GUEST_CALCULATOR_QUESTION_ID = "2f8e8b0f-4a45-4eb9-9a15-7f7a3e1d9f11";
+
+export const guestCalculatorDefaultQuestion: Question = {
+  id: GUEST_CALCULATOR_QUESTION_ID,
+  eventType: "wedding",
+  eventTypes: ["wedding", "bar_mitzvah", "private", "corporate"],
+  sortOrder: -1,
+  questionHe: "כמה אורחים אתם מצפים שיהיו באירוע?",
+  questionType: "guest_calculator",
+  isActive: true,
+};
+
 export const defaultQuestions: Question[] = [
+  guestCalculatorDefaultQuestion,
   {
     id: "q1",
     eventType: "wedding",
+    eventTypes: ["wedding"],
     sortOrder: 1,
     questionHe: "מה האווירה שאתם חולמים עליה?",
     questionType: "multi_select",
@@ -20,6 +34,7 @@ export const defaultQuestions: Question[] = [
   {
     id: "q2",
     eventType: "wedding",
+    eventTypes: ["wedding"],
     sortOrder: 2,
     questionHe: "מי הקהל המרכזי באירוע?",
     questionType: "multi_select",
@@ -36,6 +51,7 @@ export const defaultQuestions: Question[] = [
   {
     id: "q3",
     eventType: "wedding",
+    eventTypes: ["wedding"],
     sortOrder: 3,
     questionHe: "איזה סגנון מוזיקלי הכי מדבר אליכם?",
     questionType: "multi_select",
@@ -54,6 +70,7 @@ export const defaultQuestions: Question[] = [
   {
     id: "q4",
     eventType: "wedding",
+    eventTypes: ["wedding"],
     sortOrder: 4,
     questionHe: "יש סגנון שבטוח לא רוצים?",
     questionType: "multi_select",
@@ -71,6 +88,7 @@ export const defaultQuestions: Question[] = [
   {
     id: "q5",
     eventType: "wedding",
+    eventTypes: ["wedding"],
     sortOrder: 5,
     questionHe: "מה רמת האנרגיה שאתם מדמיינים ברחבה?",
     questionType: "slider",
@@ -82,6 +100,7 @@ export const defaultQuestions: Question[] = [
   {
     id: "q6",
     eventType: "wedding",
+    eventTypes: ["wedding"],
     sortOrder: 6,
     questionHe: "כמה חשוב לכם שיהיו שירים בשפות שונות?",
     questionType: "single_select",
@@ -96,6 +115,7 @@ export const defaultQuestions: Question[] = [
   {
     id: "q7",
     eventType: "wedding",
+    eventTypes: ["wedding"],
     sortOrder: 7,
     questionHe: "יש רגע מיוחד שחשוב לכם במיוחד?",
     questionType: "text",

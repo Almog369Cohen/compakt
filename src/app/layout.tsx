@@ -1,15 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Heebo } from "next/font/google";
+import { Rubik } from "next/font/google";
 import "./globals.css";
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const clerkEnabled = Boolean(clerkPublishableKey);
 
-const heebo = Heebo({
+const rubik = Rubik({
   subsets: ["hebrew", "latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
-  variable: "--font-heebo",
+  variable: "--font-rubik",
 });
 
 export const metadata: Metadata = {
@@ -44,8 +44,8 @@ export default async function RootLayout({
     : children;
 
   return (
-    <html lang="he" dir="rtl" data-theme="night" className={heebo.variable}>
-      <body className="font-heebo antialiased min-h-dvh">
+    <html lang="he" dir="rtl" data-theme="night" className={rubik.variable}>
+      <body className="font-sans antialiased min-h-dvh">
         {bodyContent}
       </body>
     </html>

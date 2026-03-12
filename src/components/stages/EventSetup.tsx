@@ -318,6 +318,16 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
       animate={{ opacity: 1, y: 0 }}
       className="w-full max-w-md mx-auto"
     >
+      {!event && (
+        <div className="mb-3 text-center">
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="text-sm text-brand-blue hover:underline"
+          >
+            יש לכם כבר מספר אירוע? חזרו לערוך כאן
+          </button>
+        </div>
+      )}
       <AnimatePresence mode="wait">
         {step === "form" && (
           <motion.div
@@ -325,20 +335,20 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="glass-card p-6 sm:p-8"
+            className="glass-card p-5 sm:p-7"
           >
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", delay: 0.2 }}
-                className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
+                className="inline-flex items-center justify-center w-14 h-14 rounded-[20px] mb-3"
                 style={{ background: "linear-gradient(135deg, #059cc0, #03b28c)" }}
               >
-                <Music className="w-8 h-8 text-white" />
+                <Music className="w-7 h-7 text-white" />
               </motion.div>
-              <h1 className="text-2xl font-bold mb-2">Compakt</h1>
-              <p className="text-secondary text-sm">!בואו ניצור את האירוע שלכם</p>
+              <p className="text-xl font-extrabold mb-1">בואו ניצור את האירוע שלכם</p>
+              <p className="text-secondary text-sm">כמה פרטים קצרים ומתחילים</p>
               {djName ? (
                 <p className="text-xs text-brand-blue mt-2">
                   השאלון של <span className="font-semibold">{djName}</span>
@@ -347,52 +357,20 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
             </div>
 
             <div className="space-y-6">
-              {!selectedDjId && availableDjs.length > 0 && (
-                <div>
-                  <label className="block text-xs text-muted mb-1">בחירת דיג׳יי</label>
-                  <select
-                    value={selectedDjId}
-                    onChange={(e) => {
-                      const nextId = e.target.value;
-                      const nextDj = availableDjs.find((row) => row.id === nextId);
-
-                      setSelectedDjId(nextId);
-                      setSelectedDjSlug(nextDj?.dj_slug || "");
-                      setDjName(nextDj?.business_name || "");
-
-                      if (nextDj) {
-                        sessionStorage.setItem("compakt_dj_profile_id", nextDj.id);
-                        sessionStorage.setItem("compakt_dj_slug", nextDj.dj_slug);
-                        sessionStorage.setItem("compakt_dj_name", nextDj.business_name);
-                      }
-                    }}
-                    className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground text-sm focus:outline-none focus:border-brand-blue transition-colors"
-                  >
-                    <option value="">בחרו דיג׳יי לשיוך האירוע</option>
-                    {availableDjs.map((dj) => (
-                      <option key={dj.id} value={dj.id}>
-                        {dj.business_name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted mt-1">אם הגעתם ישירות בלי לינק של דיג׳יי, בחרו למי לשייך את האירוע</p>
-                </div>
-              )}
-
               <div>
-                <label className="block text-sm font-medium mb-3">סוג האירוע</label>
+                <label className="block text-sm font-medium mb-2.5">סוג האירוע</label>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {eventTypes.map((et) => (
                     <button
                       key={et.type}
                       onClick={() => setSelectedType(et.type)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${selectedType === et.type
+                      className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all ${selectedType === et.type
                         ? "border-brand-blue bg-brand-blue/10 text-brand-blue"
                         : "border-glass text-secondary hover:border-brand-blue/50"
                         }`}
                     >
-                      {et.icon}
-                      <span className="text-xs font-medium">{et.label}</span>
+                      <div className="scale-90">{et.icon}</div>
+                      <span className="text-[11px] font-medium text-center leading-tight">{et.label}</span>
                     </button>
                   ))}
                 </div>
@@ -524,6 +502,38 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
                 <p className="text-xs text-center text-muted">
                   יוצר את האירוע שלכם, אין צורך ללחוץ שוב
                 </p>
+              )}
+
+              {!selectedDjId && availableDjs.length > 0 && (
+                <div className="pt-2 border-t border-white/10">
+                  <label className="block text-xs text-muted mb-1">בחירת דיג׳יי</label>
+                  <select
+                    value={selectedDjId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      const nextDj = availableDjs.find((row) => row.id === nextId);
+
+                      setSelectedDjId(nextId);
+                      setSelectedDjSlug(nextDj?.dj_slug || "");
+                      setDjName(nextDj?.business_name || "");
+
+                      if (nextDj) {
+                        sessionStorage.setItem("compakt_dj_profile_id", nextDj.id);
+                        sessionStorage.setItem("compakt_dj_slug", nextDj.dj_slug);
+                        sessionStorage.setItem("compakt_dj_name", nextDj.business_name);
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                  >
+                    <option value="">בחרו דיג׳יי לשיוך האירוע</option>
+                    {availableDjs.map((dj) => (
+                      <option key={dj.id} value={dj.id}>
+                        {dj.business_name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted mt-1">fallback רק אם הגעתם בלי לינק ישיר מהדיג׳יי</p>
+                </div>
               )}
 
               <div className="text-center mt-4">

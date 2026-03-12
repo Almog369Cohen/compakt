@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
  * Supabase client for API Route Handlers (App Router).
  * Reads/writes auth cookies from the request context.
  */
-export function createRouteClient() {
-  const cookieStore = cookies();
+export async function createRouteClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

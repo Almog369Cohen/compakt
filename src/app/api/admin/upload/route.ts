@@ -38,8 +38,8 @@ export async function POST(req: Request) {
     if (isImage && file.size > 5 * 1024 * 1024) {
       return NextResponse.json({ error: "גודל תמונה חייב להיות עד 5MB" }, { status: 400 });
     }
-    if (isAudio && file.size > 20 * 1024 * 1024) {
-      return NextResponse.json({ error: "גודל קובץ אודיו חייב להיות עד 20MB" }, { status: 400 });
+    if (isAudio && file.size > 50 * 1024 * 1024) {
+      return NextResponse.json({ error: "גודל קובץ אודיו חייב להיות עד 50MB" }, { status: 400 });
     }
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";

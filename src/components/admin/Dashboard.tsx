@@ -1,699 +1,764 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useEventStore } from "@/stores/eventStore";
+import { motion } from "framer-motion";
 import { useAdminStore } from "@/stores/adminStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { motion } from "framer-motion";
+import { useEventsStore, type DJEvent } from "@/stores/eventsStore";
 import {
-  BarChart3,
-  Users,
-  Music,
-  Heart,
-  Star,
-  XCircle,
-  TrendingUp,
-  Clock,
-  HelpCircle,
-  Sparkles,
-  Download,
-  ListTodo,
-  X,
-  Plus,
-  Trash2,
-  ShieldCheck,
-  ShieldAlert,
   AlertTriangle,
-  RefreshCw,
+  ArrowLeft,
+  BarChart3,
+  Calendar,
+  CheckCircle2,
+  Clock3,
   Loader2,
-  CheckCircle,
+  Mail,
+  MapPin,
+  MessageCircleWarning,
+  Music,
+  RefreshCw,
+  Sparkles,
+  UserRound,
 } from "lucide-react";
 
-type FixItem = {
+interface CoupleEvent {
   id: string;
-  text: string;
-  done: boolean;
-};
-
-const FIXES_STORAGE_KEY = "compakt.admin.fixes";
-
-interface HealthCheck {
-  name: string;
-  status: "pass" | "fail" | "warn";
-  detail: string;
-  count?: number;
+  magic_token: string;
+  token: string | null;
+  event_type: string;
+  couple_name_a: string;
+  couple_name_b: string;
+  event_date: string;
+  venue: string;
+  current_stage: number;
+  phone_number: string | null;
+  email?: string | null;
+  answerCount: number;
+  swipeCount: number;
+  requestCount?: number;
+  isComplete: boolean;
+  created_at: string;
+  updated_at?: string | null;
 }
 
-interface HealthResult {
-  healthy: boolean;
-  summary: { pass: number; warn: number; fail: number };
-  checks: HealthCheck[];
+type DashboardAction = {
+  id: string;
+  title: string;
+  detail: string;
+  tone: "danger" | "warn" | "info";
+  cta: string;
+  tab: "couples" | "events" | "profile" | "songs" | "questions";
+};
+
+const STAGE_LABELS: Record<number, string> = {
+  0: "טרם התחיל",
+  1: "מילוי שאלון",
+  2: "בחירת שירים",
+  3: "בקשות מיוחדות",
+  4: "הושלם",
+};
+
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(
+      text.startsWith("<!DOCTYPE") || text.startsWith("<html")
+        ? "תגובת שרת לא תקינה. ה-API החזיר HTML במקום JSON"
+        : text || "תגובה לא תקינה מהשרת"
+    );
+  }
+}
+
+function formatDateLabel(value?: string | null): string {
+  if (!value) return "לא נקבע";
+  try {
+    return new Date(value).toLocaleDateString("he-IL", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return value;
+  }
+}
+
+function daysUntil(value?: string | null): number | null {
+  if (!value) return null;
+  const target = new Date(value).getTime();
+  if (Number.isNaN(target)) return null;
+  const diff = target - Date.now();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+function getCoupleNames(event: CoupleEvent): string {
+  return [event.couple_name_a, event.couple_name_b].filter(Boolean).join(" & ") || "זוג ללא שם";
+}
+
+function dispatchAdminTabChange(tab: DashboardAction["tab"]) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("compakt-admin-tab-change", { detail: tab }));
+}
+
+function getProfileReadiness(profile: ReturnType<typeof useProfileStore.getState>["profile"]) {
+  const checks = [
+    { label: "שם עסק", done: Boolean(profile.businessName.trim()) },
+    { label: "לינק אישי", done: Boolean(profile.djSlug.trim()) },
+    { label: "לוגו או קאבר", done: Boolean(profile.logoUrl || profile.coverUrl) },
+    { label: "דרך יצירת קשר", done: Boolean(profile.whatsappNumber || profile.websiteUrl) },
+    { label: "טקסט היכרות", done: Boolean(profile.bio || profile.tagline) },
+  ];
+
+  const completed = checks.filter((item) => item.done).length;
+  const score = Math.round((completed / checks.length) * 100);
+
+  return {
+    score,
+    checks,
+  };
+}
+
+function getEventReadiness(event: DJEvent) {
+  const missing: string[] = [];
+  if (!event.date_time) missing.push("תאריך");
+  if (!event.venue) missing.push("מקום");
+  if (!event.notes) missing.push("הערות");
+
+  return {
+    ready: missing.length === 0,
+    missing,
+  };
+}
+
+function getDashboardErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (message === "Authentication required") {
+    return "ההתחברות פגה. רענן את העמוד והתחבר מחדש כדי לראות את פעילות הזוגות.";
+  }
+
+  if (message === "Forbidden" || message === "Forbidden: insufficient role" || message === "Forbidden: profile not found") {
+    return "אין לך הרשאה לצפות כרגע בפעילות הזוגות.";
+  }
+
+  return message || "שגיאה בטעינת נתוני זוגות";
 }
 
 export function Dashboard() {
-  const event = useEventStore((s) => s.event);
-  const swipes = useEventStore((s) => s.swipes);
-  const answers = useEventStore((s) => s.answers);
-  const requests = useEventStore((s) => s.requests);
-  const analytics = useEventStore((s) => s.analytics);
-  const upsellClicks = useEventStore((s) => s.upsellClicks);
+  const profileId = useProfileStore((s) => s.profileId);
+  const profile = useProfileStore((s) => s.profile);
   const songs = useAdminStore((s) => s.songs);
   const questions = useAdminStore((s) => s.questions);
-  const upsells = useAdminStore((s) => s.upsells);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _profileId = useProfileStore((s) => s.profileId);
+  const { events, loading: eventsLoading, error: eventsError, loadEvents } = useEventsStore();
 
-  const [showFixes, setShowFixes] = useState(false);
-  const [fixes, setFixes] = useState<FixItem[]>([]);
-  const [newFixText, setNewFixText] = useState("");
+  const [coupleEvents, setCoupleEvents] = useState<CoupleEvent[]>([]);
+  const [couplesLoading, setCouplesLoading] = useState(false);
+  const [couplesError, setCouplesError] = useState<string | null>(null);
 
-  // DB Health
-  const [health, setHealth] = useState<HealthResult | null>(null);
-  const [healthLoading, setHealthLoading] = useState(false);
-  const [showAllChecks, setShowAllChecks] = useState(false);
-
-  const loadHealth = useCallback(async () => {
-    setHealthLoading(true);
+  const loadCoupleEvents = useCallback(async () => {
+    if (!profileId) return;
+    setCouplesLoading(true);
+    setCouplesError(null);
     try {
-      const res = await fetch("/api/admin/db-health");
-      const data = await res.json();
-      if (res.ok) setHealth(data);
-    } catch { /* silent */ }
-    setHealthLoading(false);
-  }, []);
-
-  useEffect(() => {
-    loadHealth();
-  }, [loadHealth]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(FIXES_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as FixItem[];
-        if (Array.isArray(parsed)) setFixes(parsed);
+      const res = await fetch("/api/admin/couple-link", { cache: "no-store" });
+      const data = await parseJsonResponse<{ events?: CoupleEvent[]; error?: string }>(res);
+      if (!res.ok) {
+        throw new Error(data.error || "שגיאה בטעינת נתוני זוגות");
       }
-    } catch {
-      // ignore
+      setCoupleEvents(Array.isArray(data.events) ? data.events : []);
+    } catch (error) {
+      setCoupleEvents([]);
+      setCouplesError(getDashboardErrorMessage(error));
+    } finally {
+      setCouplesLoading(false);
     }
-  }, []);
+  }, [profileId]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(FIXES_STORAGE_KEY, JSON.stringify(fixes));
-    } catch {
-      // ignore
+    if (!profileId) return;
+    void loadCoupleEvents();
+  }, [loadCoupleEvents, profileId]);
+
+  useEffect(() => {
+    if (profileId) {
+      void loadEvents(profileId);
     }
-  }, [fixes]);
+  }, [loadEvents, profileId]);
 
-  const stats = useMemo(() => {
-    const likes = swipes.filter((s) => s.action === "like").length;
-    const superLikes = swipes.filter((s) => s.action === "super_like").length;
-    const dislikes = swipes.filter((s) => s.action === "dislike").length;
-    const unsure = swipes.filter((s) => s.action === "unsure").length;
-    const totalSwipes = swipes.length;
-    const completionRate = event
-      ? Math.round(((event.currentStage || 0) / 4) * 100)
-      : 0;
+  const profileReadiness = useMemo(() => getProfileReadiness(profile), [profile]);
+  const activeQuestions = useMemo(() => questions.filter((question) => question.isActive).length, [questions]);
+  const activeSongs = useMemo(() => songs.filter((song) => song.isActive).length, [songs]);
 
-    const topReasons = new Map<string, number>();
-    swipes
-      .filter((s) => s.action === "dislike")
-      .forEach((s) =>
-        s.reasonChips.forEach((chip) =>
-          topReasons.set(chip, (topReasons.get(chip) || 0) + 1)
-        )
-      );
-    const sortedReasons = Array.from(topReasons.entries())
-      .sort((a, b) => b[1] - a[1])
+  const dashboardData = useMemo(() => {
+    const now = Date.now();
+    const sortedCoupleEvents = [...coupleEvents].sort((a, b) => {
+      const first = a.event_date ? new Date(a.event_date).getTime() : Number.POSITIVE_INFINITY;
+      const second = b.event_date ? new Date(b.event_date).getTime() : Number.POSITIVE_INFINITY;
+      return first - second;
+    });
+
+    const incompleteCouples = sortedCoupleEvents.filter((event) => !event.isComplete);
+    const completedCouples = sortedCoupleEvents.filter((event) => event.isComplete);
+    const resumedCouples = incompleteCouples.filter((event) => event.current_stage > 0);
+    const missingContact = sortedCoupleEvents.filter((event) => !event.email && !event.phone_number);
+    const waitingForSongs = incompleteCouples.filter((event) => event.current_stage === 1 && event.answerCount > 0);
+    const recentCoupleActivity = [...sortedCoupleEvents]
+      .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
       .slice(0, 5);
+    const upcomingCouples = sortedCoupleEvents.filter((event) => {
+      if (!event.event_date) return true;
+      const target = new Date(event.event_date).getTime();
+      return Number.isNaN(target) ? true : target >= now;
+    }).slice(0, 4);
 
-    const stageEvents = analytics.filter((a) => a.eventName === "stage_change");
+    const upcomingEvents = [...events]
+      .filter((event) => event.status === "upcoming" || event.status === "confirmed")
+      .sort((a, b) => {
+        const first = a.date_time ? new Date(a.date_time).getTime() : Number.POSITIVE_INFINITY;
+        const second = b.date_time ? new Date(b.date_time).getTime() : Number.POSITIVE_INFINITY;
+        return first - second;
+      });
+
+    const nextWeekEvents = upcomingEvents.filter((event) => {
+      const target = event.date_time ? new Date(event.date_time).getTime() : null;
+      if (!target || Number.isNaN(target)) return false;
+      const diff = target - now;
+      return diff >= 0 && diff <= 1000 * 60 * 60 * 24 * 7;
+    });
+
+    const eventsMissingSetup = upcomingEvents.filter((event) => !getEventReadiness(event).ready);
+
+    const readinessItems = [
+      { label: "פרופיל DJ", done: profileReadiness.score >= 80, detail: `${profileReadiness.score}% הושלם`, tab: "profile" as const },
+      { label: "שאלון מוכן", done: activeQuestions >= 5, detail: `${activeQuestions} שאלות פעילות`, tab: "questions" as const },
+      { label: "ספריית שירים", done: activeSongs >= 10, detail: `${activeSongs} שירים פעילים`, tab: "songs" as const },
+      { label: "אירועים קרובים", done: nextWeekEvents.length > 0, detail: nextWeekEvents.length > 0 ? `${nextWeekEvents.length} אירועים בשבוע הקרוב` : "עדיין אין אירועים קרובים", tab: "events" as const },
+    ];
+
+    const attentionItems: DashboardAction[] = [];
+
+    if (resumedCouples.length > 0) {
+      const couple = resumedCouples[0];
+      attentionItems.push({
+        id: "resume-couple",
+        title: "יש זוגות שהתחילו ולא סיימו",
+        detail: `${getCoupleNames(couple)} כרגע ב-${STAGE_LABELS[couple.current_stage] || "תהליך פעיל"}`,
+        tone: "warn",
+        cta: "פתח שאלונים",
+        tab: "couples",
+      });
+    }
+
+    if (missingContact.length > 0) {
+      const couple = missingContact[0];
+      attentionItems.push({
+        id: "missing-contact",
+        title: "יש זוגות בלי פרטי קשר ברורים",
+        detail: `${getCoupleNames(couple)} ללא מייל או מספר טלפון מזוהה`,
+        tone: "danger",
+        cta: "בדוק שאלונים",
+        tab: "couples",
+      });
+    }
+
+    if (eventsMissingSetup.length > 0) {
+      const upcoming = eventsMissingSetup[0];
+      const readiness = getEventReadiness(upcoming);
+      attentionItems.push({
+        id: "missing-event-setup",
+        title: "יש אירועים קרובים שעדיין לא מוכנים",
+        detail: `${upcoming.name} חסר: ${readiness.missing.join(", ")}`,
+        tone: "warn",
+        cta: "פתח אירועים",
+        tab: "events",
+      });
+    }
+
+    if (profileReadiness.score < 80) {
+      attentionItems.push({
+        id: "profile-readiness",
+        title: "הפרופיל עדיין לא שלם",
+        detail: `כדאי להשלים עוד ${100 - profileReadiness.score}% כדי להיראות מקצועי יותר`,
+        tone: "info",
+        cta: "השלם פרופיל",
+        tab: "profile",
+      });
+    }
+
+    if (activeSongs < 10 || activeQuestions < 5) {
+      attentionItems.push({
+        id: "setup-readiness",
+        title: "המערכת עוד לא מוכנה לגמרי לקבל זוגות",
+        detail: `ספרייה: ${activeSongs} שירים, שאלון: ${activeQuestions} שאלות`,
+        tone: "info",
+        cta: "בדוק הגדרות",
+        tab: activeSongs < 10 ? "songs" : "questions",
+      });
+    }
 
     return {
-      likes,
-      superLikes,
-      dislikes,
-      unsure,
-      totalSwipes,
-      completionRate,
-      sortedReasons,
-      stageEvents,
-      answeredQuestions: answers.length,
-      totalRequests: requests.length,
-      totalUpsellClicks: upsellClicks.length,
+      incompleteCouples,
+      completedCouples,
+      waitingForSongs,
+      recentCoupleActivity,
+      upcomingEvents,
+      upcomingCouples,
+      nextWeekEvents,
+      readinessItems,
+      attentionItems: attentionItems.slice(0, 4),
     };
-  }, [swipes, event, analytics, answers, requests, upsellClicks]);
+  }, [activeQuestions, activeSongs, coupleEvents, events, profileReadiness.score]);
+
+  const summaryLine = useMemo(() => {
+    const pieces: string[] = [];
+    if (dashboardData.attentionItems.length > 0) {
+      pieces.push(`${dashboardData.attentionItems.length} דברים מחכים לטיפול`);
+    }
+    if (dashboardData.nextWeekEvents.length > 0) {
+      pieces.push(`${dashboardData.nextWeekEvents.length} אירועים בשבוע הקרוב`);
+    }
+    if (dashboardData.incompleteCouples.length > 0) {
+      pieces.push(`${dashboardData.incompleteCouples.length} שאלונים בתהליך`);
+    }
+    if (pieces.length === 0) {
+      return "המערכת שקטה כרגע. זה זמן טוב לסדר אירועים, פרופיל וספריית שירים.";
+    }
+    return pieces.join(" · ");
+  }, [dashboardData.attentionItems.length, dashboardData.incompleteCouples.length, dashboardData.nextWeekEvents.length]);
+
+  const launchChecklist = useMemo(
+    () => [
+      {
+        label: "להשלים פרופיל DJ",
+        done: profileReadiness.score >= 80,
+        detail: profileReadiness.score >= 80 ? "הפרופיל כבר נראה מוכן לפרסום" : "השלם שם עסק, טקסט היכרות ודרך יצירת קשר",
+        tab: "profile" as const,
+      },
+      {
+        label: "להכין שאלון",
+        done: activeQuestions >= 5,
+        detail: activeQuestions >= 5 ? `${activeQuestions} שאלות פעילות מוכנות` : "הוסף לפחות 5 שאלות פעילות לפני שליחה לזוגות",
+        tab: "questions" as const,
+      },
+      {
+        label: "לבנות ספריית שירים",
+        done: activeSongs >= 10,
+        detail: activeSongs >= 10 ? `${activeSongs} שירים פעילים זמינים לזוגות` : "הוסף שירים בסיסיים כדי שהזוגות יתחילו לסמן העדפות",
+        tab: "songs" as const,
+      },
+      {
+        label: "לשלוח שאלון לזוג ראשון",
+        done: coupleEvents.length > 0,
+        detail: coupleEvents.length > 0 ? `${coupleEvents.length} זוגות כבר קיבלו שאלון` : "צור קישור לשאלון הזוגות ושלח אותו ללקוח הראשון",
+        tab: "couples" as const,
+      },
+    ],
+    [activeQuestions, activeSongs, coupleEvents.length, profileReadiness.score]
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-brand-blue" />
-          דשבורד
-        </h2>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowFixes(true)}
-            className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
-          >
-            <ListTodo className="w-4 h-4" />
-            תיקונים
-          </button>
-
-          {event && (
-            <button
-              onClick={() => {
-                const data = {
-                  event,
-                  answers,
-                  swipes: swipes.map((s) => ({
-                    ...s,
-                    songTitle: songs.find((song) => song.id === s.songId)?.title,
-                    songArtist: songs.find((song) => song.id === s.songId)?.artist,
-                  })),
-                  requests,
-                  upsellClicks,
-                  analytics,
-                  exportedAt: new Date().toISOString(),
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `compakt-brief-${event.magicToken?.slice(0, 8) || "draft"}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
-            >
-              <Download className="w-4 h-4" />
-              ייצוא JSON
-            </button>
-          )}
-        </div>
-      </div>
-
-      {showFixes && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center px-4"
-          onClick={() => setShowFixes(false)}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="glass-card w-full max-w-lg p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <ListTodo className="w-5 h-5 text-brand-blue" />
-                <h3 className="font-bold">תיקונים</h3>
-                <span className="text-xs text-muted">({fixes.filter((f) => !f.done).length} פתוחים)</span>
-              </div>
-              <button
-                onClick={() => setShowFixes(false)}
-                className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
-                aria-label="סגור"
-              >
-                <X className="w-4 h-4" />
-              </button>
+    <div className="space-y-5">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-[24px] border border-white/10 bg-[rgba(12,16,24,0.72)] backdrop-blur-xl shadow-[0_16px_36px_rgba(0,0,0,0.18)] p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] text-muted">
+              <BarChart3 className="w-3.5 h-3.5 text-brand-blue" />
+              מרכז הבקרה שלך
             </div>
-
-            <div className="flex gap-2 mb-4">
-              <input
-                value={newFixText}
-                onChange={(e) => setNewFixText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
-                  const text = newFixText.trim();
-                  if (!text) return;
-                  setFixes((prev) => [
-                    { id: crypto.randomUUID(), text, done: false },
-                    ...prev,
-                  ]);
-                  setNewFixText("");
-                }}
-                placeholder="הוסף תיקון…"
-                className="flex-1 px-3 py-2.5 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors"
-              />
-              <button
-                onClick={() => {
-                  const text = newFixText.trim();
-                  if (!text) return;
-                  setFixes((prev) => [
-                    { id: crypto.randomUUID(), text, done: false },
-                    ...prev,
-                  ]);
-                  setNewFixText("");
-                }}
-                className="btn-primary text-sm flex items-center gap-1.5 py-2.5 px-4"
-              >
-                <Plus className="w-4 h-4" />
-                הוסף
-              </button>
+            <div>
+              <h2 className="text-2xl font-bold">דשבורד DJ</h2>
+              <p className="text-sm text-secondary mt-1">{summaryLine}</p>
             </div>
-
-            <div className="space-y-2 max-h-[55vh] overflow-auto pr-1">
-              {fixes.length === 0 ? (
-                <div className="text-sm text-muted text-center py-10">
-                  אין תיקונים עדיין
-                </div>
-              ) : (
-                fixes.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-glass"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={item.done}
-                      onChange={() =>
-                        setFixes((prev) =>
-                          prev.map((f) =>
-                            f.id === item.id ? { ...f, done: !f.done } : f
-                          )
-                        )
-                      }
-                      className="w-4 h-4"
-                    />
-                    <span
-                      className={`text-sm flex-1 ${item.done ? "line-through text-muted" : ""}`}
-                    >
-                      {item.text}
-                    </span>
-                    <button
-                      onClick={() => setFixes((prev) => prev.filter((f) => f.id !== item.id))}
-                      className="p-2 rounded-lg text-muted hover:text-accent-danger transition-colors"
-                      aria-label="מחק"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {fixes.length > 0 && (
-              <div className="flex items-center justify-between mt-4 gap-2">
-                <button
-                  onClick={() => setFixes((prev) => prev.filter((f) => !f.done))}
-                  className="text-xs text-secondary hover:text-foreground transition-colors"
-                >
-                  נקה שבוצעו
-                </button>
-                <button
-                  onClick={() => {
-                    if (!confirm("למחוק את כל הרשימה?")) return;
-                    setFixes([]);
-                  }}
-                  className="text-xs"
-                  style={{ color: "var(--accent-danger)" }}
-                >
-                  מחק הכל
-                </button>
-              </div>
-            )}
-          </motion.div>
-        </div>
-      )}
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard
-          icon={<Music className="w-5 h-5" />}
-          label="שירים בספרייה"
-          value={songs.length}
-          color="#059cc0"
-        />
-        <StatCard
-          icon={<HelpCircle className="w-5 h-5" />}
-          label="שאלות פעילות"
-          value={questions.filter((q) => q.isActive).length}
-          color="#03b28c"
-        />
-        <StatCard
-          icon={<Sparkles className="w-5 h-5" />}
-          label="שדרוגים"
-          value={upsells.filter((u) => u.isActive).length}
-          color="#f5c542"
-        />
-        <StatCard
-          icon={<TrendingUp className="w-5 h-5" />}
-          label="קליקים על שדרוגים"
-          value={stats.totalUpsellClicks}
-          color="#059cc0"
-        />
-      </div>
-
-      {/* DB Health Status */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="glass-card p-5"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-sm flex items-center gap-2">
-            {health?.healthy ? (
-              <ShieldCheck className="w-4 h-4 text-brand-green" />
-            ) : health && !health.healthy ? (
-              <ShieldAlert className="w-4 h-4" style={{ color: "var(--accent-danger)" }} />
-            ) : (
-              <ShieldCheck className="w-4 h-4 text-muted" />
-            )}
-            בריאות DB
-          </h3>
-          <button
-            onClick={loadHealth}
-            disabled={healthLoading}
-            className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
-            title="רענן"
-          >
-            {healthLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-
-        {health ? (
-          <>
-            <div className="flex gap-3 mb-3">
-              <span className="flex items-center gap-1 text-xs text-brand-green">
-                <CheckCircle className="w-3.5 h-3.5" /> {health.summary.pass} תקין
-              </span>
-              {health.summary.warn > 0 && (
-                <span className="flex items-center gap-1 text-xs" style={{ color: "var(--accent-gold)" }}>
-                  <AlertTriangle className="w-3.5 h-3.5" /> {health.summary.warn} אזהרות
-                </span>
-              )}
-              {health.summary.fail > 0 && (
-                <span className="flex items-center gap-1 text-xs" style={{ color: "var(--accent-danger)" }}>
-                  <ShieldAlert className="w-3.5 h-3.5" /> {health.summary.fail} בעיות
-                </span>
-              )}
-            </div>
-
-            {/* Show failed/warned checks */}
-            {health.checks.filter((c) => c.status !== "pass").length > 0 && (
-              <div className="space-y-1.5 mb-2">
-                {health.checks
-                  .filter((c) => c.status !== "pass")
-                  .map((c) => (
-                    <div
-                      key={c.name}
-                      className="flex items-start gap-2 text-xs p-2 rounded-lg border border-glass"
-                    >
-                      {c.status === "fail" ? (
-                        <ShieldAlert className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "var(--accent-danger)" }} />
-                      ) : (
-                        <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "var(--accent-gold)" }} />
-                      )}
-                      <span className="text-secondary">{c.detail}</span>
-                    </div>
-                  ))}
-              </div>
-            )}
-
-            {/* Toggle all checks */}
-            <button
-              onClick={() => setShowAllChecks(!showAllChecks)}
-              className="text-xs text-secondary hover:text-foreground transition-colors"
-            >
-              {showAllChecks ? "הסתר פירוט" : `הצג את כל ${health.checks.length} הבדיקות`}
-            </button>
-
-            {showAllChecks && (
-              <div className="space-y-1 mt-2">
-                {health.checks.map((c) => (
-                  <div key={c.name} className="flex items-center gap-2 text-xs">
-                    {c.status === "pass" ? (
-                      <CheckCircle className="w-3 h-3 text-brand-green shrink-0" />
-                    ) : c.status === "fail" ? (
-                      <ShieldAlert className="w-3 h-3 shrink-0" style={{ color: "var(--accent-danger)" }} />
-                    ) : (
-                      <AlertTriangle className="w-3 h-3 shrink-0" style={{ color: "var(--accent-gold)" }} />
-                    )}
-                    <span className="text-muted">{c.detail}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        ) : healthLoading ? (
-          <div className="text-xs text-muted flex items-center gap-2">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" /> בודק...
           </div>
-        ) : (
-          <div className="text-xs text-muted">לא ניתן לטעון בדיקת בריאות</div>
-        )}
+          <div className="flex flex-wrap gap-2">
+            <QuickActionButton label="שאלונים" onClick={() => dispatchAdminTabChange("couples")} />
+            <QuickActionButton label="אירועים" onClick={() => dispatchAdminTabChange("events")} />
+            <QuickActionButton label="פרופיל" onClick={() => dispatchAdminTabChange("profile")} />
+          </div>
+        </div>
       </motion.div>
 
-      {/* Current Event */}
-      {event ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-5"
-        >
-          <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
-            <Users className="w-4 h-4 text-brand-blue" />
-            אירוע נוכחי
-          </h3>
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <MetricCard label="שאלונים בתהליך" value={dashboardData.incompleteCouples.length} sublabel="דורשים מעקב" tone="brand" />
+        <MetricCard label="השלימו מלא" value={dashboardData.completedCouples.length} sublabel="זוגות שסיימו" tone="success" />
+        <MetricCard label="אירועים קרובים" value={dashboardData.nextWeekEvents.length} sublabel="7 ימים קדימה" tone="warn" />
+        <MetricCard label="מוכנות מערכת" value={`${Math.round((profileReadiness.score + Math.min(activeSongs * 5, 100) + Math.min(activeQuestions * 10, 100)) / 3)}%`} sublabel="פרופיל, שירים ושאלון" tone="neutral" />
+      </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <p className="text-xs text-muted">סוג</p>
-              <p className="font-medium text-sm">
-                {event.eventType === "wedding"
-                  ? "חתונה 💍"
-                  : event.eventType === "bar_mitzvah"
-                    ? "בר/בת מצווה 🎉"
-                    : event.eventType === "private"
-                      ? "אירוע פרטי 🎈"
-                      : event.eventType === "corporate"
-                        ? "עסקי 🏢"
-                        : "אחר"}
-              </p>
-            </div>
-            {(event.coupleNameA || event.coupleNameB) && (
-              <div>
-                <p className="text-xs text-muted">שמות</p>
-                <p className="font-medium text-sm">
-                  {[event.coupleNameA, event.coupleNameB].filter(Boolean).join(" & ")}
-                </p>
-              </div>
-            )}
-            {event.eventDate && (
-              <div>
-                <p className="text-xs text-muted">תאריך</p>
-                <p className="font-medium text-sm">{event.eventDate}</p>
-              </div>
-            )}
-            {event.venue && (
-              <div>
-                <p className="text-xs text-muted">מקום</p>
-                <p className="font-medium text-sm">{event.venue}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-muted">שלב נוכחי</p>
-              <p className="font-medium text-sm">
-                {event.currentStage}/4 ({stats.completionRate}%)
-              </p>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="w-full h-2 rounded-full bg-brand-gray/30 overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${stats.completionRate}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="h-full rounded-full"
-              style={{ background: "linear-gradient(90deg, #059cc0, #03b28c)" }}
-            />
-          </div>
-        </motion.div>
-      ) : (
-        <div className="glass-card p-8 text-center text-muted text-sm">
-          <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          אין אירוע פעיל כרגע
-        </div>
-      )}
-
-      {/* Swipe Analytics */}
-      {stats.totalSwipes > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="glass-card p-5"
-        >
-          <h3 className="font-bold text-sm mb-4">סטטיסטיקת שירים</h3>
-
-          <div className="grid grid-cols-4 gap-3 mb-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <Heart className="w-4 h-4 text-brand-green" fill="var(--accent-secondary)" />
-              </div>
-              <p className="text-lg font-bold text-brand-green">{stats.likes}</p>
-              <p className="text-xs text-muted">אהבו</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <Star className="w-4 h-4" style={{ color: "var(--accent-gold)" }} fill="var(--accent-gold)" />
-              </div>
-              <p className="text-lg font-bold" style={{ color: "var(--accent-gold)" }}>
-                {stats.superLikes}
-              </p>
-              <p className="text-xs text-muted">!סופר</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <XCircle className="w-4 h-4" style={{ color: "var(--accent-danger)" }} />
-              </div>
-              <p className="text-lg font-bold" style={{ color: "var(--accent-danger)" }}>
-                {stats.dislikes}
-              </p>
-              <p className="text-xs text-muted">לא אהבו</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <HelpCircle className="w-4 h-4 text-muted" />
-              </div>
-              <p className="text-lg font-bold text-muted">{stats.unsure}</p>
-              <p className="text-xs text-muted">לא בטוח</p>
-            </div>
-          </div>
-
-          {/* Visual bar */}
-          <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
-            {stats.likes > 0 && (
-              <div
-                className="rounded-full"
-                style={{
-                  width: `${(stats.likes / stats.totalSwipes) * 100}%`,
-                  background: "var(--accent-secondary)",
-                }}
-              />
-            )}
-            {stats.superLikes > 0 && (
-              <div
-                className="rounded-full"
-                style={{
-                  width: `${(stats.superLikes / stats.totalSwipes) * 100}%`,
-                  background: "var(--accent-gold)",
-                }}
-              />
-            )}
-            {stats.dislikes > 0 && (
-              <div
-                className="rounded-full"
-                style={{
-                  width: `${(stats.dislikes / stats.totalSwipes) * 100}%`,
-                  background: "var(--accent-danger)",
-                }}
-              />
-            )}
-            {stats.unsure > 0 && (
-              <div
-                className="rounded-full bg-muted"
-                style={{
-                  width: `${(stats.unsure / stats.totalSwipes) * 100}%`,
-                }}
-              />
-            )}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Top Dislike Reasons */}
-      {stats.sortedReasons.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="glass-card p-5"
-        >
-          <h3 className="font-bold text-sm mb-3">סיבות דחייה נפוצות</h3>
-          <div className="space-y-2">
-            {stats.sortedReasons.map(([reason, count]) => (
-              <div key={reason} className="flex items-center gap-3">
-                <span className="text-sm flex-1">{reason}</span>
-                <div className="flex-1 h-2 rounded-full bg-brand-gray/30 overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${(count / stats.dislikes) * 100}%`,
-                      background: "var(--accent-danger)",
-                      opacity: 0.7,
-                    }}
-                  />
+      <SectionCard title="צ׳ק ליסט השקה מהיר" subtitle="המסלול הקצר ביותר ל-DJ חדש לפני שליחה ללקוחות">
+        <div className="grid md:grid-cols-2 gap-3">
+          {launchChecklist.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => dispatchAdminTabChange(item.tab)}
+              className="w-full rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-right hover:bg-white/[0.05] transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{item.label}</p>
+                  <p className="text-xs text-secondary mt-1 leading-5">{item.detail}</p>
                 </div>
-                <span className="text-xs text-muted w-8 text-left">{count}</span>
+                <span className={`inline-flex px-2.5 py-1 rounded-full border text-[11px] shrink-0 ${item.done ? "border-brand-green/20 bg-brand-green/10 text-brand-green" : "border-white/10 bg-black/15 text-muted"}`}>
+                  {item.done ? "מוכן" : "השלם"}
+                </span>
               </div>
+            </button>
+          ))}
+        </div>
+      </SectionCard>
+
+      <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-4">
+        <SectionCard
+          title="דורש טיפול עכשיו"
+          subtitle="רק מה שבאמת צריך ממך פעולה"
+          action={(
+            <button onClick={loadCoupleEvents} className="p-2 rounded-xl text-muted hover:text-foreground transition-colors" aria-label="רענן">
+              <RefreshCw className={`w-4 h-4 ${couplesLoading ? "animate-spin" : ""}`} />
+            </button>
+          )}
+        >
+          {!profileId ? (
+            <LoadingState label="טוען את סביבת הזוגות שלך..." />
+          ) : couplesLoading && dashboardData.attentionItems.length === 0 ? (
+            <LoadingState label="טוען משימות..." />
+          ) : dashboardData.attentionItems.length === 0 ? (
+            <EmptyState icon={<CheckCircle2 className="w-5 h-5 text-brand-green" />} title="אין משהו דחוף כרגע" detail="כל הזוגות והאירועים במצב יציב כרגע." />
+          ) : (
+            <div className="space-y-2.5">
+              {dashboardData.attentionItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => dispatchAdminTabChange(item.tab)}
+                  className="w-full rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-right hover:bg-white/[0.05] transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className={`inline-flex w-2.5 h-2.5 rounded-full ${item.tone === "danger" ? "bg-[var(--accent-danger)]" : item.tone === "warn" ? "bg-[var(--accent-gold)]" : "bg-brand-blue"}`} />
+                        <p className="text-sm font-semibold">{item.title}</p>
+                      </div>
+                      <p className="text-xs text-secondary leading-5">{item.detail}</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-brand-blue whitespace-nowrap">
+                      {item.cta}
+                      <ArrowLeft className="w-3 h-3" />
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="מוכנות והגדרות" subtitle="מה חסר כדי להרגיש מוכן לעבודה">
+          <div className="space-y-2.5">
+            {dashboardData.readinessItems.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => dispatchAdminTabChange(item.tab)}
+                className="w-full rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-right hover:bg-white/[0.05] transition-colors"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{item.label}</p>
+                    <p className="text-xs text-secondary mt-1">{item.detail}</p>
+                  </div>
+                  <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${item.done ? "border-brand-green/20 bg-brand-green/10 text-brand-green" : "border-white/10 bg-black/15 text-muted"}`}>
+                    {item.done ? "מוכן" : "חסר"}
+                  </span>
+                </div>
+              </button>
             ))}
           </div>
-        </motion.div>
-      )}
+        </SectionCard>
+      </div>
 
-      {/* Requests Summary */}
-      {stats.totalRequests > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="glass-card p-5"
-        >
-          <h3 className="font-bold text-sm mb-3">בקשות</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <MiniStat label="חופשיות" count={requests.filter((r) => r.requestType === "free_text").length} />
-            <MiniStat label="✅ כן" count={requests.filter((r) => r.requestType === "do").length} />
-            <MiniStat label="❌ לא" count={requests.filter((r) => r.requestType === "dont").length} />
-            <MiniStat label="🔗 לינקים" count={requests.filter((r) => r.requestType === "link").length} />
+      <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-4">
+        <SectionCard title="אירועים קרובים" subtitle="הקרובים ביותר ללוח הזמנים שלך">
+          {eventsLoading ? (
+            <LoadingState label="טוען אירועים..." />
+          ) : eventsError ? (
+            <EmptyState icon={<AlertTriangle className="w-5 h-5" style={{ color: "var(--accent-danger)" }} />} title="לא הצלחנו לטעון אירועים" detail={eventsError} />
+          ) : dashboardData.upcomingEvents.length === 0 ? (
+            <EmptyState icon={<Calendar className="w-5 h-5 text-muted" />} title="אין אירועים קרובים" detail="כדאי ליצור אירוע חדש כדי להתחיל לנהל את הלו״ז שלך." />
+          ) : (
+            <div className="space-y-2.5">
+              {dashboardData.upcomingEvents.slice(0, 4).map((event) => {
+                const readiness = getEventReadiness(event);
+                const days = daysUntil(event.date_time);
+                return (
+                  <button
+                    key={event.id}
+                    onClick={() => dispatchAdminTabChange("events")}
+                    className="w-full rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-right hover:bg-white/[0.05] transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">{event.name}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-secondary">
+                          <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDateLabel(event.date_time)}</span>
+                          <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{event.venue || "מקום לא הוגדר"}</span>
+                        </div>
+                        {!readiness.ready && (
+                          <p className="text-[11px] mt-2" style={{ color: "var(--accent-gold)" }}>
+                            חסר: {readiness.missing.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-left shrink-0">
+                        <p className="text-[11px] text-muted">{days === null ? "ללא תאריך" : days <= 0 ? "היום" : `עוד ${days} ימים`}</p>
+                        <span className={`inline-flex mt-2 px-2.5 py-1 rounded-full border text-[11px] ${readiness.ready ? "border-brand-green/20 bg-brand-green/10 text-brand-green" : "border-white/10 bg-black/15 text-muted"}`}>
+                          {readiness.ready ? "מוכן" : "צריך בדיקה"}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="הזוגות הקרובים שלך" subtitle="מי דורש היכרות מהירה לפני כולם">
+          {!profileId ? (
+            <LoadingState label="טוען את סביבת הזוגות שלך..." />
+          ) : couplesLoading ? (
+            <LoadingState label="טוען זוגות קרובים..." />
+          ) : couplesError ? (
+            <EmptyState icon={<AlertTriangle className="w-5 h-5" style={{ color: "var(--accent-danger)" }} />} title="לא הצלחנו לטעון זוגות קרובים" detail={couplesError} />
+          ) : dashboardData.upcomingCouples.length === 0 ? (
+            <EmptyState icon={<UserRound className="w-5 h-5 text-muted" />} title="אין זוגות קרובים כרגע" detail="ברגע שייכנסו זוגות עם תאריך קרוב הם יופיעו כאן." />
+          ) : (
+            <div className="space-y-2">
+              {dashboardData.upcomingCouples.map((event) => (
+                <button
+                  key={event.id}
+                  onClick={() => dispatchAdminTabChange("couples")}
+                  className="w-full rounded-[16px] border border-white/10 bg-white/[0.03] px-3.5 py-3 text-right hover:bg-white/[0.05] transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold">{getCoupleNames(event)}</p>
+                        {event.token ? <span className="text-[11px] font-mono text-brand-blue">#{event.token}</span> : null}
+                      </div>
+                      <p className="text-[11px] text-secondary mt-1.5 leading-5">
+                        {formatDateLabel(event.event_date)} · {event.venue || "מקום לא הוגדר"}
+                      </p>
+                      <p className="text-[11px] text-muted mt-1.5 leading-5">
+                        {STAGE_LABELS[event.current_stage] || "בתהליך"} · {event.answerCount} תשובות · {event.swipeCount} שירים · {event.requestCount || 0} בקשות
+                      </p>
+                    </div>
+                    <span className={`inline-flex px-2.5 py-1 rounded-full border text-[11px] ${event.isComplete ? "border-brand-green/20 bg-brand-green/10 text-brand-green" : "border-white/10 bg-black/15 text-muted"}`}>
+                      {event.isComplete ? "הושלם" : "בתהליך"}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      </div>
+
+      <div className="grid xl:grid-cols-[1fr_1fr] gap-4">
+        <SectionCard title="פעילות אחרונה של זוגות" subtitle="מי נכנס, המשיך או סיים לאחרונה">
+          {!profileId ? (
+            <LoadingState label="טוען את סביבת הזוגות שלך..." />
+          ) : couplesLoading ? (
+            <LoadingState label="טוען פעילות..." />
+          ) : couplesError ? (
+            <EmptyState icon={<AlertTriangle className="w-5 h-5" style={{ color: "var(--accent-danger)" }} />} title="לא הצלחנו לטעון פעילות זוגות" detail={couplesError} />
+          ) : dashboardData.recentCoupleActivity.length === 0 ? (
+            <EmptyState icon={<UserRound className="w-5 h-5 text-muted" />} title="עדיין אין פעילות זוגות" detail="ברגע שזוגות יתחילו להיכנס, הפעילות תופיע כאן." />
+          ) : (
+            <div className="space-y-2.5">
+              {dashboardData.recentCoupleActivity.map((event) => (
+                <button
+                  key={event.id}
+                  onClick={() => dispatchAdminTabChange("couples")}
+                  className="w-full rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-right hover:bg-white/[0.05] transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{getCoupleNames(event)}</p>
+                      <p className="text-xs text-secondary mt-1">
+                        {STAGE_LABELS[event.current_stage] || "בתהליך"} · {event.answerCount} תשובות · {event.swipeCount} שירים · {event.requestCount || 0} בקשות
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2 text-[11px] text-muted">
+                        {event.token ? <span>#{event.token}</span> : null}
+                        {event.email ? <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{event.email}</span> : null}
+                      </div>
+                    </div>
+                    <div className="text-left shrink-0">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full border text-[11px] ${event.isComplete ? "border-brand-green/20 bg-brand-green/10 text-brand-green" : "border-white/10 bg-black/15 text-muted"}`}>
+                        {event.isComplete ? "הושלם" : "בתהליך"}
+                      </span>
+                      <p className="text-[10px] text-muted mt-2">{formatDateLabel(event.updated_at || event.created_at)}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="סיכום חכם" subtitle="כמה מספרים שבאמת עוזרים לעבוד">
+          <div className="grid grid-cols-2 gap-3">
+            <InsightCard title="זוגות באמצע הדרך" value={dashboardData.incompleteCouples.length} detail="עדיין לא סיימו את התהליך" icon={<Clock3 className="w-4 h-4 text-brand-blue" />} />
+            <InsightCard title="ממתינים לשירים" value={dashboardData.waitingForSongs.length} detail="מילאו שאלון אבל עוד לא בחרו שירים" icon={<Music className="w-4 h-4 text-brand-blue" />} />
+            <InsightCard title="שלמו מלא" value={dashboardData.completedCouples.length} detail="מוכנים לעבור על החומר" icon={<CheckCircle2 className="w-4 h-4 text-brand-green" />} />
+            <InsightCard title="איכות מקצועית" value={`${profileReadiness.score}%`} detail="מוכנות הפרופיל שלך כלפי לקוחות" icon={<Sparkles className="w-4 h-4" style={{ color: "var(--accent-gold)" }} />} />
           </div>
-        </motion.div>
-      )}
-    </div>
+        </SectionCard>
+
+        <SectionCard
+          title="עזרה ופידבק"
+          subtitle="כאן נוסיף דיווח בעיות והערות ישירות למערכת"
+          action={(
+            <button className="inline-flex items-center gap-1 text-[11px] text-brand-blue">
+              בקרוב
+            </button>
+          )}
+        >
+          <div className="rounded-[18px] border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl border border-white/10 bg-black/15 flex items-center justify-center shrink-0">
+                <MessageCircleWarning className="w-4.5 h-4.5 text-brand-blue" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">דווח בעיה / שלח הערה</p>
+                <p className="text-xs text-secondary mt-1 leading-5">
+                  בשלב הבא נוסיף כאן טופס קצר שיאפשר לך לדווח ישירות על באגים, תקלות או רעיונות — ובהמשך נחבר אותו לאייג׳נט שיטפל בדיווחים.
+                </p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <span className="text-[11px] px-2.5 py-1 rounded-full border border-white/10 bg-black/15 text-muted">בעיה טכנית</span>
+                  <span className="text-[11px] px-2.5 py-1 rounded-full border border-white/10 bg-black/15 text-muted">רעיון לשיפור</span>
+                  <span className="text-[11px] px-2.5 py-1 rounded-full border border-white/10 bg-black/15 text-muted">פידבק מהשטח</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+      </div>
+    </div >
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  color,
+function QuickActionButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm text-secondary hover:text-foreground hover:bg-white/[0.05] transition-colors"
+    >
+      {label}
+    </button>
+  );
+}
+
+function SectionCard({
+  title,
+  subtitle,
+  action,
+  children,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  color: string;
+  title: string;
+  subtitle: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="glass-card p-4 text-center"
-    >
-      <div className="flex justify-center mb-2" style={{ color }}>
-        {icon}
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-[24px] border border-white/10 bg-[rgba(12,16,24,0.72)] backdrop-blur-xl shadow-[0_16px_36px_rgba(0,0,0,0.16)] p-5">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 className="text-base font-bold">{title}</h3>
+          <p className="text-xs text-secondary mt-1">{subtitle}</p>
+        </div>
+        {action}
       </div>
-      <p className="text-2xl font-bold" style={{ color }}>
-        {value}
-      </p>
-      <p className="text-xs text-muted">{label}</p>
+      {children}
     </motion.div>
   );
 }
 
-function MiniStat({ label, count }: { label: string; count: number }) {
+function MetricCard({
+  label,
+  value,
+  sublabel,
+  tone,
+}: {
+  label: string;
+  value: number | string;
+  sublabel: string;
+  tone: "brand" | "success" | "warn" | "neutral";
+}) {
+  const toneClass =
+    tone === "success"
+      ? "text-brand-green"
+      : tone === "warn"
+        ? "text-[var(--accent-gold)]"
+        : tone === "neutral"
+          ? "text-foreground"
+          : "text-brand-blue";
+
   return (
-    <div className="text-center p-2 rounded-xl border border-glass">
-      <p className="text-lg font-bold">{count}</p>
+    <div className="rounded-[20px] border border-white/10 bg-[rgba(12,16,24,0.68)] backdrop-blur-xl p-4 shadow-[0_10px_24px_rgba(0,0,0,0.14)]">
       <p className="text-xs text-muted">{label}</p>
+      <p className={`text-2xl font-bold mt-1 ${toneClass}`}>{value}</p>
+      <p className="text-[11px] text-secondary mt-1">{sublabel}</p>
+    </div>
+  );
+}
+
+function InsightCard({
+  title,
+  value,
+  detail,
+  icon,
+}: {
+  title: string;
+  value: number | string;
+  detail: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-[18px] border border-white/10 bg-white/[0.03] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold">{title}</p>
+        {icon}
+      </div>
+      <p className="text-2xl font-bold mt-3">{value}</p>
+      <p className="text-[11px] text-secondary mt-1 leading-5">{detail}</p>
+    </div>
+  );
+}
+
+function LoadingState({ label }: { label: string }) {
+  return (
+    <div className="flex items-center justify-center py-10 text-sm text-muted gap-2">
+      <Loader2 className="w-4 h-4 animate-spin text-brand-blue" />
+      {label}
+    </div>
+  );
+}
+
+function EmptyState({
+  icon,
+  title,
+  detail,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-[18px] border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
+      <div className="flex justify-center mb-2">{icon}</div>
+      <p className="text-sm font-medium">{title}</p>
+      <p className="text-xs text-secondary mt-2 leading-5">{detail}</p>
     </div>
   );
 }

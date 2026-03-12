@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     const supabase = getServiceSupabase();
 
     if (id || slug) {
-      let query = supabase.from("profiles").select("id, business_name, dj_slug");
+      let query = supabase.from("profiles").select("id, business_name, dj_slug, logo_url");
 
       if (id) {
         query = query.or(`id.eq.${id},user_id.eq.${id}`);
@@ -33,13 +33,14 @@ export async function GET(req: Request) {
           id: data.id,
           business_name: typeof data.business_name === "string" ? data.business_name : "",
           dj_slug: typeof data.dj_slug === "string" ? data.dj_slug : "",
+          logo_url: typeof data.logo_url === "string" ? data.logo_url : "",
         },
       });
     }
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, business_name, dj_slug")
+      .select("id, business_name, dj_slug, logo_url")
       .not("dj_slug", "is", null)
       .order("business_name", { ascending: true });
 
@@ -59,6 +60,7 @@ export async function GET(req: Request) {
           id: row.id,
           business_name: typeof row.business_name === "string" ? row.business_name : "",
           dj_slug: row.dj_slug,
+          logo_url: typeof row.logo_url === "string" ? row.logo_url : "",
         }))
       : [];
 

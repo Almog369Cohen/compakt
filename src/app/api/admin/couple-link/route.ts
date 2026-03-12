@@ -37,7 +37,101 @@ export async function POST(req: Request) {
     const eventOwnerId = isUuid(auth.userId) ? auth.userId : profileId;
 
     const body = await req.json();
-    const { eventType, coupleNameA, coupleNameB, eventDate, venue, contactPhone } = body;
+    const { action, eventId, eventType, coupleNameA, coupleNameB, eventDate, venue, contactPhone } = body;
+
+    const ownerIds = Array.from(new Set([auth.userId, profileId].filter((value): value is string => Boolean(value))));
+
+    if (action === "get_event_detail") {
+      if (!eventId) {
+        return NextResponse.json({ error: "Missing eventId" }, { status: 400 });
+      }
+
+      const { data: event, error: eventError } = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", eventId)
+        .in("dj_id", ownerIds)
+        .maybeSingle();
+
+      if (eventError) {
+        return NextResponse.json({ error: eventError.message }, { status: 500 });
+      }
+
+      if (!event) {
+        return NextResponse.json({ error: "Event not found" }, { status: 404 });
+      }
+
+      const [answersResult, swipesResult, requestsResult] = await Promise.all([
+        supabase.from("answers").select("*").eq("event_id", eventId).order("created_at", { ascending: true }),
+        supabase.from("swipes").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
+        supabase.from("requests").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
+      ]);
+
+      if (answersResult.error || swipesResult.error || requestsResult.error) {
+        const firstError = answersResult.error || swipesResult.error || requestsResult.error;
+        return NextResponse.json({ error: firstError?.message || "Failed to load event detail" }, { status: 500 });
+      }
+
+      const answerQuestionIds = Array.from(
+        new Set((answersResult.data || []).map((answer: Record<string, unknown>) => answer.question_id).filter((value): value is string => typeof value === "string" && value.length > 0))
+      );
+      const swipeSongIds = Array.from(
+        new Set((swipesResult.data || []).map((swipe: Record<string, unknown>) => swipe.song_id).filter((value): value is string => typeof value === "string" && value.length > 0))
+      );
+
+      const [questionsResult, songsResult] = await Promise.all([
+        answerQuestionIds.length > 0
+          ? supabase.from("questions").select("*").in("id", answerQuestionIds).order("sort_order", { ascending: true })
+          : Promise.resolve({ data: [], error: null }),
+        swipeSongIds.length > 0
+          ? supabase.from("songs").select("*").in("id", swipeSongIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      return NextResponse.json({
+        event,
+        answers: answersResult.data || [],
+        swipes: swipesResult.data || [],
+        requests: requestsResult.data || [],
+        questions: questionsResult.data || [],
+        songs: songsResult.data || [],
+      });
+    }
+
+    if (action === "update_event_meta") {
+      if (!eventId) {
+        return NextResponse.json({ error: "Missing eventId" }, { status: 400 });
+      }
+
+      const { data: existingEvent, error: existingEventError } = await supabase
+        .from("events")
+        .select("id")
+        .eq("id", eventId)
+        .in("dj_id", ownerIds)
+        .maybeSingle();
+
+      if (existingEventError) {
+        return NextResponse.json({ error: existingEventError.message }, { status: 500 });
+      }
+
+      if (!existingEvent) {
+        return NextResponse.json({ error: "Event not found" }, { status: 404 });
+      }
+
+      const { error: updateError } = await supabase
+        .from("events")
+        .update({
+          event_date: eventDate || "",
+          venue: venue || "",
+        })
+        .eq("id", eventId);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ ok: true });
+    }
 
     const token = generateMagicToken();
     const eventNumber = generateEventNumber();

@@ -67,11 +67,16 @@ export async function POST(req: Request) {
             .select("*")
             .eq("event_id", session.event_id);
 
-        const hasProgress = (answers?.length || 0) > 0 || (swipes?.length || 0) > 0;
+        const hasProgress =
+            (answers?.length || 0) > 0 ||
+            (swipes?.length || 0) > 0 ||
+            (requests?.length || 0) > 0 ||
+            (event?.current_stage || 0) > 0;
 
         return NextResponse.json({
             verified: true,
             sessionId,
+            eventKey: event?.magic_token || null,
             event,
             resumeData: hasProgress
                 ? {

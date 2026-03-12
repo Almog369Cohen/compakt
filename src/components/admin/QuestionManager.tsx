@@ -1,177 +1,442 @@
 "use client";
 
-import { useState } from "react";
-import { useAdminStore } from "@/stores/adminStore";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Plus,
+  ArrowDown,
+  ArrowUp,
+  Copy,
   Edit3,
-  Trash2,
-  X,
   Eye,
   EyeOff,
   GripVertical,
   HelpCircle,
+  LayoutPanelTop,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2,
+  X,
 } from "lucide-react";
-import type { Question, QuestionType, EventType } from "@/lib/types";
+import { useAdminStore } from "@/stores/adminStore";
+import type { EventType, Question, QuestionType } from "@/lib/types";
+import {
+  GUEST_CALCULATOR_QUESTION_ID,
+  guestCalculatorDefaultQuestion,
+} from "@/data/questions";
 
-const questionTypes: { value: QuestionType; label: string }[] = [
-  { value: "single_select", label: "בחירה יחידה" },
-  { value: "multi_select", label: "בחירה מרובה" },
-  { value: "slider", label: "סליידר" },
-  { value: "text", label: "טקסט חופשי" },
+const questionTypes: { value: QuestionType; label: string; description: string }[] = [
+  { value: "single_select", label: "בחירה אחת", description: "הזוג בוחר תשובה אחת מתוך רשימה" },
+  { value: "multi_select", label: "בחירה מרובה", description: "הזוג יכול לבחור כמה אפשרויות" },
+  { value: "slider", label: "סקאלה", description: "בחירה על ציר של רגש, עוצמה או העדפה" },
+  { value: "text", label: "תשובה פתוחה", description: "הזוג כותב תשובה חופשית" },
 ];
 
 const eventTypes: { value: EventType; label: string }[] = [
   { value: "wedding", label: "חתונה" },
   { value: "bar_mitzvah", label: "בר/בת מצווה" },
   { value: "private", label: "אירוע פרטי" },
-  { value: "corporate", label: "עסקי" },
+  { value: "corporate", label: "אירוע עסקי" },
 ];
+
+type EditorOption = {
+  id: string;
+  label: string;
+  value: string;
+};
+
+type EditorState = {
+  questionHe: string;
+  questionType: QuestionType;
+  eventTypes: EventType[];
+  options: EditorOption[];
+  sliderMin: number;
+  sliderMax: number;
+  sliderLabels: string[];
+  isActive: boolean;
+};
+
+function createOption(label = "", value = ""): EditorOption {
+  return {
+    id: crypto.randomUUID(),
+    label,
+    value,
+  };
+}
+
+function slugifyValue(input: string) {
+  const normalized = input
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_\u0590-\u05ff-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return normalized || `option_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createDefaultState(eventType: EventType): EditorState {
+  return {
+    questionHe: "",
+    questionType: "single_select",
+    eventTypes: [eventType],
+    options: [createOption("", ""), createOption("", "")],
+    sliderMin: 1,
+    sliderMax: 5,
+    sliderLabels: ["רגוע", "זורם", "מקפיץ", "אש", "פסטיבל"],
+    isActive: true,
+  };
+}
+
+function mapQuestionToState(question: Question): EditorState {
+  return {
+    questionHe: question.questionHe,
+    questionType: question.questionType,
+    eventTypes: question.eventTypes?.length ? question.eventTypes : [question.eventType],
+    options: question.options?.length
+      ? question.options.map((option) => createOption(option.label, option.value))
+      : [createOption("", ""), createOption("", "")],
+    sliderMin: question.sliderMin ?? 1,
+    sliderMax: question.sliderMax ?? 5,
+    sliderLabels: question.sliderLabels?.length ? question.sliderLabels : ["רגוע", "זורם", "מקפיץ", "אש", "פסטיבל"],
+    isActive: question.isActive,
+  };
+}
+
+function mapStateToQuestion(state: EditorState): Omit<Question, "id" | "sortOrder"> {
+  const normalizedQuestionType = state.questionType === "guest_calculator" ? "single_select" : state.questionType;
+  const normalizedOptions =
+    normalizedQuestionType === "single_select" || normalizedQuestionType === "multi_select"
+      ? state.options
+        .map((option) => ({
+          label: option.label.trim(),
+          value: option.value.trim() || slugifyValue(option.label),
+        }))
+        .filter((option) => option.label.length > 0)
+      : undefined;
+
+  return {
+    questionHe: state.questionHe.trim(),
+    questionType: normalizedQuestionType,
+    eventType: state.eventTypes[0] ?? "wedding",
+    eventTypes: state.eventTypes,
+    options: normalizedOptions,
+    sliderMin: normalizedQuestionType === "slider" ? Math.min(state.sliderMin, state.sliderMax) : undefined,
+    sliderMax: normalizedQuestionType === "slider" ? Math.max(state.sliderMin, state.sliderMax) : undefined,
+    sliderLabels:
+      normalizedQuestionType === "slider"
+        ? state.sliderLabels.map((label) => label.trim()).filter(Boolean)
+        : undefined,
+    isActive: state.isActive,
+  };
+}
+
+function getQuestionTypeMeta(value: QuestionType) {
+  if (value === "guest_calculator") {
+    return {
+      value,
+      label: "מחשבון אורחים",
+      description: "שאלה מובנית שמאפשרת לזוג לפרט את כמות האורחים לפי קבוצות",
+    };
+  }
+  return questionTypes.find((type) => type.value === value) ?? questionTypes[0];
+}
 
 export function QuestionManager() {
   const questions = useAdminStore((s) => s.questions);
   const addQuestion = useAdminStore((s) => s.addQuestion);
   const updateQuestion = useAdminStore((s) => s.updateQuestion);
   const deleteQuestion = useAdminStore((s) => s.deleteQuestion);
+  const reorderQuestions = useAdminStore((s) => s.reorderQuestions);
 
-  const [filterType, setFilterType] = useState<string>("wedding");
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [filterType, setFilterType] = useState<EventType>("wedding");
+  const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [questionMutationError, setQuestionMutationError] = useState<string | null>(null);
 
-  const filtered = questions
-    .filter((q) => q.eventType === filterType)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const filtered = useMemo(
+    () =>
+      questions
+        .filter((question) =>
+          (question.eventTypes?.length ? question.eventTypes : [question.eventType]).includes(filterType)
+        )
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [filterType, questions]
+  );
+
+  const moveQuestion = (questionId: string, direction: "up" | "down") => {
+    const index = filtered.findIndex((question) => question.id === questionId);
+    if (index === -1) return;
+
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= filtered.length) return;
+
+    const reorderedCurrentType = [...filtered];
+    const [movedItem] = reorderedCurrentType.splice(index, 1);
+    reorderedCurrentType.splice(targetIndex, 0, movedItem);
+
+    const otherIds = questions
+      .filter(
+        (question) =>
+          !(question.eventTypes?.length ? question.eventTypes : [question.eventType]).includes(filterType)
+      )
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((question) => question.id);
+
+    reorderQuestions([...reorderedCurrentType.map((question) => question.id), ...otherIds]);
+  };
+
+  const duplicateQuestion = (question: Question) => {
+    setQuestionMutationError(null);
+    void addQuestion({
+      ...mapStateToQuestion(mapQuestionToState(question)),
+      questionHe: `${question.questionHe} (עותק)`,
+    }).catch((error) => {
+      setQuestionMutationError(
+        error instanceof Error ? error.message : "שכפול השאלה נכשל"
+      );
+    });
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <HelpCircle className="w-5 h-5 text-brand-blue" />
-          ניהול שאלות ({filtered.length})
-        </h2>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
-        >
-          <Plus className="w-4 h-4" />
-          הוסף שאלה
-        </button>
+      <div className="rounded-[24px] border border-white/10 bg-[rgba(12,16,24,0.72)] backdrop-blur-xl shadow-[0_16px_36px_rgba(0,0,0,0.16)] p-4 md:p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] text-secondary">
+              <HelpCircle className="w-3.5 h-3.5 text-brand-blue" />
+              שאלון לזוגות
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">בנק השאלות של הזוגות</h2>
+              <p className="text-sm text-secondary mt-1 max-w-3xl leading-6">
+                כאן בונים את השאלון שהזוג יקבל. כדי לעלות לאוויר בצורה חלקה, מומלץ להכין לפחות כמה שאלות ליבה שמכירות אותך עם הסגנון, הקהל והדגשים של האירוע.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              setEditorMode("create");
+              setEditingQuestion(null);
+            }}
+            className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
+          >
+            <Plus className="w-4 h-4" />
+            הוסף שאלה
+          </button>
+        </div>
       </div>
 
-      {/* Event Type Filter */}
-      <div className="flex gap-1">
-        {eventTypes.map((et) => (
+      <div className="flex gap-1 flex-wrap">
+        {eventTypes.map((eventType) => (
           <button
-            key={et.value}
-            onClick={() => setFilterType(et.value)}
-            className={`chip text-xs ${filterType === et.value ? "active" : ""}`}
+            key={eventType.value}
+            onClick={() => setFilterType(eventType.value)}
+            className={`chip text-xs ${filterType === eventType.value ? "active" : ""}`}
           >
-            {et.label}
+            {eventType.label}
           </button>
         ))}
       </div>
 
-      {/* Questions List */}
+      {questionMutationError && (
+        <div className="glass-card p-3 text-sm" style={{ color: "var(--accent-danger)" }}>
+          {questionMutationError}
+        </div>
+      )}
+
       <div className="space-y-2">
-        {filtered.map((q, i) => (
-          <motion.div
-            key={q.id}
-            layout
-            className="glass-card p-4 flex items-start gap-3"
-          >
-            <div className="text-muted cursor-grab mt-1">
-              <GripVertical className="w-4 h-4" />
-            </div>
+        {filtered.map((question, index) => {
+          const typeMeta = getQuestionTypeMeta(question.questionType);
+          const questionTargets = question.eventTypes?.length ? question.eventTypes : [question.eventType];
+          const isPinnedGuestCalculator =
+            question.questionType === "guest_calculator" || question.id === GUEST_CALCULATOR_QUESTION_ID;
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs text-brand-blue font-bold">
-                  {i + 1}.
-                </span>
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${
-                    q.isActive
-                      ? "bg-brand-green/10 text-brand-green"
-                      : "bg-accent-danger/10 text-accent-danger"
-                  }`}
-                >
-                  {q.isActive ? "פעיל" : "מוסתר"}
-                </span>
-                <span className="text-xs text-muted px-2 py-0.5 rounded-full border border-glass">
-                  {questionTypes.find((t) => t.value === q.questionType)?.label}
-                </span>
-              </div>
-              <p className="font-medium text-sm">{q.questionHe}</p>
-              {q.options && (
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {q.options.map((opt) => (
-                    <span key={opt.value} className="text-xs text-muted">
-                      {opt.label}
+          return (
+            <motion.div key={question.id} layout className="glass-card p-4">
+              <div className="flex items-start gap-3">
+                <div className="text-muted mt-1">
+                  <GripVertical className="w-4 h-4" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-xs text-brand-blue font-bold">{index + 1}.</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${question.isActive ? "bg-brand-green/10 text-brand-green" : "bg-accent-danger/10 text-accent-danger"
+                        }`}
+                    >
+                      {question.isActive ? "פעיל" : "מוסתר"}
                     </span>
-                  ))}
-                </div>
-              )}
-              {q.sliderLabels && (
-                <div className="flex gap-2 mt-1.5 text-xs text-muted">
-                  {q.sliderLabels.map((l, i) => (
-                    <span key={i}>{l}</span>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <span className="text-xs text-muted px-2 py-0.5 rounded-full border border-glass">
+                      {typeMeta.label}
+                    </span>
+                    {isPinnedGuestCalculator && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue">
+                        נעוץ
+                      </span>
+                    )}
+                  </div>
 
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={() => updateQuestion(q.id, { isActive: !q.isActive })}
-                className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
-                aria-label={q.isActive ? "הסתר" : "הצג"}
-              >
-                {q.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              </button>
-              <button
-                onClick={() => setEditingQuestion(q)}
-                className="p-1.5 rounded-lg text-muted hover:text-brand-blue transition-colors"
-                aria-label="ערוך"
-              >
-                <Edit3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => {
-                  if (confirm("למחוק את השאלה?")) deleteQuestion(q.id);
-                }}
-                className="p-1.5 rounded-lg text-muted hover:text-accent-danger transition-colors"
-                aria-label="מחק"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </motion.div>
-        ))}
+                  <p className="font-medium text-sm leading-6">{question.questionHe}</p>
+
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {questionTargets.map((target) => (
+                      <span
+                        key={`${question.id}-${target}`}
+                        className="text-xs px-2 py-1 rounded-full border border-glass text-muted"
+                      >
+                        {eventTypes.find((eventType) => eventType.value === target)?.label ?? target}
+                      </span>
+                    ))}
+                  </div>
+
+                  {question.options && question.options.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {question.options.slice(0, 4).map((option) => (
+                        <span key={option.value} className="text-xs px-2 py-1 rounded-full border border-glass text-muted">
+                          {option.label}
+                        </span>
+                      ))}
+                      {question.options.length > 4 && (
+                        <span className="text-xs px-2 py-1 rounded-full border border-glass text-muted">
+                          +{question.options.length - 4} אפשרויות
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {question.sliderLabels && question.sliderLabels.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted">
+                      {question.sliderLabels.map((label, sliderIndex) => (
+                        <span key={`${label}-${sliderIndex}`}>{label}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => moveQuestion(question.id, "up")}
+                    className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
+                    aria-label="הזז למעלה"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveQuestion(question.id, "down")}
+                    className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
+                    aria-label="הזז למטה"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setQuestionMutationError(null);
+                      try {
+                        await updateQuestion(question.id, { isActive: !question.isActive });
+                      } catch (error) {
+                        setQuestionMutationError(
+                          error instanceof Error ? error.message : "עדכון השאלה נכשל"
+                        );
+                      }
+                    }}
+                    className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
+                    aria-label={question.isActive ? "הסתר" : "הצג"}
+                  >
+                    {question.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => duplicateQuestion(question)}
+                    className="p-1.5 rounded-lg text-muted hover:text-brand-blue transition-colors"
+                    aria-label="שכפל"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingQuestion(question);
+                      setEditorMode("edit");
+                    }}
+                    className="p-1.5 rounded-lg text-muted hover:text-brand-blue transition-colors"
+                    aria-label="ערוך"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (isPinnedGuestCalculator) {
+                        return;
+                      }
+                      if (confirm("למחוק את השאלה?")) {
+                        setQuestionMutationError(null);
+                        try {
+                          await deleteQuestion(question.id);
+                        } catch (error) {
+                          setQuestionMutationError(
+                            error instanceof Error ? error.message : "מחיקת השאלה נכשלה"
+                          );
+                        }
+                      }
+                    }}
+                    disabled={isPinnedGuestCalculator}
+                    className={`p-1.5 rounded-lg transition-colors ${isPinnedGuestCalculator ? "text-muted/40 cursor-not-allowed" : "text-muted hover:text-accent-danger"}`}
+                    aria-label={isPinnedGuestCalculator ? "אי אפשר למחוק שאלה נעוצה" : "מחק"}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+
         {filtered.length === 0 && (
           <div className="glass-card p-8 text-center text-muted text-sm">
-            אין שאלות לסוג אירוע זה
+            <p>אין עדיין שאלות לסוג האירוע הזה</p>
+            <p className="text-xs text-secondary mt-2">
+              התחל מ-5 שאלות בסיסיות על אווירה, קהל, קווים אדומים ורגעים חשובים כדי שיהיה לך שאלון מוכן לשליחה.
+            </p>
           </div>
         )}
       </div>
 
-      {/* Add/Edit Modal */}
       <AnimatePresence>
-        {(showAddModal || editingQuestion) && (
-          <QuestionModal
+        {editorMode && (
+          <QuestionEditorModal
+            key={editorMode === "edit" ? editingQuestion?.id ?? "edit" : "create"}
+            mode={editorMode}
             question={editingQuestion}
-            defaultEventType={filterType as EventType}
-            onSave={(data) => {
-              if (editingQuestion) {
-                updateQuestion(editingQuestion.id, data);
-              } else {
-                addQuestion(data as Omit<Question, "id" | "sortOrder">);
-              }
-              setShowAddModal(false);
+            defaultEventType={filterType}
+            onClose={() => {
+              setEditorMode(null);
               setEditingQuestion(null);
             }}
-            onClose={() => {
-              setShowAddModal(false);
+            onSave={(payload) => {
+              setQuestionMutationError(null);
+              if (editorMode === "edit" && editingQuestion) {
+                void updateQuestion(editingQuestion.id, payload).catch((error) => {
+                  setQuestionMutationError(
+                    error instanceof Error ? error.message : "עדכון השאלה נכשל"
+                  );
+                });
+              } else {
+                void addQuestion(payload as Omit<Question, "id" | "sortOrder">).catch((error) => {
+                  setQuestionMutationError(
+                    error instanceof Error ? error.message : "יצירת השאלה נכשלה"
+                  );
+                });
+              }
+              setEditorMode(null);
               setEditingQuestion(null);
             }}
           />
@@ -181,60 +446,73 @@ export function QuestionManager() {
   );
 }
 
-function QuestionModal({
+function QuestionEditorModal({
+  mode,
   question,
   defaultEventType,
-  onSave,
   onClose,
+  onSave,
 }: {
+  mode: "create" | "edit";
   question: Question | null;
   defaultEventType: EventType;
-  onSave: (data: Partial<Question>) => void;
   onClose: () => void;
+  onSave: (payload: Partial<Question>) => void;
 }) {
-  const [questionHe, setQuestionHe] = useState(question?.questionHe || "");
-  const [questionType, setQuestionType] = useState<QuestionType>(
-    question?.questionType || "single_select"
+  const isPinnedGuestCalculator =
+    question?.questionType === "guest_calculator" || question?.id === GUEST_CALCULATOR_QUESTION_ID;
+  const [draft, setDraft] = useState<EditorState>(() =>
+    question ? mapQuestionToState(question) : createDefaultState(defaultEventType)
   );
-  const [eventType, setEventType] = useState<EventType>(
-    question?.eventType || defaultEventType
-  );
-  const [optionsText, setOptionsText] = useState(
-    question?.options?.map((o) => `${o.label}|${o.value}`).join("\n") || ""
-  );
-  const [sliderMin, setSliderMin] = useState(question?.sliderMin || 1);
-  const [sliderMax, setSliderMax] = useState(question?.sliderMax || 5);
-  const [sliderLabels, setSliderLabels] = useState(
-    question?.sliderLabels?.join(", ") || ""
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+
+  const previewQuestion = useMemo<Question>(
+    () => ({
+      id: question?.id ?? guestCalculatorDefaultQuestion.id,
+      sortOrder: question?.sortOrder ?? 0,
+      ...mapStateToQuestion(draft),
+    }),
+    [draft, question]
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const updateOption = (optionId: string, nextLabel: string) => {
+    setDraft((current) => ({
+      ...current,
+      options: current.options.map((option) =>
+        option.id === optionId
+          ? {
+            ...option,
+            label: nextLabel,
+            value: option.value || slugifyValue(nextLabel),
+          }
+          : option
+      ),
+    }));
+  };
 
-    const options =
-      questionType === "single_select" || questionType === "multi_select"
-        ? optionsText
-            .split("\n")
-            .filter(Boolean)
-            .map((line) => {
-              const [label, value] = line.split("|");
-              return { label: label.trim(), value: (value || label).trim() };
-            })
-        : undefined;
+  const saveDraft = () => {
+    const payload = mapStateToQuestion(draft);
 
-    onSave({
-      questionHe,
-      questionType,
-      eventType,
-      options,
-      sliderMin: questionType === "slider" ? sliderMin : undefined,
-      sliderMax: questionType === "slider" ? sliderMax : undefined,
-      sliderLabels:
-        questionType === "slider" && sliderLabels
-          ? sliderLabels.split(",").map((l) => l.trim())
-          : undefined,
-      isActive: true,
-    });
+    if (!payload.questionHe) {
+      setValidationMessage("צריך לכתוב את נוסח השאלה לפני ששומרים");
+      return;
+    }
+
+    if (
+      (payload.questionType === "single_select" || payload.questionType === "multi_select") &&
+      (!payload.options || payload.options.length < 2)
+    ) {
+      setValidationMessage("כדאי להוסיף לפחות 2 אפשרויות כדי שהשאלה תהיה ברורה לזוג");
+      return;
+    }
+
+    if (payload.questionType === "slider" && (payload.sliderMin ?? 0) >= (payload.sliderMax ?? 0)) {
+      setValidationMessage("בסקאלה, הערך המקסימלי חייב להיות גדול מהמינימום");
+      return;
+    }
+
+    onSave(payload);
   };
 
   return (
@@ -242,133 +520,410 @@ function QuestionModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 bg-black/70 p-4 overflow-y-auto"
       onClick={onClose}
     >
-      <motion.form
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={handleSubmit}
-        className="glass-card p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-4"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: 12 }}
+        transition={{ duration: 0.18 }}
+        onClick={(event) => event.stopPropagation()}
+        className="mx-auto w-full max-w-6xl"
       >
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-lg">
-            {question ? "עריכת שאלה" : "הוספת שאלה"}
-          </h3>
-          <button type="button" onClick={onClose} className="p-1 text-muted hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div>
-          <label className="block text-xs text-muted mb-1">טקסט השאלה (עברית) *</label>
-          <input
-            type="text"
-            value={questionHe}
-            onChange={(e) => setQuestionHe(e.target.value)}
-            required
-            placeholder="?מה האווירה שאתם חולמים עליה"
-            className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-muted mb-1">סוג שאלה</label>
-            <select
-              value={questionType}
-              onChange={(e) => setQuestionType(e.target.value as QuestionType)}
-              className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+        <div className="glass-card p-4 md:p-6">
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div>
+              <h3 className="font-bold text-lg">{mode === "edit" ? "עריכת שאלה" : "הוספת שאלה"}</h3>
+              <p className="text-sm text-muted mt-1">בצד אחד אתה עורך, ובצד השני אתה רואה איך זה ייראה לזוג.</p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl text-muted hover:text-foreground transition-colors"
+              aria-label="סגור"
             >
-              {questionTypes.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <div>
-            <label className="block text-xs text-muted mb-1">סוג אירוע</label>
-            <select
-              value={eventType}
-              onChange={(e) => setEventType(e.target.value as EventType)}
-              className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
-            >
-              {eventTypes.map((et) => (
-                <option key={et.value} value={et.value}>
-                  {et.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
 
-        {/* Options for select types */}
-        {(questionType === "single_select" || questionType === "multi_select") && (
-          <div>
-            <label className="block text-xs text-muted mb-1">
-              אפשרויות (שורה לכל אפשרות, פורמט: תווית|ערך)
-            </label>
-            <textarea
-              value={optionsText}
-              onChange={(e) => setOptionsText(e.target.value)}
-              placeholder={"מסיבה פרועה 🔥|party\nאלגנטית ✨|elegant"}
-              rows={5}
-              className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors resize-none font-mono"
-              dir="ltr"
-            />
-          </div>
-        )}
+          {validationMessage && (
+            <div className="glass-card px-4 py-3 text-sm text-brand-blue mb-4">
+              {validationMessage}
+            </div>
+          )}
 
-        {/* Slider settings */}
-        {questionType === "slider" && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-muted mb-1">מינימום</label>
-                <input
-                  type="number"
-                  value={sliderMin}
-                  onChange={(e) => setSliderMin(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
-                />
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="block text-xs text-muted mb-1">נוסח השאלה</label>
+                  <input
+                    type="text"
+                    value={draft.questionHe}
+                    onChange={(event) => setDraft((current) => ({ ...current, questionHe: event.target.value }))}
+                    placeholder="?מה האווירה שאתם חולמים עליה"
+                    className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-muted mb-1">סוג שאלה</label>
+                  <select
+                    value={draft.questionType}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        questionType: event.target.value as QuestionType,
+                      }))
+                    }
+                    disabled={isPinnedGuestCalculator}
+                    className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                  >
+                    {isPinnedGuestCalculator && (
+                      <option value="guest_calculator">מחשבון אורחים</option>
+                    )}
+                    {questionTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted mt-2">{getQuestionTypeMeta(draft.questionType).description}</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-muted mb-1">איפה השאלה תופיע</label>
+                  <div className="space-y-2 rounded-2xl border border-glass p-3">
+                    {eventTypes.map((eventType) => {
+                      const checked = draft.eventTypes.includes(eventType.value);
+                      return (
+                        <label key={eventType.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setDraft((current) => {
+                                const nextEventTypes = checked
+                                  ? current.eventTypes.filter((value) => value !== eventType.value)
+                                  : [...current.eventTypes, eventType.value];
+                                return {
+                                  ...current,
+                                  eventTypes: nextEventTypes.length > 0 ? nextEventTypes : [eventType.value],
+                                };
+                              })
+                            }
+                            className="accent-brand-blue"
+                          />
+                          <span>{eventType.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted mt-2">אפשר לבחור כמה סוגי אירועים במקביל.</p>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs text-muted mb-1">מקסימום</label>
-                <input
-                  type="number"
-                  value={sliderMax}
-                  onChange={(e) => setSliderMax(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
-                />
+
+              {(draft.questionType === "single_select" || draft.questionType === "multi_select") && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <label className="block text-xs text-muted mb-1">אפשרויות תשובה</label>
+                      <p className="text-xs text-muted">כתוב כל תשובה בדיוק כמו שאתה רוצה שהזוג יראה.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          options: [...current.options, createOption("", "")],
+                        }))
+                      }
+                      className="btn-secondary text-xs px-3 py-2 flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      הוסף אפשרות
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {draft.options.map((option, index) => (
+                      <div key={option.id} className="rounded-2xl border border-glass p-3">
+                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] items-start">
+                          <div>
+                            <label className="block text-[11px] text-muted mb-1">טקסט שמופיע לזוג</label>
+                            <input
+                              type="text"
+                              value={option.label}
+                              onChange={(event) => updateOption(option.id, event.target.value)}
+                              placeholder={`אפשרות ${index + 1}`}
+                              className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                            />
+                          </div>
+                          <div className="flex items-end h-full">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDraft((current) => ({
+                                  ...current,
+                                  options:
+                                    current.options.length > 2
+                                      ? current.options.filter((item) => item.id !== option.id)
+                                      : current.options,
+                                }))
+                              }
+                              className="p-2 rounded-xl text-muted hover:text-accent-danger transition-colors"
+                              aria-label="מחק אפשרות"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {draft.questionType === "slider" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-muted mb-1">הגדרת סקאלה</label>
+                    <p className="text-xs text-muted">בחר טווח ותן לכל שלב שם קצר וברור.</p>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="block text-[11px] text-muted mb-1">מינימום</label>
+                      <input
+                        type="number"
+                        value={draft.sliderMin}
+                        onChange={(event) => setDraft((current) => ({ ...current, sliderMin: Number(event.target.value) }))}
+                        className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-muted mb-1">מקסימום</label>
+                      <input
+                        type="number"
+                        value={draft.sliderMax}
+                        onChange={(event) => setDraft((current) => ({ ...current, sliderMax: Number(event.target.value) }))}
+                        className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {Array.from({ length: Math.max(2, draft.sliderMax - draft.sliderMin + 1) }, (_, index) => index).map((index) => (
+                      <div key={index} className="grid gap-2 md:grid-cols-[92px_minmax(0,1fr)] items-center">
+                        <div className="text-xs text-muted">שלב {draft.sliderMin + index}</div>
+                        <input
+                          type="text"
+                          value={draft.sliderLabels[index] || ""}
+                          onChange={(event) =>
+                            setDraft((current) => {
+                              const sliderLabels = [...current.sliderLabels];
+                              sliderLabels[index] = event.target.value;
+                              return { ...current, sliderLabels };
+                            })
+                          }
+                          placeholder="לדוגמה: רגוע"
+                          className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {draft.questionType === "text" && (
+                <div className="rounded-2xl border border-dashed border-glass p-4">
+                  <p className="text-sm font-medium">תשובה פתוחה</p>
+                  <p className="text-xs text-muted mt-1">לא צריך להוסיף אפשרויות. הזוג יקבל שדה כתיבה חופשי.</p>
+                </div>
+              )}
+
+              {draft.questionType === "guest_calculator" && (
+                <div className="rounded-2xl border border-dashed border-glass p-4">
+                  <p className="text-sm font-medium">מחשבון אורחים מובנה</p>
+                  <p className="text-xs text-muted mt-1">השאלה הזו נעוצה כברירת מחדל. אפשר להסתיר אותה, אבל לא למחוק.</p>
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-glass p-4 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((current) => !current)}
+                  className="w-full flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Sparkles className="w-4 h-4 text-brand-blue" />
+                    הגדרות מתקדמות
+                  </div>
+                  <span className="text-xs text-muted">{showAdvanced ? "הסתר" : "הצג"}</span>
+                </button>
+
+                {showAdvanced && (
+                  <div className="space-y-3">
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setDraft((current) => ({ ...current, isActive: !current.isActive }))}
+                        className={`text-xs px-3 py-2 rounded-full transition-colors ${draft.isActive ? "bg-brand-green/10 text-brand-green" : "bg-accent-danger/10 text-accent-danger"
+                          }`}
+                      >
+                        {draft.isActive ? "השאלה פעילה" : "השאלה מוסתרת"}
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] text-muted">
+                      אין צורך למלא מזהים טכניים. המערכת מייצרת אותם לבד מאחורי הקלעים.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col-reverse md:flex-row gap-2">
+                <button type="button" onClick={onClose} className="btn-secondary flex-1">
+                  ביטול
+                </button>
+                <button
+                  type="button"
+                  onClick={saveDraft}
+                  className="btn-primary flex-1 flex items-center justify-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  {mode === "edit" ? "שמור שינויים" : "הוסף שאלה"}
+                </button>
               </div>
             </div>
-            <div>
-              <label className="block text-xs text-muted mb-1">
-                תוויות (מופרדות בפסיק, לפי סדר)
-              </label>
+
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <LayoutPanelTop className="w-4 h-4 text-brand-blue" />
+                    תצוגה מקדימה
+                  </div>
+                  <p className="text-xs text-muted mt-1">כך זה ייראה לזוג במובייל.</p>
+                </div>
+                <span className="text-xs text-muted px-2 py-1 rounded-full border border-glass">
+                  {getQuestionTypeMeta(previewQuestion.questionType).label}
+                </span>
+              </div>
+
+              <QuestionPreviewCard question={previewQuestion} />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function QuestionPreviewCard({ question }: { question: Question }) {
+  return (
+    <div className="mx-auto w-full max-w-sm rounded-[32px] border border-white/10 bg-black/20 p-3 shadow-2xl">
+      <div className="rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(52,152,219,0.18),transparent_40%),rgba(255,255,255,0.03)] p-5 min-h-[520px] flex flex-col">
+        <div className="flex items-center justify-center gap-1.5 mb-4">
+          <span className="h-1.5 w-12 rounded-full bg-white/20" />
+          <span className="h-1.5 w-7 rounded-full bg-brand-blue/70" />
+          <span className="h-1.5 w-7 rounded-full bg-white/10" />
+        </div>
+
+        <div className="mb-5 min-h-[72px] flex items-center justify-center">
+          <h3 className="text-xl font-bold text-center leading-relaxed text-balance">
+            {question.questionHe || "כאן תופיע השאלה שלך"}
+          </h3>
+        </div>
+
+        <div className="flex-1 flex flex-col">
+          {question.questionType === "single_select" && (
+            <div className="space-y-2.5">
+              {(question.options?.length ? question.options : [{ label: "אפשרות לדוגמה", value: "example" }]).map((option) => (
+                <div
+                  key={option.value}
+                  className="w-full text-right px-4 py-3 min-h-[52px] rounded-xl border border-glass text-secondary"
+                >
+                  {option.label}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {question.questionType === "multi_select" && (
+            <div className="space-y-2.5">
+              <p className="text-xs text-center text-muted">אפשר לבחור כמה אפשרויות</p>
+              {(question.options?.length ? question.options : [{ label: "אפשרות לדוגמה", value: "example" }]).map((option, index) => (
+                <div
+                  key={`${option.value}-${index}`}
+                  className={`w-full text-right px-4 py-3 min-h-[52px] rounded-xl border transition-all ${index === 0 ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium" : "border-glass text-secondary"
+                    }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${index === 0 ? "border-brand-blue bg-brand-blue" : "border-glass"
+                        }`}
+                    >
+                      {index === 0 ? <span className="text-white text-xs">✓</span> : null}
+                    </span>
+                    <span className="flex-1 min-w-0 break-words">{option.label}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {question.questionType === "slider" && (
+            <div className="flex-1 flex flex-col justify-center space-y-5 px-1">
               <input
-                type="text"
-                value={sliderLabels}
-                onChange={(e) => setSliderLabels(e.target.value)}
-                placeholder="רגוע, קליל, אנרגטי, פרוע, מטורף"
-                className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                type="range"
+                min={question.sliderMin || 1}
+                max={question.sliderMax || 5}
+                value={Math.round(((question.sliderMin || 1) + (question.sliderMax || 5)) / 2)}
+                readOnly
+                className="w-full accent-brand-blue"
+              />
+              <div className="flex justify-between text-xs text-muted gap-2">
+                {(question.sliderLabels?.length ? question.sliderLabels : ["רגוע", "זורם", "מקפיץ", "אש", "פסטיבל"]).map((label, index) => (
+                  <span
+                    key={`${label}-${index}`}
+                    className={`transition-colors text-center flex-1 ${index === Math.floor(((question.sliderLabels?.length || 5) - 1) / 2) ? "text-brand-blue font-bold text-sm" : ""
+                      }`}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {question.questionType === "text" && (
+            <div className="flex-1 flex items-center">
+              <textarea
+                value=""
+                readOnly
+                placeholder="...ספרו לנו"
+                rows={6}
+                className="w-full h-[180px] px-4 py-3 rounded-xl bg-transparent border border-glass text-foreground placeholder:text-muted text-sm resize-none"
               />
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="flex gap-2 pt-2">
-          <button type="submit" className="btn-primary flex-1">
-            {question ? "שמור שינויים" : "הוסף שאלה"}
-          </button>
-          <button type="button" onClick={onClose} className="btn-secondary flex-1">
-            ביטול
-          </button>
+          {question.questionType === "guest_calculator" && (
+            <div className="space-y-3">
+              {["סה\"כ אורחים", "מבוגרים", "צעירים", "ילדים"].map((label) => (
+                <div
+                  key={label}
+                  className="rounded-xl border border-glass px-4 py-3 text-sm text-secondary"
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </motion.form>
-    </motion.div>
+      </div>
+    </div>
   );
 }

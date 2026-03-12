@@ -22,12 +22,33 @@ import { formatDate, getSafeOrigin } from "@/lib/utils";
 
 const CELEBRATION_EMOJIS = ["🎉", "🎵", "🎶", "✨", "💫", "🎧", "🎤", "💃", "🕺", "🌟"];
 
-function CelebrationParticle({ emoji, delay, x }: { emoji: string; delay: number; x: number }) {
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function CelebrationParticle({
+  emoji,
+  delay,
+  x,
+  rotate,
+  duration,
+}: {
+  emoji: string;
+  delay: number;
+  x: number;
+  rotate: number;
+  duration: number;
+}) {
   return (
     <motion.div
       initial={{ y: 0, x, opacity: 1, scale: 1 }}
-      animate={{ y: -300, opacity: 0, scale: 0.5, rotate: Math.random() * 360 }}
-      transition={{ duration: 2 + Math.random(), delay, ease: "easeOut" }}
+      animate={{ y: -300, opacity: 0, scale: 0.5, rotate }}
+      transition={{ duration, delay, ease: "easeOut" }}
       className="fixed bottom-0 text-2xl pointer-events-none z-50"
       style={{ left: `${x}%` }}
     >
@@ -167,6 +188,19 @@ export function MusicBrief() {
     ];
   }, [event, journeyLink]);
 
+  const celebrationParticles = useMemo(
+    () =>
+      Array.from({ length: 15 }).map((_, i) => ({
+        key: `celebration-${i}`,
+        emoji: CELEBRATION_EMOJIS[i % CELEBRATION_EMOJIS.length],
+        delay: i * 0.12,
+        x: 5 + Math.random() * 90,
+        rotate: Math.random() * 360,
+        duration: 2 + Math.random(),
+      })),
+    []
+  );
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(journeyLink);
     setCopiedLink(true);
@@ -174,19 +208,148 @@ export function MusicBrief() {
   };
 
   const handleDownloadPDF = async () => {
-    if (!briefRef.current) return;
     try {
       const html2pdf = (await import("html2pdf.js")).default;
+      const pdfNode = document.createElement("div");
+      pdfNode.dir = "rtl";
+      pdfNode.style.background = "#ffffff";
+      pdfNode.style.color = "#111827";
+      pdfNode.style.padding = "24px";
+      pdfNode.style.width = "794px";
+      pdfNode.style.fontFamily = "Arial, sans-serif";
+      pdfNode.innerHTML = `
+        <div style="direction: rtl; text-align: right;">
+          <div style="margin-bottom: 16px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px;">
+            <h1 style="margin: 0 0 8px; font-size: 28px;">Music Brief</h1>
+            <div style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">${escapeHtml(eventTitle)}</div>
+            ${event?.eventDate ? `<div style="font-size: 14px; color: #4b5563;">${escapeHtml(formatDate(event.eventDate))}</div>` : ""}
+            ${event?.venue ? `<div style="font-size: 14px; color: #4b5563;">${escapeHtml(event.venue)}</div>` : ""}
+            ${event?.eventNumber ? `<div style="font-size: 14px; color: #0891b2; margin-top: 8px;">מספר אירוע: ${escapeHtml(event.eventNumber)}</div>` : ""}
+          </div>
+
+          <div style="margin-bottom: 16px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px;">
+            <h2 style="margin: 0 0 10px; font-size: 18px;">פרטים טכניים לאימות</h2>
+            ${technicalDetails
+          .map(
+            (item) => `
+                  <div style="margin-bottom: 8px;">
+                    <div style="font-size: 12px; color: #6b7280;">${escapeHtml(item.label)}</div>
+                    <div style="font-size: 14px; font-weight: 600; word-break: break-word;">${escapeHtml(item.value)}</div>
+                  </div>
+                `
+          )
+          .join("")}
+          </div>
+
+          ${questionAnswerPairs.length > 0
+          ? `
+            <div style="margin-bottom: 16px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px;">
+              <h2 style="margin: 0 0 10px; font-size: 18px;">סגנון ואווירה</h2>
+              ${questionAnswerPairs
+            .map(
+              (qa) => `
+                    <div style="margin-bottom: 8px;">
+                      <div style="font-size: 12px; color: #6b7280;">${escapeHtml(qa.question)}</div>
+                      <div style="font-size: 14px; font-weight: 600;">${escapeHtml(qa.answer || "—")}</div>
+                    </div>
+                  `
+            )
+            .join("")}
+            </div>
+          `
+          : ""
+        }
+
+          ${superLiked.length > 0
+          ? `
+            <div style="margin-bottom: 16px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px;">
+              <h2 style="margin: 0 0 10px; font-size: 18px;">שירי חובה (${superLiked.length})</h2>
+              ${superLiked
+            .filter(Boolean)
+            .map(
+              (song) => `
+                    <div style="margin-bottom: 6px; font-size: 14px;">⭐ ${escapeHtml(song!.title)} — ${escapeHtml(song!.artist)}</div>
+                  `
+            )
+            .join("")}
+            </div>
+          `
+          : ""
+        }
+
+          ${liked.length > 0
+          ? `
+            <div style="margin-bottom: 16px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px;">
+              <h2 style="margin: 0 0 10px; font-size: 18px;">שירים שאהבנו (${liked.length})</h2>
+              ${liked
+            .filter(Boolean)
+            .map(
+              (song) => `
+                    <div style="margin-bottom: 6px; font-size: 14px;">💚 ${escapeHtml(song!.title)} — ${escapeHtml(song!.artist)}</div>
+                  `
+            )
+            .join("")}
+            </div>
+          `
+          : ""
+        }
+
+          ${disliked.length > 0 || dislikeReasons.length > 0
+          ? `
+            <div style="margin-bottom: 16px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px;">
+              <h2 style="margin: 0 0 10px; font-size: 18px;">קווים אדומים</h2>
+              ${dislikeReasons.length > 0
+            ? `<div style="margin-bottom: 10px; font-size: 13px; color: #dc2626;">${dislikeReasons
+              .map(([reason, count]) => `${escapeHtml(reason)} (${count})`)
+              .join(" • ")}</div>`
+            : ""
+          }
+              ${disliked
+            .filter(Boolean)
+            .slice(0, 12)
+            .map(
+              (song) => `
+                    <div style="margin-bottom: 6px; font-size: 14px;">❌ ${escapeHtml(song!.title)} — ${escapeHtml(song!.artist)}</div>
+                  `
+            )
+            .join("")}
+            </div>
+          `
+          : ""
+        }
+
+          ${freeRequests.length > 0 || doRequests.length > 0 || dontRequests.length > 0 || linkRequests.length > 0 || momentRequests.length > 0
+          ? `
+            <div style="padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px;">
+              <h2 style="margin: 0 0 10px; font-size: 18px;">בקשות מיוחדות</h2>
+              ${momentRequests.map((r) => `<div style="margin-bottom: 6px; font-size: 14px;">✨ ${escapeHtml(r.content)}</div>`).join("")}
+              ${doRequests.map((r) => `<div style="margin-bottom: 6px; font-size: 14px; color: #059669;">✅ ${escapeHtml(r.content)}</div>`).join("")}
+              ${dontRequests.map((r) => `<div style="margin-bottom: 6px; font-size: 14px; color: #dc2626;">❌ ${escapeHtml(r.content)}</div>`).join("")}
+              ${freeRequests.map((r) => `<div style="margin-bottom: 6px; font-size: 14px;">${escapeHtml(r.content)}</div>`).join("")}
+              ${linkRequests
+            .map((r) => `<div style="margin-bottom: 6px; font-size: 14px; color: #2563eb; word-break: break-all;">${escapeHtml(r.content)}</div>`)
+            .join("")}
+            </div>
+          `
+          : ""
+        }
+        </div>
+      `;
+      document.body.appendChild(pdfNode);
+
       html2pdf()
         .set({
           margin: [10, 10],
           filename: `music-brief-${event?.eventNumber || event?.magicToken?.slice(0, 8) || "draft"}.pdf`,
           image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         })
-        .from(briefRef.current)
-        .save();
+        .from(pdfNode)
+        .save()
+        .finally(() => {
+          pdfNode.remove();
+        });
     } catch {
       alert("ייצוא PDF נכשל (לעיתים קורה בדפדפנים במובייל). אפשר להשתמש ב'העתק סיכום' ולשלוח בוואטסאפ.");
     }
@@ -247,12 +410,14 @@ export function MusicBrief() {
       {/* Celebration Particles */}
       <AnimatePresence>
         {showCelebration &&
-          Array.from({ length: 15 }).map((_, i) => (
+          celebrationParticles.map((particle) => (
             <CelebrationParticle
-              key={i}
-              emoji={CELEBRATION_EMOJIS[i % CELEBRATION_EMOJIS.length]}
-              delay={i * 0.12}
-              x={5 + Math.random() * 90}
+              key={particle.key}
+              emoji={particle.emoji}
+              delay={particle.delay}
+              x={particle.x}
+              rotate={particle.rotate}
+              duration={particle.duration}
             />
           ))}
       </AnimatePresence>

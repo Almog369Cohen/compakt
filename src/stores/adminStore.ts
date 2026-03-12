@@ -2,7 +2,11 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Song, Question, Upsell } from "@/lib/types";
 import { defaultSongs } from "@/data/songs";
-import { defaultQuestions } from "@/data/questions";
+import {
+  defaultQuestions,
+  guestCalculatorDefaultQuestion,
+  GUEST_CALCULATOR_QUESTION_ID,
+} from "@/data/questions";
 import { defaultUpsells } from "@/data/upsells";
 import { supabase } from "@/lib/supabase";
 
@@ -45,6 +49,8 @@ interface AdminStore {
   songs: Song[];
   questions: Question[];
   upsells: Upsell[];
+  contentLoading: boolean;
+  contentLoadedProfileId: string | null;
 
   // Auth
   login: (email: string, password: string) => boolean;
@@ -55,17 +61,18 @@ interface AdminStore {
   logout: () => void;
   setAuthState: (input: { isAuthenticated: boolean; userId?: string | null; userEmail?: string | null; authError?: string | null }) => void;
   resetAuthState: () => void;
+  resetContent: () => void;
 
   // Songs
-  addSong: (song: Omit<Song, "id" | "sortOrder">) => void;
-  updateSong: (id: string, data: Partial<Song>) => void;
-  deleteSong: (id: string) => void;
+  addSong: (song: Omit<Song, "id" | "sortOrder">) => Promise<void>;
+  updateSong: (id: string, data: Partial<Song>) => Promise<void>;
+  deleteSong: (id: string) => Promise<void>;
   reorderSongs: (ids: string[]) => void;
 
   // Questions
-  addQuestion: (question: Omit<Question, "id" | "sortOrder">) => void;
-  updateQuestion: (id: string, data: Partial<Question>) => void;
-  deleteQuestion: (id: string) => void;
+  addQuestion: (question: Omit<Question, "id" | "sortOrder">) => Promise<void>;
+  updateQuestion: (id: string, data: Partial<Question>) => Promise<void>;
+  deleteQuestion: (id: string) => Promise<void>;
   reorderQuestions: (ids: string[]) => void;
 
   // Upsells
@@ -79,6 +86,90 @@ interface AdminStore {
 
 const ADMIN_PASSWORD = "compakt2024";
 // LEGACY_LOGIN_ALLOWED env check removed — bypass login always available
+
+function parseQuestionEventTypes(
+  value: Question["eventType"] | string | null | undefined
+): Question["eventType"][] {
+  if (!value) return ["wedding"];
+  if (typeof value !== "string") return [value];
+  const parsed = value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean) as Question["eventType"][];
+  return parsed.length > 0 ? parsed : ["wedding"];
+}
+
+function mapQuestionRow(q: {
+  id: string;
+  question_he: string;
+  question_type?: Question["questionType"] | null;
+  event_type?: Question["eventType"] | string | null;
+  options?: Question["options"] | string | null;
+  slider_min?: number | null;
+  slider_max?: number | null;
+  slider_labels?: string[] | string | null;
+  is_active?: boolean | null;
+  sort_order?: number | null;
+}): Question {
+  const eventTypes = parseQuestionEventTypes(q.event_type);
+  return {
+    id: q.id,
+    questionHe: q.question_he,
+    questionType: q.question_type ?? "single_select",
+    eventType: eventTypes[0] ?? "wedding",
+    eventTypes,
+    options:
+      Array.isArray(q.options)
+        ? q.options
+        : typeof q.options === "string"
+          ? JSON.parse(q.options)
+          : [],
+    sliderMin: q.slider_min ?? undefined,
+    sliderMax: q.slider_max ?? undefined,
+    sliderLabels: q.slider_labels
+      ? Array.isArray(q.slider_labels)
+        ? q.slider_labels
+        : JSON.parse(q.slider_labels)
+      : undefined,
+    isActive: q.is_active ?? true,
+    sortOrder: q.sort_order ?? 0,
+  };
+}
+
+async function ensureGuestCalculatorQuestion(
+  questions: Question[]
+): Promise<Question[]> {
+  if (
+    questions.some(
+      (question) =>
+        question.questionType === "guest_calculator" ||
+        question.id === GUEST_CALCULATOR_QUESTION_ID
+    )
+  ) {
+    return questions;
+  }
+
+  const fallbackQuestion = {
+    ...guestCalculatorDefaultQuestion,
+    sortOrder: Math.min(...questions.map((question) => question.sortOrder), 0) - 1,
+  };
+
+  try {
+    const response = await fetch("/api/admin/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: fallbackQuestion }),
+    });
+
+    if (!response.ok) {
+      return [fallbackQuestion, ...questions];
+    }
+  } catch {
+    return [fallbackQuestion, ...questions];
+  }
+
+  return [fallbackQuestion, ...questions];
+}
 
 async function resolveProfileId(identity: { userId: string | null; userEmail: string | null }) {
   if (!supabase || (!identity.userId && !identity.userEmail)) {
@@ -111,6 +202,8 @@ export const useAdminStore = create<AdminStore>()(
       songs: defaultSongs,
       questions: defaultQuestions,
       upsells: defaultUpsells,
+      contentLoading: false,
+      contentLoadedProfileId: null,
 
       setAuthState: ({ isAuthenticated, userId = null, userEmail = null, authError = null }) => {
         set({ isAuthenticated, userId, userEmail, authError });
@@ -118,6 +211,10 @@ export const useAdminStore = create<AdminStore>()(
 
       resetAuthState: () => {
         set({ isAuthenticated: false, userId: null, userEmail: null, authError: null });
+      },
+
+      resetContent: () => {
+        set({ songs: [], questions: [], upsells: [], contentLoading: false, contentLoadedProfileId: null });
       },
 
       login: (email, password) => {
@@ -184,6 +281,23 @@ export const useAdminStore = create<AdminStore>()(
       },
 
       checkSession: async () => {
+        if (typeof document !== "undefined") {
+          const bypassCookie = document.cookie
+            .split("; ")
+            .find((entry) => entry.startsWith("compakt-admin-bypass="));
+          const bypassEmail = bypassCookie?.split("=")[1];
+
+          if (bypassEmail) {
+            set({
+              isAuthenticated: true,
+              userId: `bypass-${decodeURIComponent(bypassEmail)}`,
+              userEmail: decodeURIComponent(bypassEmail),
+              authError: null,
+            });
+            return;
+          }
+        }
+
         if (!supabase) return;
         const { data } = await supabase.auth.getSession();
         if (data.session?.user) {
@@ -197,40 +311,64 @@ export const useAdminStore = create<AdminStore>()(
         if (supabase) {
           supabase.auth.signOut().then(() => { });
         }
+        if (typeof document !== "undefined") {
+          document.cookie = "compakt-admin-bypass=; path=/; max-age=0; SameSite=Lax";
+        }
         set({ isAuthenticated: false, userId: null, userEmail: null, authError: null });
       },
 
       // Songs
-      addSong: (song) => {
+      addSong: async (song) => {
         const { songs } = get();
         const id = crypto.randomUUID();
         const newSong = { ...song, id, sortOrder: songs.length + 1 };
         set({ songs: [...songs, newSong] });
 
-        void fetch("/api/admin/songs", {
+        const response = await fetch("/api/admin/songs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ song: newSong }),
         });
+
+        if (!response.ok) {
+          set({ songs });
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.error || "יצירת השיר נכשלה");
+        }
       },
 
-      updateSong: (id, data) => {
+      updateSong: async (id, data) => {
+        const previousSongs = get().songs;
         set({
-          songs: get().songs.map((s) => (s.id === id ? { ...s, ...data } : s)),
+          songs: previousSongs.map((s) => (s.id === id ? { ...s, ...data } : s)),
         });
 
-        void fetch(`/api/admin/songs/${encodeURIComponent(id)}`, {
+        const response = await fetch(`/api/admin/songs/${encodeURIComponent(id)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ data }),
         });
+
+        if (!response.ok) {
+          set({ songs: previousSongs });
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.error || "עדכון השיר נכשל");
+        }
       },
 
-      deleteSong: (id) => {
-        set({ songs: get().songs.filter((s) => s.id !== id) });
-        void fetch(`/api/admin/songs/${encodeURIComponent(id)}`, {
+      deleteSong: async (id) => {
+        const previousSongs = get().songs;
+        set({ songs: previousSongs.filter((s) => s.id !== id) });
+
+        const response = await fetch(`/api/admin/songs/${encodeURIComponent(id)}`, {
           method: "DELETE",
         });
+
+        if (!response.ok) {
+          set({ songs: previousSongs });
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.error || "מחיקת השיר נכשלה");
+        }
       },
 
       reorderSongs: (ids) => {
@@ -245,55 +383,58 @@ export const useAdminStore = create<AdminStore>()(
       },
 
       // Questions
-      addQuestion: (question) => {
-        const { questions, userId, userEmail } = get();
-        const id = `q${Date.now()}`;
+      addQuestion: async (question) => {
+        const { questions } = get();
+        const id = crypto.randomUUID();
         const newQ = { ...question, id, sortOrder: questions.length + 1 };
         set({ questions: [...questions, newQ] });
 
-        if (supabase && (userId || userEmail)) {
-          resolveProfileId({ userId, userEmail }).then((profileId) => {
-            if (!profileId) return;
-            supabase!.from("questions").insert({
-              id, dj_id: profileId, question_he: question.questionHe,
-              question_type: question.questionType, event_type: question.eventType,
-              options: JSON.stringify(question.options || []),
-              slider_min: question.sliderMin, slider_max: question.sliderMax,
-              slider_labels: question.sliderLabels ? JSON.stringify(question.sliderLabels) : null,
-              is_active: question.isActive, sort_order: questions.length + 1,
-            }).then(() => { });
-          });
+        const response = await fetch("/api/admin/questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: newQ }),
+        });
+
+        if (!response.ok) {
+          set({ questions });
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.error || "יצירת השאלה נכשלה");
         }
       },
 
-      updateQuestion: (id, data) => {
+      updateQuestion: async (id, data) => {
+        const previousQuestions = get().questions;
         set({
-          questions: get().questions.map((q) =>
+          questions: previousQuestions.map((q) =>
             q.id === id ? { ...q, ...data } : q
           ),
         });
 
-        if (supabase) {
-          const row: Record<string, unknown> = {};
-          if (data.questionHe !== undefined) row.question_he = data.questionHe;
-          if (data.questionType !== undefined) row.question_type = data.questionType;
-          if (data.eventType !== undefined) row.event_type = data.eventType;
-          if (data.options !== undefined) row.options = JSON.stringify(data.options);
-          if (data.sliderMin !== undefined) row.slider_min = data.sliderMin;
-          if (data.sliderMax !== undefined) row.slider_max = data.sliderMax;
-          if (data.sliderLabels !== undefined) row.slider_labels = JSON.stringify(data.sliderLabels);
-          if (data.isActive !== undefined) row.is_active = data.isActive;
-          if (data.sortOrder !== undefined) row.sort_order = data.sortOrder;
-          if (Object.keys(row).length > 0) {
-            supabase!.from("questions").update(row).eq("id", id).then(() => { });
-          }
+        const response = await fetch(`/api/admin/questions/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data }),
+        });
+
+        if (!response.ok) {
+          set({ questions: previousQuestions });
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.error || "עדכון השאלה נכשל");
         }
       },
 
-      deleteQuestion: (id) => {
-        set({ questions: get().questions.filter((q) => q.id !== id) });
-        if (supabase) {
-          supabase!.from("questions").delete().eq("id", id).then(() => { });
+      deleteQuestion: async (id) => {
+        const previousQuestions = get().questions;
+        set({ questions: previousQuestions.filter((q) => q.id !== id) });
+
+        const response = await fetch(`/api/admin/questions/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          set({ questions: previousQuestions });
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.error || "מחיקת השאלה נכשלה");
         }
       },
 
@@ -362,6 +503,13 @@ export const useAdminStore = create<AdminStore>()(
       // Never keep mock/localStorage data when DB returns 0 rows.
       loadContentFromDB: async (profileId: string) => {
         if (!supabase) return;
+        set({
+          songs: [],
+          questions: [],
+          upsells: [],
+          contentLoading: true,
+          contentLoadedProfileId: profileId,
+        });
 
         const [songsRes, questionsRes, upsellsRes] = await Promise.all([
           supabase.from("songs").select("*").eq("dj_id", profileId).order("sort_order"),
@@ -400,29 +548,9 @@ export const useAdminStore = create<AdminStore>()(
           sortOrder: s.sort_order ?? 0,
         })) as Song[];
 
-        const dbQuestions: Question[] = (questionsRes.data || []).map((q: {
-          id: string;
-          question_he: string;
-          question_type?: Question["questionType"] | null;
-          event_type?: Question["eventType"] | null;
-          options?: Question["options"] | string | null;
-          slider_min?: number | null;
-          slider_max?: number | null;
-          slider_labels?: string[] | string | null;
-          is_active?: boolean | null;
-          sort_order?: number | null;
-        }) => ({
-          id: q.id,
-          questionHe: q.question_he,
-          questionType: q.question_type ?? "single_select",
-          eventType: q.event_type ?? "wedding",
-          options: Array.isArray(q.options) ? q.options : (typeof q.options === "string" ? JSON.parse(q.options) : []),
-          sliderMin: q.slider_min,
-          sliderMax: q.slider_max,
-          sliderLabels: q.slider_labels ? (Array.isArray(q.slider_labels) ? q.slider_labels : JSON.parse(q.slider_labels)) : undefined,
-          isActive: q.is_active ?? true,
-          sortOrder: q.sort_order ?? 0,
-        })) as Question[];
+        const dbQuestions = await ensureGuestCalculatorQuestion(
+          (questionsRes.data || []).map(mapQuestionRow)
+        );
 
         const dbUpsells: Upsell[] = (upsellsRes.data || []).map((u: {
           id: string;
@@ -445,7 +573,13 @@ export const useAdminStore = create<AdminStore>()(
         })) as Upsell[];
 
         // Always overwrite local state with DB truth
-        set({ songs: dbSongs, questions: dbQuestions, upsells: dbUpsells });
+        set({
+          songs: dbSongs,
+          questions: dbQuestions,
+          upsells: dbUpsells,
+          contentLoading: false,
+          contentLoadedProfileId: profileId,
+        });
 
         // If DB is empty, auto-bootstrap defaults
         const needsBootstrap = dbSongs.length === 0 || dbQuestions.length === 0;
@@ -496,30 +630,17 @@ export const useAdminStore = create<AdminStore>()(
                     language: s.language ?? "hebrew", isSafe: s.is_safe ?? true,
                     isActive: s.is_active ?? true, sortOrder: s.sort_order ?? 0,
                   })) as Song[],
+                  contentLoading: false,
+                  contentLoadedProfileId: profileId,
                 });
               }
               if (q2.data && q2.data.length > 0) {
                 set({
-                  questions: q2.data.map((q: {
-                    id: string;
-                    question_he: string;
-                    question_type?: Question["questionType"] | null;
-                    event_type?: Question["eventType"] | null;
-                    options?: Question["options"] | null;
-                    slider_min?: number | null;
-                    slider_max?: number | null;
-                    slider_labels?: string[] | null;
-                    is_active?: boolean | null;
-                    sort_order?: number | null;
-                  }) => ({
-                    id: q.id, questionHe: q.question_he,
-                    questionType: q.question_type ?? "single_select",
-                    eventType: q.event_type ?? "wedding",
-                    options: Array.isArray(q.options) ? q.options : [],
-                    sliderMin: q.slider_min, sliderMax: q.slider_max,
-                    sliderLabels: q.slider_labels ? (Array.isArray(q.slider_labels) ? q.slider_labels : []) : undefined,
-                    isActive: q.is_active ?? true, sortOrder: q.sort_order ?? 0,
-                  })) as Question[],
+                  questions: await ensureGuestCalculatorQuestion(
+                    q2.data.map(mapQuestionRow)
+                  ),
+                  contentLoading: false,
+                  contentLoadedProfileId: profileId,
                 });
               }
               if (u2.data && u2.data.length > 0) {
@@ -539,13 +660,28 @@ export const useAdminStore = create<AdminStore>()(
                     placement: u.placement ?? "stage_4", isActive: u.is_active ?? true,
                     sortOrder: u.sort_order ?? 0,
                   })) as Upsell[],
+                  contentLoading: false,
+                  contentLoadedProfileId: profileId,
                 });
               }
             }
           } catch (e) {
             console.error("[DB Health] Bootstrap failed:", e);
+          } finally {
+            set((state) =>
+              state.contentLoadedProfileId === profileId
+                ? { contentLoading: false }
+                : state
+            );
           }
+          return;
         }
+
+        set((state) =>
+          state.contentLoadedProfileId === profileId
+            ? { contentLoading: false }
+            : state
+        );
       },
     }),
     {

@@ -43,7 +43,7 @@ export async function POST() {
     }
 
     if (!userId) {
-      const routeClient = createRouteClient();
+      const routeClient = await createRouteClient();
       const { data: { user }, error: authErr } = await routeClient.auth.getUser();
       if (authErr || !user) {
         return NextResponse.json({ error: "Authentication required" }, { status: 401 });

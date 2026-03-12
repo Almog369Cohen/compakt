@@ -68,6 +68,11 @@ export function SongManager() {
   const [categoryLabelsSaved, setCategoryLabelsSaved] = useState(false);
   const [categoryLabelsError, setCategoryLabelsError] = useState<string | null>(null);
   const [bulkActionMessage, setBulkActionMessage] = useState<string | null>(null);
+  const [songMutationError, setSongMutationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedSongIds((current) => current.filter((id) => songs.some((song) => song.id === id)));
+  }, [songs]);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,23 +141,44 @@ export function SongManager() {
   };
 
   const showBulkFeedback = (message: string) => {
+    setSongMutationError(null);
     setBulkActionMessage(message);
     window.setTimeout(() => {
       setBulkActionMessage((current) => (current === message ? null : current));
     }, 2200);
   };
 
-  const runBulkUpdate = (patch: Partial<Song>, successMessage: string) => {
+  const runBulkUpdate = async (patch: Partial<Song>, successMessage: string) => {
     if (selectedSongIds.length === 0) return;
-    selectedSongIds.forEach((songId) => updateSong(songId, patch));
+    setSongMutationError(null);
+    const results = await Promise.allSettled(
+      selectedSongIds.map((songId) => updateSong(songId, patch))
+    );
+    const failed = results.filter((result) => result.status === "rejected");
+    if (failed.length > 0) {
+      setSongMutationError(
+        failed[0].reason instanceof Error ? failed[0].reason.message : "עדכון שירים נכשל"
+      );
+      return;
+    }
     setSelectedSongIds([]);
     showBulkFeedback(successMessage);
   };
 
-  const runBulkDelete = () => {
+  const runBulkDelete = async () => {
     if (selectedSongIds.length === 0) return;
     if (!confirm(`למחוק ${selectedSongIds.length} שירים?`)) return;
-    selectedSongIds.forEach((songId) => deleteSong(songId));
+    setSongMutationError(null);
+    const results = await Promise.allSettled(
+      selectedSongIds.map((songId) => deleteSong(songId))
+    );
+    const failed = results.filter((result) => result.status === "rejected");
+    if (failed.length > 0) {
+      setSongMutationError(
+        failed[0].reason instanceof Error ? failed[0].reason.message : "מחיקת השירים נכשלה"
+      );
+      return;
+    }
     setSelectedSongIds([]);
     showBulkFeedback("השירים שנבחרו נמחקו");
   };
@@ -173,406 +199,474 @@ export function SongManager() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Music className="w-5 h-5 text-brand-blue" />
-          ספריית שירים ({songs.length})
-        </h2>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowPreview(true)}
-            className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
-          >
-            <Monitor className="w-4 h-4" />
-            תצוגה מקדימה
-          </button>
-          <button
-            onClick={() => canUseSpotifyImport && setShowSpotifyImport(true)}
-            disabled={!canUseSpotifyImport}
-            className={`btn-secondary text-sm flex items-center gap-1.5 py-2 px-4 ${!canUseSpotifyImport ? "opacity-50 cursor-not-allowed" : ""}`}
-            title={canUseSpotifyImport ? "ייבוא שירים מ-Spotify" : "פיצ'ר Spotify זמין בתוכנית Premium ומעלה או דרך override ב-HQ"}
-          >
-            <LinkIcon className="w-4 h-4" />
-            Spotify
-          </button>
-          <a
-            href="/songs-template.csv"
-            download
-            className="text-[10px] text-muted underline hover:text-brand-blue transition-colors"
-          >
-            תבנית CSV
-          </a>
-          <label className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4 cursor-pointer">
-            <Upload className="w-4 h-4" />
-            CSV ייבוא
-            <input
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                  const text = ev.target?.result as string;
-                  const lines = text.split("\n").filter((l) => l.trim());
-                  if (lines.length < 2) return alert("קובץ ריק");
-                  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-                  const titleIdx = headers.indexOf("title");
-                  const artistIdx = headers.indexOf("artist");
-                  if (titleIdx === -1 || artistIdx === -1) {
-                    return alert("CSV חייב לכלול עמודות title ו-artist");
-                  }
-                  const tagsIdx = headers.indexOf("tags");
-                  const categoryIdx = headers.indexOf("category");
-                  const energyIdx = headers.indexOf("energy");
-                  const langIdx = headers.indexOf("language");
-                  const coverIdx = headers.indexOf("cover");
-                  const previewIdx = headers.indexOf("preview");
-
-                  let count = 0;
-                  for (let i = 1; i < lines.length; i++) {
-                    const cols = lines[i].split(",").map((c) => c.trim());
-                    const title = cols[titleIdx];
-                    const artist = cols[artistIdx];
-                    if (!title || !artist) continue;
-                    addSong({
-                      title,
-                      artist,
-                      tags: tagsIdx >= 0 ? cols[tagsIdx]?.split("|").filter(Boolean) || [] : [],
-                      category: (categoryIdx >= 0 ? cols[categoryIdx] : "dancing") as SongCategory,
-                      energy: energyIdx >= 0 ? Math.min(5, Math.max(1, parseInt(cols[energyIdx]) || 3)) : 3,
-                      language: langIdx >= 0 ? cols[langIdx] || "hebrew" : "hebrew",
-                      coverUrl: coverIdx >= 0 ? cols[coverIdx] || "" : "",
-                      previewUrl: previewIdx >= 0 ? cols[previewIdx] || "" : "",
-                      isSafe: true,
-                      isActive: true,
-                    });
-                    count++;
-                  }
-                  alert(`${count} שירים יובאו בהצלחה!`);
-                };
-                reader.readAsText(file);
-                e.target.value = "";
-              }}
-            />
-          </label>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
-          >
-            <Plus className="w-4 h-4" />
-            הוסף שיר
-          </button>
-        </div>
-      </div>
-
-      {!canUseSpotifyImport && (
-        <div className="glass-card p-3 text-sm text-muted">
-          ייבוא מ-Spotify חסום כרגע לחשבון הזה. אפשר להפעיל אותו דרך תוכנית תומכת או override ב-HQ.
-        </div>
-      )}
-
-      <div className="glass-card p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h3 className="text-sm font-bold">שמות קטגוריות לשירים</h3>
-          <button
-            type="button"
-            onClick={handleSaveCategoryLabels}
-            disabled={savingCategoryLabels}
-            className={`btn-secondary text-sm flex items-center gap-2 py-2 px-4 ${savingCategoryLabels ? "opacity-60 cursor-not-allowed" : ""}`}
-          >
-            <Save className="w-4 h-4" />
-            {savingCategoryLabels ? "שומר..." : categoryLabelsSaved ? "נשמר" : "שמור שמות"}
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-          {categories.map((category) => (
-            <div key={category.value}>
-              <label className="block text-xs text-muted mb-1">
-                {category.value === "reception"
-                  ? "קבלת פנים"
-                  : category.value === "food"
-                    ? "אוכל"
-                    : category.value === "dancing"
-                      ? "רחבה"
-                      : "חופה / טקס"}
-              </label>
-              <input
-                type="text"
-                value={songCategoryLabels[category.value]}
-                onChange={(e) =>
-                  setProfile({
-                    songCategoryLabels: {
-                      ...songCategoryLabels,
-                      [category.value]: e.target.value,
-                    } as SongCategoryLabels,
-                  })
-                }
-                className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
-              />
+      <div className="rounded-[24px] border border-white/10 bg-[rgba(12,16,24,0.72)] backdrop-blur-xl shadow-[0_16px_36px_rgba(0,0,0,0.16)] p-4 md:p-5">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] text-secondary">
+              <Music className="w-3.5 h-3.5 text-brand-blue" />
+              ספריית שירים
             </div>
-          ))}
+            <div>
+              <h2 className="text-xl font-bold">ספריית השירים של הזוגות ({songs.length})</h2>
+              <p className="text-sm text-secondary mt-1 max-w-3xl leading-6">
+                כאן בונים את מאגר השירים שהזוגות יוכלו לאהוב, לפסול או לסמן כחובה. כדי לעלות לאוויר מומלץ להתחיל עם רשימת בסיס ברורה לפני ששולחים שאלון ראשון.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setShowPreview(true)}
+              className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
+            >
+              <Monitor className="w-4 h-4" />
+              תצוגה מקדימה
+            </button>
+            <button
+              onClick={() => canUseSpotifyImport && setShowSpotifyImport(true)}
+              disabled={!canUseSpotifyImport}
+              className={`btn-secondary text-sm flex items-center gap-1.5 py-2 px-4 ${!canUseSpotifyImport ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={canUseSpotifyImport ? "ייבוא שירים מ-Spotify" : "פיצ'ר Spotify זמין בתוכנית Premium ומעלה או דרך override ב-HQ"}
+            >
+              <LinkIcon className="w-4 h-4" />
+              Spotify
+            </button>
+            <a
+              href="/songs-template.csv"
+              download
+              className="text-[10px] text-muted underline hover:text-brand-blue transition-colors"
+            >
+              תבנית CSV
+            </a>
+            <label className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4 cursor-pointer">
+              <Upload className="w-4 h-4" />
+              CSV ייבוא
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    const text = ev.target?.result as string;
+                    const lines = text.split("\n").filter((l) => l.trim());
+                    if (lines.length < 2) return alert("קובץ ריק");
+                    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+                    const titleIdx = headers.indexOf("title");
+                    const artistIdx = headers.indexOf("artist");
+                    if (titleIdx === -1 || artistIdx === -1) {
+                      return alert("CSV חייב לכלול עמודות title ו-artist");
+                    }
+                    const tagsIdx = headers.indexOf("tags");
+                    const categoryIdx = headers.indexOf("category");
+                    const energyIdx = headers.indexOf("energy");
+                    const langIdx = headers.indexOf("language");
+                    const coverIdx = headers.indexOf("cover");
+                    const previewIdx = headers.indexOf("preview");
+
+                    let count = 0;
+                    for (let i = 1; i < lines.length; i++) {
+                      const cols = lines[i].split(",").map((c) => c.trim());
+                      const title = cols[titleIdx];
+                      const artist = cols[artistIdx];
+                      if (!title || !artist) continue;
+                      void addSong({
+                        title,
+                        artist,
+                        tags: tagsIdx >= 0 ? cols[tagsIdx]?.split("|").filter(Boolean) || [] : [],
+                        category: (categoryIdx >= 0 ? cols[categoryIdx] : "dancing") as SongCategory,
+                        energy: energyIdx >= 0 ? Math.min(5, Math.max(1, parseInt(cols[energyIdx]) || 3)) : 3,
+                        language: langIdx >= 0 ? cols[langIdx] || "hebrew" : "hebrew",
+                        coverUrl: coverIdx >= 0 ? cols[coverIdx] || "" : "",
+                        previewUrl: previewIdx >= 0 ? cols[previewIdx] || "" : "",
+                        isSafe: true,
+                        isActive: true,
+                      }).catch((error) => {
+                        setSongMutationError(
+                          error instanceof Error ? error.message : "יצירת השיר נכשלה"
+                        );
+                      });
+                      count++;
+                    }
+                    alert(`${count} שירים יובאו בהצלחה!`);
+                  };
+                  reader.readAsText(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
+            >
+              <Plus className="w-4 h-4" />
+              הוסף שיר
+            </button>
+          </div>
         </div>
-        {categoryLabelsError && (
-          <div className="text-xs" style={{ color: "var(--accent-danger)" }}>
-            {categoryLabelsError}
+
+        {!canUseSpotifyImport && (
+          <div className="glass-card p-3 text-sm text-muted">
+            ייבוא אוטומטי מ-Spotify לא זמין כרגע לחשבון הזה. אפשר עדיין להוסיף שירים ידנית, ב-CSV או עם לינק ישיר.
           </div>
         )}
-      </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="חפש שיר, אמן או תגית..."
-            className="w-full pr-9 pl-3 py-2 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors"
-          />
-        </div>
-        <div className="flex gap-1">
-          <button
-            onClick={() => setFilterCategory("all")}
-            className={`chip text-xs ${filterCategory === "all" ? "active" : ""}`}
-          >
-            הכל
-          </button>
-          {categories.map((c) => (
+        <div className="glass-card p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h3 className="text-sm font-bold">שמות קטגוריות לשירים</h3>
             <button
-              key={c.value}
-              onClick={() => setFilterCategory(c.value)}
-              className={`chip text-xs ${filterCategory === c.value ? "active" : ""}`}
+              type="button"
+              onClick={handleSaveCategoryLabels}
+              disabled={savingCategoryLabels}
+              className={`btn-secondary text-sm flex items-center gap-2 py-2 px-4 ${savingCategoryLabels ? "opacity-60 cursor-not-allowed" : ""}`}
             >
-              {c.label}
+              <Save className="w-4 h-4" />
+              {savingCategoryLabels ? "שומר..." : categoryLabelsSaved ? "נשמר" : "שמור שמות"}
             </button>
-          ))}
-        </div>
-      </div>
-
-      {selectedCount > 0 && (
-        <div className="glass-card p-4 flex flex-wrap items-center gap-2">
-          <div className="text-sm font-medium ml-2">נבחרו {selectedCount} שירים</div>
-          <button
-            type="button"
-            onClick={() => runBulkUpdate({ isActive: false }, "השירים סומנו כמוסתרים")}
-            className="btn-secondary text-sm py-2 px-3"
-          >
-            הסתר
-          </button>
-          <button
-            type="button"
-            onClick={() => runBulkUpdate({ isActive: true }, "השירים סומנו כפעילים")}
-            className="btn-secondary text-sm py-2 px-3"
-          >
-            הצג
-          </button>
-          <select
-            value={bulkCategory}
-            onChange={(e) => setBulkCategory(e.target.value as SongCategory)}
-            className="px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
-          >
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
             {categories.map((category) => (
-              <option key={category.value} value={category.value}>
-                {category.label}
-              </option>
+              <div key={category.value}>
+                <label className="block text-xs text-muted mb-1">
+                  {category.value === "reception"
+                    ? "קבלת פנים"
+                    : category.value === "food"
+                      ? "אוכל"
+                      : category.value === "dancing"
+                        ? "רחבה"
+                        : "חופה / טקס"}
+                </label>
+                <input
+                  type="text"
+                  value={songCategoryLabels[category.value]}
+                  onChange={(e) =>
+                    setProfile({
+                      songCategoryLabels: {
+                        ...songCategoryLabels,
+                        [category.value]: e.target.value,
+                      } as SongCategoryLabels,
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                />
+              </div>
             ))}
-          </select>
-          <button
-            type="button"
-            onClick={() =>
-              runBulkUpdate(
-                { category: bulkCategory },
-                `השירים הועברו לקטגוריית ${categories.find((category) => category.value === bulkCategory)?.label || ""}`
-              )
-            }
-            className="btn-secondary text-sm py-2 px-3"
-          >
-            העבר לקטגוריה
-          </button>
-          <button
-            type="button"
-            onClick={runBulkDelete}
-            className="btn-secondary text-sm py-2 px-3"
-            style={{ color: "var(--accent-danger)" }}
-          >
-            מחק נבחרים
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedSongIds([])}
-            className="text-xs text-muted hover:text-foreground transition-colors mr-auto"
-          >
-            נקה בחירה
-          </button>
+          </div>
+          {categoryLabelsError && (
+            <div className="text-xs" style={{ color: "var(--accent-danger)" }}>
+              {categoryLabelsError}
+            </div>
+          )}
         </div>
-      )}
 
-      {bulkActionMessage && (
-        <div className="glass-card p-3 text-sm text-brand-blue">
-          {bulkActionMessage}
+        {/* Filters */}
+        <div className="flex gap-2 flex-wrap">
+          <div className="flex-1 min-w-[200px] relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="חפש שיר, אמן או תגית..."
+              className="w-full pr-9 pl-3 py-2 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors"
+            />
+          </div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setFilterCategory("all")}
+              className={`chip text-xs ${filterCategory === "all" ? "active" : ""}`}
+            >
+              הכל
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c.value}
+                onClick={() => setFilterCategory(c.value)}
+                className={`chip text-xs ${filterCategory === c.value ? "active" : ""}`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
 
-      {/* Songs Table */}
-      <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-glass text-right">
-                <th className="px-4 py-3 font-medium text-muted w-12">
-                  <button
-                    type="button"
-                    onClick={toggleSelectAllFiltered}
-                    className="text-muted hover:text-foreground transition-colors"
-                    aria-label={allFilteredSelected ? "בטל בחירה" : "בחר הכל"}
-                  >
-                    {allFilteredSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                  </button>
-                </th>
-                <th className="px-4 py-3 font-medium text-muted">שיר</th>
-                <th className="px-4 py-3 font-medium text-muted hidden sm:table-cell">קטגוריה</th>
-                <th className="px-4 py-3 font-medium text-muted hidden md:table-cell">תגיות</th>
-                <th className="px-4 py-3 font-medium text-muted hidden sm:table-cell">אנרגיה</th>
-                <th className="px-4 py-3 font-medium text-muted w-24">פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((song) => (
-                <tr
-                  key={song.id}
-                  className={`border-b border-glass/50 hover:bg-surface-hover transition-colors ${!song.isActive ? "opacity-55" : ""}`}
-                >
-                  <td className="px-4 py-3">
+        {selectedCount > 0 && (
+          <div className="glass-card p-4 flex flex-wrap items-center gap-2">
+            <div className="text-sm font-medium ml-2">נבחרו {selectedCount} שירים</div>
+            <button
+              type="button"
+              onClick={() => runBulkUpdate({ isActive: false }, "השירים סומנו כמוסתרים")}
+              className="btn-secondary text-sm py-2 px-3"
+            >
+              הסתר
+            </button>
+            <button
+              type="button"
+              onClick={() => runBulkUpdate({ isActive: true }, "השירים סומנו כפעילים")}
+              className="btn-secondary text-sm py-2 px-3"
+            >
+              הצג
+            </button>
+            <select
+              value={bulkCategory}
+              onChange={(e) => setBulkCategory(e.target.value as SongCategory)}
+              className="px-3 py-2 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors"
+            >
+              {categories.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() =>
+                runBulkUpdate(
+                  { category: bulkCategory },
+                  `השירים הועברו לקטגוריית ${categories.find((category) => category.value === bulkCategory)?.label || ""}`
+                )
+              }
+              className="btn-secondary text-sm py-2 px-3"
+            >
+              העבר לקטגוריה
+            </button>
+            <button
+              type="button"
+              onClick={runBulkDelete}
+              className="btn-secondary text-sm py-2 px-3"
+              style={{ color: "var(--accent-danger)" }}
+            >
+              מחק נבחרים
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedSongIds([])}
+              className="text-xs text-muted hover:text-foreground transition-colors mr-auto"
+            >
+              נקה בחירה
+            </button>
+          </div>
+        )}
+
+        {bulkActionMessage && (
+          <div className="glass-card p-3 text-sm text-brand-blue">
+            {bulkActionMessage}
+          </div>
+        )}
+
+        {songMutationError && (
+          <div className="glass-card p-3 text-sm" style={{ color: "var(--accent-danger)" }}>
+            {songMutationError}
+          </div>
+        )}
+
+        {/* Songs Table */}
+        <div className="glass-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-glass text-right">
+                  <th className="px-4 py-3 font-medium text-muted w-12">
                     <button
                       type="button"
-                      onClick={() => toggleSongSelection(song.id)}
+                      onClick={toggleSelectAllFiltered}
                       className="text-muted hover:text-foreground transition-colors"
-                      aria-label={selectedSongIds.includes(song.id) ? "בטל בחירה" : "בחר שיר"}
+                      aria-label={allFilteredSelected ? "בטל בחירה" : "בחר הכל"}
                     >
-                      {selectedSongIds.includes(song.id) ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                      {allFilteredSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                     </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-brand-gray/30 flex-shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={song.coverUrl}
-                          alt={song.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{song.title}</p>
-                        <p className="text-xs text-muted truncate">{song.artist}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className="chip text-xs">
-                      {categories.find((c) => c.value === song.category)?.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {song.tags.slice(0, 2).map((tag) => (
-                        <span key={tag} className="text-xs text-muted">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    {"⚡".repeat(song.energy)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => updateSong(song.id, { isActive: !song.isActive })}
-                        className={`p-1.5 rounded-lg transition-colors ${song.isActive ? "text-brand-blue hover:text-brand-blue/80" : "text-accent-danger hover:text-accent-danger/80"}`}
-                        aria-label={song.isActive ? "הסתר" : "הצג"}
-                        title={song.isActive ? "הסתר שיר" : "הצג שיר"}
-                      >
-                        {song.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                      </button>
-                      <button
-                        onClick={() => setEditingSong(song)}
-                        className="p-1.5 rounded-lg text-muted hover:text-brand-blue transition-colors"
-                        aria-label="ערוך"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm("למחוק את השיר?")) deleteSong(song.id);
-                        }}
-                        className="p-1.5 rounded-lg text-muted hover:text-accent-danger transition-colors"
-                        aria-label="מחק"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+                  </th>
+                  <th className="px-4 py-3 font-medium text-muted">שיר</th>
+                  <th className="px-4 py-3 font-medium text-muted hidden sm:table-cell">קטגוריה</th>
+                  <th className="px-4 py-3 font-medium text-muted hidden md:table-cell">תגיות</th>
+                  <th className="px-4 py-3 font-medium text-muted hidden sm:table-cell">אנרגיה</th>
+                  <th className="px-4 py-3 font-medium text-muted w-24">פעולות</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filtered.length === 0 && (
-          <div className="p-8 text-center text-muted text-sm">
-            לא נמצאו שירים
+              </thead>
+              <tbody>
+                {filtered.map((song) => (
+                  <tr
+                    key={song.id}
+                    className={`border-b border-glass/50 hover:bg-surface-hover transition-colors ${!song.isActive ? "opacity-55" : ""}`}
+                  >
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleSongSelection(song.id)}
+                        className="text-muted hover:text-foreground transition-colors"
+                        aria-label={selectedSongIds.includes(song.id) ? "בטל בחירה" : "בחר שיר"}
+                      >
+                        {selectedSongIds.includes(song.id) ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-brand-gray/30 flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={song.coverUrl}
+                            alt={song.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{song.title}</p>
+                          <p className="text-xs text-muted truncate">{song.artist}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <span className="chip text-xs">
+                        {categories.find((c) => c.value === song.category)?.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <div className="flex flex-wrap gap-1">
+                        {song.tags.slice(0, 2).map((tag) => (
+                          <span key={tag} className="text-xs text-muted">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      {"⚡".repeat(song.energy)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={async () => {
+                            setSongMutationError(null);
+                            try {
+                              await updateSong(song.id, { isActive: !song.isActive });
+                            } catch (error) {
+                              setSongMutationError(
+                                error instanceof Error ? error.message : "עדכון השיר נכשל"
+                              );
+                            }
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors ${song.isActive ? "text-brand-blue hover:text-brand-blue/80" : "text-accent-danger hover:text-accent-danger/80"}`}
+                          aria-label={song.isActive ? "הסתר" : "הצג"}
+                          title={song.isActive ? "הסתר שיר" : "הצג שיר"}
+                        >
+                          {song.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        </button>
+                        <button
+                          onClick={() => setEditingSong(song)}
+                          className="p-1.5 rounded-lg text-muted hover:text-brand-blue transition-colors"
+                          aria-label="ערוך"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm("למחוק את השיר?")) return;
+                            setSongMutationError(null);
+                            try {
+                              await deleteSong(song.id);
+                            } catch (error) {
+                              setSongMutationError(
+                                error instanceof Error ? error.message : "מחיקת השיר נכשלה"
+                              );
+                            }
+                          }}
+                          className="p-1.5 rounded-lg text-muted hover:text-accent-danger transition-colors"
+                          aria-label="מחק"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
+          {filtered.length === 0 && (
+            <div className="p-8 text-center text-muted text-sm space-y-2">
+              <p>{songs.length === 0 ? "עדיין אין שירים בספרייה" : "לא נמצאו שירים לפי הסינון הנוכחי"}</p>
+              <p className="text-xs text-secondary">
+                {songs.length === 0
+                  ? "התחל עם 10-20 שירים בסיסיים, או ייבא CSV כדי לתת לזוגות חוויית בחירה מלאה כבר מהיום הראשון."
+                  : "נסה לחפש בשם אחר, להסיר סינון, או להוסיף שירים חדשים לרשימה."}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Add/Edit Modal */}
+        <AnimatePresence>
+          {(showAddModal || editingSong) && (
+            <SongModal
+              song={editingSong}
+              categories={categories}
+              onSave={async (data) => {
+                setSongMutationError(null);
+                if (editingSong) {
+                  try {
+                    await updateSong(editingSong.id, data);
+                  } catch (error) {
+                    setSongMutationError(
+                      error instanceof Error ? error.message : "עדכון השיר נכשל"
+                    );
+                    throw error;
+                  }
+                } else {
+                  try {
+                    await addSong(data as Omit<Song, "id" | "sortOrder">);
+                  } catch (error) {
+                    setSongMutationError(
+                      error instanceof Error ? error.message : "יצירת השיר נכשלה"
+                    );
+                    throw error;
+                  }
+                }
+                setShowAddModal(false);
+                setEditingSong(null);
+              }}
+              onClose={() => {
+                setShowAddModal(false);
+                setEditingSong(null);
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showPreview && (
+            <PreviewModal
+              songs={songs}
+              categories={categories}
+              onToggleActive={(id, isActive) => {
+                void updateSong(id, { isActive }).catch((error) => {
+                  setSongMutationError(
+                    error instanceof Error ? error.message : "עדכון השיר נכשל"
+                  );
+                });
+              }}
+              onClose={() => setShowPreview(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showSpotifyImport && (
+            <SpotifyImportModal
+              existingSongs={songs}
+              onAdd={(data) => {
+                void addSong(data).catch((error) => {
+                  setSongMutationError(
+                    error instanceof Error ? error.message : "יצירת השיר נכשלה"
+                  );
+                });
+              }}
+              onClose={() => setShowSpotifyImport(false)}
+              canUseSpotifyImport={canUseSpotifyImport}
+            />
+          )}
+        </AnimatePresence>
       </div>
-
-      {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {(showAddModal || editingSong) && (
-          <SongModal
-            song={editingSong}
-            categories={categories}
-            onSave={(data) => {
-              if (editingSong) {
-                updateSong(editingSong.id, data);
-              } else {
-                addSong(data as Omit<Song, "id" | "sortOrder">);
-              }
-              setShowAddModal(false);
-              setEditingSong(null);
-            }}
-            onClose={() => {
-              setShowAddModal(false);
-              setEditingSong(null);
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showPreview && (
-          <PreviewModal
-            songs={songs}
-            categories={categories}
-            onToggleActive={(id, isActive) => updateSong(id, { isActive })}
-            onClose={() => setShowPreview(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showSpotifyImport && (
-          <SpotifyImportModal
-            existingSongs={songs}
-            onAdd={(data) => addSong(data)}
-            onClose={() => setShowSpotifyImport(false)}
-            canUseSpotifyImport={canUseSpotifyImport}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -1070,7 +1164,7 @@ function SongModal({
 }: {
   song: Song | null;
   categories: { value: SongCategory; label: string }[];
-  onSave: (data: Partial<Song>) => void;
+  onSave: (data: Partial<Song>) => Promise<void>;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(song?.title || "");
@@ -1087,6 +1181,8 @@ function SongModal({
   const [metaError, setMetaError] = useState<string | null>(null);
   const [uploadingKind, setUploadingKind] = useState<"audio" | "cover" | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const resolvedMedia = resolveSongMedia(previewUrl, externalLink);
   const canAutoFillFromYoutube = resolvedMedia.canAutoFillFromYoutube;
 
@@ -1152,21 +1248,31 @@ function SongModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      title,
-      artist,
-      coverUrl,
-      previewUrl: previewUrl || undefined,
-      externalLink: externalLink || undefined,
-      category,
-      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-      energy,
-      language,
-      isSafe,
-      isActive: true,
-    });
+    setSaveError(null);
+    setSaving(true);
+    try {
+      await onSave({
+        title,
+        artist,
+        coverUrl,
+        previewUrl: previewUrl || undefined,
+        externalLink: externalLink || undefined,
+        category,
+        tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+        energy,
+        language,
+        isSafe,
+        isActive: song?.isActive ?? true,
+      });
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : song ? "עדכון השיר נכשל" : "יצירת השיר נכשלה"
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -1191,6 +1297,12 @@ function SongModal({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {saveError && (
+          <div className="glass-card px-4 py-3 text-sm" style={{ color: "var(--accent-danger)" }}>
+            {saveError}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 sm:col-span-1">
@@ -1391,8 +1503,8 @@ function SongModal({
         </label>
 
         <div className="flex gap-2 pt-2">
-          <button type="submit" className="btn-primary flex-1">
-            {song ? "שמור שינויים" : "הוסף שיר"}
+          <button type="submit" disabled={saving} className={`btn-primary flex-1 ${saving ? "opacity-60 cursor-not-allowed" : ""}`}>
+            {saving ? "שומר..." : song ? "שמור שינויים" : "הוסף שיר"}
           </button>
           <button type="button" onClick={onClose} className="btn-secondary flex-1">
             ביטול

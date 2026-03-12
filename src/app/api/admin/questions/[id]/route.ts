@@ -16,25 +16,22 @@ export async function PATCH(
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    const songId = params.id?.trim();
-    if (!songId) {
-      return NextResponse.json({ error: "Missing song id" }, { status: 400 });
+    const questionId = params.id?.trim();
+    if (!questionId) {
+      return NextResponse.json({ error: "Missing question id" }, { status: 400 });
     }
 
     const body = (await req.json()) as { data?: Record<string, unknown> };
     const data = body.data || {};
     const row: Record<string, unknown> = {};
 
-    if (data.title !== undefined) row.title = data.title;
-    if (data.artist !== undefined) row.artist = data.artist;
-    if (data.coverUrl !== undefined) row.cover_url = data.coverUrl;
-    if (data.previewUrl !== undefined) row.preview_url = data.previewUrl;
-    if (data.externalLink !== undefined) row.external_link = data.externalLink;
-    if (data.category !== undefined) row.category = data.category;
-    if (data.tags !== undefined) row.tags = data.tags;
-    if (data.energy !== undefined) row.energy = data.energy;
-    if (data.language !== undefined) row.language = data.language;
-    if (data.isSafe !== undefined) row.is_safe = data.isSafe;
+    if (data.questionHe !== undefined) row.question_he = data.questionHe;
+    if (data.questionType !== undefined) row.question_type = data.questionType;
+    if (data.eventType !== undefined) row.event_type = data.eventType;
+    if (data.options !== undefined) row.options = JSON.stringify(data.options);
+    if (data.sliderMin !== undefined) row.slider_min = data.sliderMin;
+    if (data.sliderMax !== undefined) row.slider_max = data.sliderMax;
+    if (data.sliderLabels !== undefined) row.slider_labels = JSON.stringify(data.sliderLabels);
     if (data.isActive !== undefined) row.is_active = data.isActive;
     if (data.sortOrder !== undefined) row.sort_order = data.sortOrder;
 
@@ -43,25 +40,25 @@ export async function PATCH(
     }
 
     const supabase = getServiceSupabase();
-    const { data: existingSong, error: existingSongError } = await supabase
-      .from("songs")
+    const { data: existingQuestion, error: existingQuestionError } = await supabase
+      .from("questions")
       .select("id")
-      .eq("id", songId)
+      .eq("id", questionId)
       .eq("dj_id", auth.profileId)
       .maybeSingle();
 
-    if (existingSongError) {
-      return NextResponse.json({ error: existingSongError.message }, { status: 500 });
+    if (existingQuestionError) {
+      return NextResponse.json({ error: existingQuestionError.message }, { status: 500 });
     }
 
-    if (!existingSong?.id) {
-      return NextResponse.json({ error: "Song not found for current profile" }, { status: 404 });
+    if (!existingQuestion?.id) {
+      return NextResponse.json({ error: "Question not found for current profile" }, { status: 404 });
     }
 
     const { error } = await supabase
-      .from("songs")
+      .from("questions")
       .update(row)
-      .eq("id", songId)
+      .eq("id", questionId)
       .eq("dj_id", auth.profileId);
 
     if (error) {
@@ -71,7 +68,7 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Failed to update song" },
+      { error: e instanceof Error ? e.message : "Failed to update question" },
       { status: 500 }
     );
   }
@@ -88,31 +85,31 @@ export async function DELETE(
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    const songId = params.id?.trim();
-    if (!songId) {
-      return NextResponse.json({ error: "Missing song id" }, { status: 400 });
+    const questionId = params.id?.trim();
+    if (!questionId) {
+      return NextResponse.json({ error: "Missing question id" }, { status: 400 });
     }
 
     const supabase = getServiceSupabase();
-    const { data: existingSong, error: existingSongError } = await supabase
-      .from("songs")
+    const { data: existingQuestion, error: existingQuestionError } = await supabase
+      .from("questions")
       .select("id")
-      .eq("id", songId)
+      .eq("id", questionId)
       .eq("dj_id", auth.profileId)
       .maybeSingle();
 
-    if (existingSongError) {
-      return NextResponse.json({ error: existingSongError.message }, { status: 500 });
+    if (existingQuestionError) {
+      return NextResponse.json({ error: existingQuestionError.message }, { status: 500 });
     }
 
-    if (!existingSong?.id) {
-      return NextResponse.json({ error: "Song not found for current profile" }, { status: 404 });
+    if (!existingQuestion?.id) {
+      return NextResponse.json({ error: "Question not found for current profile" }, { status: 404 });
     }
 
     const { error } = await supabase
-      .from("songs")
+      .from("questions")
       .delete()
-      .eq("id", songId)
+      .eq("id", questionId)
       .eq("dj_id", auth.profileId);
 
     if (error) {
@@ -122,7 +119,7 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Failed to delete song" },
+      { error: e instanceof Error ? e.message : "Failed to delete question" },
       { status: 500 }
     );
   }

@@ -6,10 +6,6 @@ import { hasFeature, loadResolvedAccessByUserId } from "@/lib/access";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function isUuid(value: string | null | undefined) {
-  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
 type RouteContext = {
   params: {
     eventId: string;
@@ -32,7 +28,7 @@ export async function GET(_req: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
     const ownerIds = Array.from(
-      new Set([isUuid(auth.userId) ? auth.userId : null, profileId].filter((value): value is string => Boolean(value)))
+      new Set([auth.userId, profileId].filter((value): value is string => Boolean(value)))
     );
 
     const eventId = params.eventId;
@@ -55,7 +51,7 @@ export async function GET(_req: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    const [{ data: answers, error: answersError }, { data: swipes, error: swipesError }, { data: requests, error: requestsError }, { data: questions, error: questionsError }, { data: songs, error: songsError }] = await Promise.all([
+    const [answersResult, swipesResult, requestsResult, questionsResult, songsResult] = await Promise.all([
       supabase.from("answers").select("*").eq("event_id", eventId).order("created_at", { ascending: true }),
       supabase.from("swipes").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
       supabase.from("requests").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
@@ -63,18 +59,18 @@ export async function GET(_req: Request, { params }: RouteContext) {
       supabase.from("songs").select("*").eq("dj_id", profileId).order("sort_order", { ascending: true }),
     ]);
 
-    const firstError = answersError || swipesError || requestsError || questionsError || songsError;
-    if (firstError) {
-      return NextResponse.json({ error: firstError.message }, { status: 500 });
+    if (answersResult.error || swipesResult.error || requestsResult.error) {
+      const firstError = answersResult.error || swipesResult.error || requestsResult.error;
+      return NextResponse.json({ error: firstError?.message || "Failed to load event detail" }, { status: 500 });
     }
 
     return NextResponse.json({
       event,
-      answers: answers || [],
-      swipes: swipes || [],
-      requests: requests || [],
-      questions: questions || [],
-      songs: songs || [],
+      answers: answersResult.data || [],
+      swipes: swipesResult.data || [],
+      requests: requestsResult.data || [],
+      questions: questionsResult.data || [],
+      songs: songsResult.data || [],
     });
   } catch (e) {
     return NextResponse.json(

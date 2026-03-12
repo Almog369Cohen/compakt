@@ -61,7 +61,7 @@ export async function requireAuth(
 
   if (!userId) {
     try {
-      const supabase = createRouteClient();
+      const supabase = await createRouteClient();
       const {
         data: { user },
         error: sessionError,

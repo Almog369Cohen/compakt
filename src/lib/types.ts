@@ -1,6 +1,6 @@
 export type EventType = "wedding" | "bar_mitzvah" | "private" | "corporate" | "other";
 
-export type QuestionType = "single_select" | "multi_select" | "slider" | "text";
+export type QuestionType = "single_select" | "multi_select" | "slider" | "text" | "guest_calculator";
 
 export type SwipeAction = "like" | "dislike" | "super_like" | "unsure";
 
@@ -39,6 +39,7 @@ export interface QuestionOption {
 export interface Question {
   id: string;
   eventType: EventType;
+  eventTypes?: EventType[];
   sortOrder: number;
   questionHe: string;
   questionType: QuestionType;
@@ -49,11 +50,18 @@ export interface Question {
   isActive: boolean;
 }
 
+export interface GuestCalculatorAnswer {
+  totalGuests: number;
+  adults: number;
+  youngAdults: number;
+  children: number;
+}
+
 export interface QuestionAnswer {
   id: string;
   eventId: string;
   questionId: string;
-  answerValue: string | string[] | number;
+  answerValue: string | string[] | number | GuestCalculatorAnswer;
   answeredAt: string;
 }
 

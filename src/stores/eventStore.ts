@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type {
   EventData,
   EventType,
+  GuestCalculatorAnswer,
   QuestionAnswer,
   SongSwipe,
   EventRequest,
@@ -38,6 +39,38 @@ function isUuidLike(value: string | undefined): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+async function persistSwipeToServer(payload: {
+  id: string;
+  eventId: string;
+  songId: string;
+  action: SwipeAction;
+  reasonChips: string[];
+}) {
+  const res = await fetch("/api/couple/swipe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error || "Failed to persist swipe");
+  }
+}
+
+async function deleteSwipeFromServer(id: string) {
+  const res = await fetch("/api/couple/swipe", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error || "Failed to delete swipe");
+  }
+}
+
 interface EventStore {
   // Current event
   event: EventData | null;
@@ -57,7 +90,7 @@ interface EventStore {
   setStage: (stage: number) => void;
 
   // Questions
-  saveAnswer: (questionId: string, value: string | string[] | number) => void;
+  saveAnswer: (questionId: string, value: string | string[] | number | GuestCalculatorAnswer) => void;
   getAnswer: (questionId: string) => QuestionAnswer | undefined;
 
   // Swipes
@@ -352,24 +385,15 @@ export const useEventStore = create<EventStore>()(
           set({ swipes: [...swipes, swipe] });
         }
 
-        // Sync to Supabase
-        if (supabase) {
-          supabase
-            .from("swipes")
-            .upsert(
-              {
-                id: swipe.id,
-                event_id: event.id,
-                song_id: songId,
-                action,
-                reason_chips: JSON.stringify(reasonChips),
-              },
-              { onConflict: "id" }
-            )
-            .then(({ error }: { error: { message: string } | null }) => {
-              if (error) console.error("[DB Write] swipes.upsert failed:", error.message);
-            });
-        }
+        void persistSwipeToServer({
+          id: swipe.id,
+          eventId: event.id,
+          songId,
+          action,
+          reasonChips,
+        }).catch((error) => {
+          console.error("[API Write] couple/swipe upsert failed:", error instanceof Error ? error.message : String(error));
+        });
       },
 
       getSwipe: (songId) => {
@@ -383,9 +407,9 @@ export const useEventStore = create<EventStore>()(
       removeSwipe: (songId) => {
         const swipe = get().swipes.find((s) => s.songId === songId);
         set({ swipes: get().swipes.filter((s) => s.songId !== songId) });
-        if (supabase && swipe) {
-          supabase.from("swipes").delete().eq("id", swipe.id).then(({ error }: { error: { message: string } | null }) => {
-            if (error) console.error("[DB Write] swipes.delete failed:", error.message);
+        if (swipe) {
+          void deleteSwipeFromServer(swipe.id).catch((error) => {
+            console.error("[API Write] couple/swipe delete failed:", error instanceof Error ? error.message : String(error));
           });
         }
       },

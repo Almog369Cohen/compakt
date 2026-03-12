@@ -14,7 +14,7 @@ function isValidEmail(email: string): boolean {
 }
 
 type EventInsertRow = {
-  dj_id?: string;
+  dj_id: string;
   magic_token: string;
   token: string;
   event_type: string;
@@ -27,13 +27,14 @@ type EventInsertRow = {
   current_stage: number;
 };
 
-async function resolveDjProfileId(
+async function resolveDjOwnerCandidates(
   supabase: ReturnType<typeof getServiceSupabase>,
   djId: string | null,
   djSlug: string | null
-): Promise<string | null> {
+): Promise<string[]> {
   const normalizedId = typeof djId === "string" ? djId.trim() : "";
   const normalizedSlug = typeof djSlug === "string" ? djSlug.trim() : "";
+  const candidates = new Set<string>();
 
   if (normalizedId) {
     const { data } = await supabase
@@ -42,8 +43,8 @@ async function resolveDjProfileId(
       .or(`id.eq.${normalizedId},user_id.eq.${normalizedId}`)
       .maybeSingle();
 
-    if (data?.user_id) return data.user_id;
-    if (data?.id) return data.id;
+    if (data?.user_id) candidates.add(data.user_id);
+    if (data?.id) candidates.add(data.id);
   }
 
   if (normalizedSlug) {
@@ -53,11 +54,11 @@ async function resolveDjProfileId(
       .eq("dj_slug", normalizedSlug)
       .maybeSingle();
 
-    if (data?.user_id) return data.user_id;
-    if (data?.id) return data.id;
+    if (data?.user_id) candidates.add(data.user_id);
+    if (data?.id) candidates.add(data.id);
   }
 
-  return null;
+  return Array.from(candidates);
 }
 
 async function insertEventRow(
@@ -111,13 +112,13 @@ export async function POST(req: Request) {
     }
 
     const supabase = getServiceSupabase();
-    const resolvedDjId = await resolveDjProfileId(
+    const ownerCandidates = await resolveDjOwnerCandidates(
       supabase,
       typeof djId === "string" ? djId : null,
       typeof djSlug === "string" ? djSlug : null
     );
 
-    if (!resolvedDjId) {
+    if (ownerCandidates.length === 0) {
       return NextResponse.json(
         { error: "הדיג׳יי שנבחר לא נמצא. רעננו את הדף ובחרו שוב." },
         { status: 400 }
@@ -126,64 +127,42 @@ export async function POST(req: Request) {
 
     const token = generateMagicToken();
     const eventNumber = generateEventNumber();
-    const insertPayload: EventInsertRow = {
-      dj_id: resolvedDjId,
-      magic_token: token,
-      token: eventNumber,
-      event_type: eventType || "wedding",
-      couple_name_a: coupleNameA || "",
-      couple_name_b: coupleNameB || "",
-      event_date: eventDate || "",
-      venue: venue || "",
-      phone_number: contactPhone || "",
-      email: normalizedEmail,
-      current_stage: 0,
-    };
+    let attempt: Awaited<ReturnType<typeof insertEventRow>> | null = null;
+    let lastErrorMessage = "שגיאה ביצירת אירוע";
 
-    let attempt = await insertEventRow(supabase, insertPayload, true);
+    for (const ownerId of ownerCandidates) {
+      const insertPayload: EventInsertRow = {
+        dj_id: ownerId,
+        magic_token: token,
+        token: eventNumber,
+        event_type: eventType || "wedding",
+        couple_name_a: coupleNameA || "",
+        couple_name_b: coupleNameB || "",
+        event_date: eventDate || "",
+        venue: venue || "",
+        phone_number: contactPhone || "",
+        email: normalizedEmail,
+        current_stage: 0,
+      };
 
-    if (attempt.error?.message.includes("email")) {
-      attempt = await insertEventRow(supabase, insertPayload, false);
+      attempt = await insertEventRow(supabase, insertPayload, true);
+
+      if (attempt.error?.message.includes("email")) {
+        attempt = await insertEventRow(supabase, insertPayload, false);
+      }
+
+      if (!attempt.error) {
+        break;
+      }
+
+      lastErrorMessage = attempt.error.message;
     }
 
-    if (attempt.error?.message.includes("events_dj_id_fkey")) {
-      const retryWithoutDj = await insertEventRow(
-        supabase,
-        { ...insertPayload, dj_id: undefined },
-        !attempt.error.message.includes("email")
+    if (!attempt || attempt.error) {
+      return NextResponse.json(
+        { error: lastErrorMessage || "יצירת האירוע נכשלה. לא נוצר אירוע בלי שיוך ל-DJ." },
+        { status: 500 }
       );
-
-      if (retryWithoutDj.error?.message.includes("email")) {
-        const retryWithoutDjNoEmail = await insertEventRow(
-          supabase,
-          { ...insertPayload, dj_id: undefined },
-          false
-        );
-
-        if (retryWithoutDjNoEmail.error) {
-          return NextResponse.json({ error: retryWithoutDjNoEmail.error.message }, { status: 500 });
-        }
-
-        return NextResponse.json({
-          event: retryWithoutDjNoEmail.data,
-          eventKey: retryWithoutDjNoEmail.data.magic_token,
-          eventNumber: retryWithoutDjNoEmail.data.token,
-        });
-      }
-
-      if (retryWithoutDj.error) {
-        return NextResponse.json({ error: retryWithoutDj.error.message }, { status: 500 });
-      }
-
-      return NextResponse.json({
-        event: retryWithoutDj.data,
-        eventKey: retryWithoutDj.data.magic_token,
-        eventNumber: retryWithoutDj.data.token,
-      });
-    }
-
-    if (attempt.error) {
-      return NextResponse.json({ error: attempt.error.message }, { status: 500 });
     }
 
     const data = attempt.data;

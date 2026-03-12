@@ -245,39 +245,48 @@ export function EventsManager() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-brand-blue" />
-          ניהול אירועים
-        </h2>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleConnectGCal}
-            disabled={!userId || !canUseGoogleCalendar}
-            className={`btn-secondary text-sm flex items-center gap-2 py-2.5 px-4 ${!canUseGoogleCalendar ? "opacity-50 cursor-not-allowed" : ""}`}
-            title={canUseGoogleCalendar ? "חברו את Google Calendar" : "Google Calendar זמין בתוכנית Pro ומעלה או דרך override ב-HQ"}
-          >
-            <Link className="w-4 h-4" />
-            <span className="hidden sm:inline">חבר Google Calendar</span>
-          </button>
-          <button
-            onClick={() => handleSync("both")}
-            disabled={syncing || !userId || !canUseGoogleCalendar}
-            className={`btn-secondary text-sm flex items-center gap-2 py-2.5 px-4 ${syncing || !canUseGoogleCalendar ? "opacity-70" : ""}`}
-            title={canUseGoogleCalendar ? "סנכרן עם Google Calendar" : "Google Calendar זמין בתוכנית Pro ומעלה או דרך override ב-HQ"}
-          >
-            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            <span className="hidden sm:inline">{syncing ? "מסנכרן..." : "סנכרן"}</span>
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={creating || !profileId}
-            className={`btn-primary text-sm flex items-center gap-2 py-2.5 px-5 ${creating ? "opacity-70" : ""}`}
-          >
-            <Plus className="w-4 h-4" />
-            {creating ? "יוצר..." : "אירוע חדש"}
-          </button>
+      <div className="rounded-[24px] border border-white/10 bg-[rgba(12,16,24,0.72)] backdrop-blur-xl shadow-[0_16px_36px_rgba(0,0,0,0.16)] p-4 md:p-5">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] text-secondary">
+              <Calendar className="w-3.5 h-3.5 text-brand-blue" />
+              אירועי DJ
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">יומן ותפעול אירועי DJ</h2>
+              <p className="text-sm text-secondary mt-1 max-w-3xl leading-6">
+                זהו אזור התפעול של הדיג׳יי עצמו: תאריכים, מיקום, הערות עבודה וצילומי מסך. זה נפרד משאלוני הזוגות ומהעדפות המוזיקליות שלהם.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleConnectGCal}
+              disabled={!userId || !canUseGoogleCalendar}
+              className={`btn-secondary text-sm flex items-center gap-2 py-2.5 px-4 ${!canUseGoogleCalendar ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={canUseGoogleCalendar ? "חברו את Google Calendar" : "Google Calendar זמין בתוכנית Pro ומעלה או דרך override ב-HQ"}
+            >
+              <Link className="w-4 h-4" />
+              <span className="hidden sm:inline">חבר Google Calendar</span>
+            </button>
+            <button
+              onClick={() => handleSync("both")}
+              disabled={syncing || !userId || !canUseGoogleCalendar}
+              className={`btn-secondary text-sm flex items-center gap-2 py-2.5 px-4 ${syncing || !canUseGoogleCalendar ? "opacity-70" : ""}`}
+              title={canUseGoogleCalendar ? "סנכרן עם Google Calendar" : "Google Calendar זמין בתוכנית Pro ומעלה או דרך override ב-HQ"}
+            >
+              {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              <span className="hidden sm:inline">{syncing ? "מסנכרן..." : "סנכרן"}</span>
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={creating || !profileId}
+              className={`btn-primary text-sm flex items-center gap-2 py-2.5 px-5 ${creating ? "opacity-70" : ""}`}
+            >
+              <Plus className="w-4 h-4" />
+              {creating ? "יוצר..." : "אירוע חדש"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -289,13 +298,13 @@ export function EventsManager() {
 
       {!canUseGoogleCalendar && (
         <div className="glass-card p-3 text-sm text-muted">
-          חיבור וסנכרון עם Google Calendar חסומים כרגע לחשבון הזה. אפשר להפעיל אותם דרך תוכנית תומכת או override ב-HQ.
+          חיבור וסנכרון עם Google Calendar לא כלולים כרגע בגרסת ההשקה של החשבון הזה.
         </div>
       )}
 
       {!canUseImageUploads && (
         <div className="glass-card p-3 text-sm text-muted">
-          העלאת צילומי מסך חסומה כרגע לחשבון הזה. אפשר להפעיל אותה דרך תוכנית תומכת או override ב-HQ.
+          העלאת צילומי מסך לא כלולה כרגע בגרסת ההשקה של החשבון הזה.
         </div>
       )}
 
@@ -376,8 +385,8 @@ export function EventsManager() {
       {!loading && profileId && events.length === 0 && (
         <div className="glass-card p-8 text-center space-y-3">
           <Calendar className="w-10 h-10 text-muted mx-auto" />
-          <p className="text-sm text-muted">אין אירועים עדיין</p>
-          <p className="text-xs text-muted">לחצו &quot;אירוע חדש&quot; כדי להוסיף את האירוע הראשון</p>
+          <p className="text-sm text-muted">עדיין אין אירועי DJ ביומן</p>
+          <p className="text-xs text-secondary">לחצו על &quot;אירוע חדש&quot; כדי לנהל כאן את האירועים שאתם מפעילים בפועל.</p>
         </div>
       )}
     </div>
