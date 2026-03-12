@@ -311,7 +311,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
       }
     }
 
-    if (bypassClerk || authMode === "legacy") {
+    if (authMode === "legacy") {
       if (!login(normalizedEmail || "admin@compakt.app", normalizedPassword)) {
         setError(true);
         setTimeout(() => setError(false), 2000);
