@@ -102,8 +102,8 @@ export function QuestionFlow() {
   if (!question) return null;
 
   return (
-    <div className="w-full max-w-md mx-auto min-h-[calc(100dvh-7.5rem)] sm:min-h-0 flex flex-col">
-      <div className="flex items-center justify-between mb-3 px-1">
+    <div className="flex min-h-[calc(100dvh-7rem)] w-full flex-col sm:min-h-0">
+      <div className="mb-3 flex items-center justify-between px-1 pt-12 sm:pt-0">
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -120,7 +120,7 @@ export function QuestionFlow() {
         <div className="text-xs text-muted" />
       </div>
 
-      <div className="flex items-center justify-center gap-1.5 mb-4">
+      <div className="mb-3 flex items-center justify-center gap-1.5">
         {questions.map((_, i) => (
           <div
             key={i}
@@ -130,11 +130,11 @@ export function QuestionFlow() {
         ))}
       </div>
 
-      <div className="text-center text-xs text-muted mb-3">
+      <div className="mb-3 text-center text-xs text-muted">
         {currentIndex + 1} / {total}
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flow-content flex-1 min-h-0">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={question.id}
@@ -143,7 +143,7 @@ export function QuestionFlow() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: direction * -100 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="flex-1 min-h-0"
+            className="flex min-h-0 flex-1 flex-col"
           >
             <QuestionCard
               question={question}
@@ -184,22 +184,24 @@ export function QuestionFlow() {
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between mt-4 px-2 py-2">
-        <button
-          onClick={goBack}
-          className="flex items-center gap-1 text-sm text-secondary hover:text-foreground transition-colors h-10"
-        >
-          <ChevronRight className="w-4 h-4" />
-          הקודם
-        </button>
+      <div className="flow-sticky-footer mt-3 px-1 pt-3">
+        <div className="flex items-center justify-between rounded-[18px] border border-white/8 bg-black/20 px-3 py-2.5">
+          <button
+            onClick={goBack}
+            className="flex items-center gap-1 text-sm text-secondary hover:text-foreground transition-colors h-10"
+          >
+            <ChevronRight className="w-4 h-4" />
+            הקודם
+          </button>
 
-        <button
-          onClick={goNext}
-          className="flex items-center gap-1 text-sm text-brand-blue hover:text-brand-blue/80 transition-colors font-medium h-10"
-        >
-          המשך
-          <ChevronLeft className="w-4 h-4" />
-        </button>
+          <button
+            onClick={goNext}
+            className="flex items-center gap-1 text-sm text-brand-blue hover:text-brand-blue/80 transition-colors font-medium h-10"
+          >
+            המשך
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -278,9 +280,9 @@ function QuestionCard({
   );
 
   return (
-    <div className="glass-card px-5 py-5 sm:px-7 sm:py-7 h-[calc(100dvh-16rem)] min-h-[440px] max-h-[560px] sm:h-[540px] flex flex-col">
-      <div className="mb-5 min-h-[72px] flex items-center justify-center">
-        <h2 className="text-xl font-bold text-center leading-relaxed text-balance">
+    <div className="flow-card glass-card flex min-h-[min(32rem,calc(100dvh-14rem))] flex-col px-4 py-4 sm:px-6 sm:py-6">
+      <div className="mb-4 flex min-h-[64px] items-center justify-center sm:min-h-[72px]">
+        <h2 className="text-fluid-screen-title text-center font-bold text-balance">
           {question.questionHe}
         </h2>
       </div>
@@ -293,7 +295,7 @@ function QuestionCard({
                 key={opt.value}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => onAnswer(opt.value)}
-                className={`w-full text-right px-4 py-3 min-h-[52px] rounded-xl border transition-all ${existingValue === opt.value
+                className={`w-full min-h-[50px] rounded-xl border px-4 py-3 text-right text-fluid-body transition-all ${existingValue === opt.value
                   ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
                   : "border-glass text-secondary hover:border-brand-blue/50"
                   }`}
@@ -306,7 +308,7 @@ function QuestionCard({
 
         {question.questionType === "multi_select" && question.options && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <p className="text-xs text-center text-muted mb-2 flex-shrink-0">אפשר לבחור כמה אפשרויות</p>
+            <p className="mb-2 flex-shrink-0 text-center text-fluid-micro text-muted">אפשר לבחור כמה אפשרויות</p>
             <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-2.5 scrollbar-hide">
               {question.options.map((opt) => {
                 const isSelected = multiSelected.includes(opt.value);
@@ -321,7 +323,7 @@ function QuestionCard({
                       setMultiSelected(updated);
                       onAnswer(updated);
                     }}
-                    className={`w-full text-right px-4 py-3 min-h-[52px] rounded-xl border transition-all ${isSelected
+                    className={`w-full min-h-[50px] rounded-xl border px-4 py-3 text-right text-fluid-body transition-all ${isSelected
                       ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
                       : "border-glass text-secondary hover:border-brand-blue/50"
                       }`}
@@ -383,7 +385,7 @@ function QuestionCard({
         )}
 
         {question.questionType === "text" && (
-          <div className="flex-1 flex items-center">
+          <div className="flex flex-1 items-center">
             <textarea
               value={textValue}
               onChange={(e) => {
@@ -392,7 +394,7 @@ function QuestionCard({
               }}
               placeholder="...ספרו לנו"
               rows={6}
-              className="w-full h-[180px] px-4 py-3 rounded-xl bg-transparent border border-glass text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-brand-blue transition-colors resize-none"
+              className="h-[180px] w-full rounded-xl border border-glass bg-transparent px-4 py-3 text-fluid-body text-foreground placeholder:text-muted focus:border-brand-blue focus:outline-none transition-colors resize-none"
             />
           </div>
         )}
@@ -484,35 +486,35 @@ function GuestCalculatorCard({
   ];
 
   return (
-    <div className="flex flex-1 flex-col justify-center">
-      <div className="rounded-[26px] border border-white/10 bg-white/[0.03] p-4">
+    <div className="flex flex-1 flex-col">
+      <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-3 sm:p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold">מחשבון אורחים חכם</p>
-            <p className="mt-1 text-xs leading-5 text-muted">הכניסו כמות כוללת, וקבלו חלוקה התחלתית שאפשר לדייק.</p>
+            <p className="text-fluid-card-title font-semibold">מחשבון אורחים חכם</p>
+            <p className="mt-1 max-w-[28ch] text-fluid-micro text-muted">הכניסו כמות כוללת, וקבלו חלוקה התחלתית שאפשר לדייק.</p>
           </div>
-          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] sm:h-11 sm:w-11">
             <Users className="h-5 w-5 text-brand-blue" />
           </div>
         </div>
 
-        <div className="mt-5 rounded-[22px] border border-white/10 bg-black/15 p-4 text-center">
-          <p className="text-xs text-muted">סה״כ אורחים</p>
-          <div className="mt-2 flex items-center justify-center gap-3">
+        <div className="mt-4 rounded-[20px] border border-white/10 bg-black/15 p-3 text-center sm:p-4">
+          <p className="text-fluid-micro text-muted">סה״כ אורחים</p>
+          <div className="mt-2 flex items-center justify-center gap-2.5 sm:gap-3">
             <button
               onClick={() => distributeFromTotal(totalGuests - 10)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-colors hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-colors hover:text-white sm:h-10 sm:w-10"
               type="button"
             >
               <Minus className="h-4 w-4" />
             </button>
-            <div className="min-w-[110px] text-center">
-              <p className="text-[34px] font-black leading-none tracking-[-0.05em] tabular-nums">{totalGuests}</p>
-              <p className="mt-1 text-[11px] text-secondary">אורחים משוערים</p>
+            <div className="min-w-[96px] text-center sm:min-w-[110px]">
+              <p className="text-fluid-stat font-black tabular-nums">{totalGuests}</p>
+              <p className="mt-1 text-fluid-micro text-secondary">אורחים משוערים</p>
             </div>
             <button
               onClick={() => distributeFromTotal(totalGuests + 10)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-colors hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-colors hover:text-white sm:h-10 sm:w-10"
               type="button"
             >
               <Plus className="h-4 w-4" />
@@ -525,19 +527,19 @@ function GuestCalculatorCard({
             step={10}
             value={totalGuests}
             onChange={(e) => distributeFromTotal(Number(e.target.value))}
-            className="mt-4 w-full accent-brand-blue"
+            className="mt-3 w-full accent-brand-blue"
           />
         </div>
 
-        <div className="mt-4 space-y-2.5">
+        <div className="mt-3 space-y-2">
           {segments.map((segment) => (
-            <div key={segment.key} className="rounded-[20px] border border-white/10 bg-black/15 px-3 py-3">
-              <div className="flex items-center justify-between gap-3">
+            <div key={segment.key} className="rounded-[18px] border border-white/10 bg-black/15 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2.5">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{segment.label}</p>
-                  <p className="mt-0.5 text-[11px] text-muted">{segment.hint}</p>
+                  <p className="text-fluid-body font-medium leading-6">{segment.label}</p>
+                  <p className="mt-0.5 text-fluid-micro text-muted">{segment.hint}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <button
                     onClick={() => adjustSegment(segment.key, -5)}
                     className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-colors hover:text-white"
@@ -545,7 +547,7 @@ function GuestCalculatorCard({
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <div className="min-w-[44px] text-center text-sm font-bold tabular-nums">{segment.value}</div>
+                  <div className="min-w-[40px] text-center text-base font-bold tabular-nums sm:min-w-[44px]">{segment.value}</div>
                   <button
                     onClick={() => adjustSegment(segment.key, 5)}
                     className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-colors hover:text-white"
@@ -559,7 +561,7 @@ function GuestCalculatorCard({
           ))}
         </div>
 
-        <div className="mt-4 rounded-[18px] border border-brand-blue/20 bg-brand-blue/10 px-3 py-2 text-center text-xs text-brand-blue">
+        <div className="mt-3 rounded-[18px] border border-brand-blue/20 bg-brand-blue/10 px-3 py-2 text-center text-fluid-micro text-brand-blue">
           ביחד כרגע: {adults + youngAdults + children} אורחים
         </div>
       </div>

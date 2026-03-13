@@ -68,6 +68,26 @@ function parseMaybeJson(value: string | null): string | string[] | number | "" {
   }
 }
 
+function getSessionItem(key: string) {
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setSessionItem(key: string, value: string) {
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch { }
+}
+
+function removeSessionItem(key: string) {
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch { }
+}
+
 function restoreResumeData(resumeData: RawResumeData) {
   useEventStore.setState({
     answers: resumeData.answers.map((answer) => {
@@ -156,201 +176,209 @@ export function JourneyApp({
   }, [event, currentStage, trackStageEnter]);
 
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    if (hashParams.get("type") === "recovery") {
-      const target = new URL(`${window.location.origin}/admin`);
-      target.searchParams.set("reset", "1");
-      window.location.replace(`${target.toString()}${window.location.hash}`);
-      return;
-    }
-
-    const params = new URLSearchParams(window.location.search);
-    const token = initialToken ?? params.get("token");
-    const dj = initialDjSlug ?? params.get("dj");
-    const resume = params.get("resume");
-
-    if (!initialToken && !event && initialMode !== "resume" && resume) {
-      setShowReturnGate(true);
-    }
-
-    const storedDjProfileId = sessionStorage.getItem("compakt_dj_profile_id");
-    const storedDjSlug = sessionStorage.getItem("compakt_dj_slug");
-    const djToResolve = dj || storedDjSlug;
-
-    const sb = supabase;
-    const loadPublicDjBySlug = async (slugToLoad: string) => {
-      const response = await fetch(`/api/public/djs?slug=${encodeURIComponent(slugToLoad)}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) return null;
-      const result = await response.json();
-      return result.data as { id: string; business_name: string; dj_slug: string; logo_url?: string } | null;
-    };
-
-    const loadPublicDjById = async (idToLoad: string) => {
-      const response = await fetch(`/api/public/djs?id=${encodeURIComponent(idToLoad)}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) return null;
-      const result = await response.json();
-      return result.data as { id: string; business_name: string; dj_slug: string; logo_url?: string } | null;
-    };
-
-    const loadEventContext = async (eventToken: string) => {
-      if (!sb) return;
-
-      const { data } = await sb
-        .from("events")
-        .select("id, magic_token, token, event_type, couple_name_a, couple_name_b, event_date, venue, current_stage, created_at, dj_id")
-        .eq("magic_token", eventToken)
-        .maybeSingle();
-
-      if (!data) return;
-
-      useEventStore.setState((state) => ({
-        ...state,
-        event: {
-          id: data.id,
-          magicToken: data.magic_token,
-          eventNumber: data.token,
-          eventType: data.event_type,
-          coupleNameA: data.couple_name_a,
-          coupleNameB: data.couple_name_b,
-          eventDate: data.event_date,
-          venue: data.venue,
-          djId: data.dj_id || undefined,
-          currentStage: data.current_stage ?? 0,
-          theme: state.theme,
-          createdAt: data.created_at,
-        },
-      }));
-
-      if (data.dj_id) {
-        const profileData = await loadPublicDjById(data.dj_id);
-
-        if (profileData?.id) {
-          sessionStorage.setItem("compakt_dj_profile_id", profileData.id);
-          if (profileData.dj_slug) {
-            sessionStorage.setItem("compakt_dj_slug", profileData.dj_slug);
-          }
-          if (profileData.business_name) {
-            sessionStorage.setItem("compakt_dj_name", profileData.business_name);
-            if (!entryDjName) {
-              setEntryDjName(profileData.business_name);
-            }
-          }
-          if (profileData.logo_url) {
-            sessionStorage.setItem("compakt_dj_logo_url", profileData.logo_url);
-          }
-          await loadContentFromDB(profileData.id);
-          return;
-        }
-
-        sessionStorage.removeItem("compakt_dj_profile_id");
-        sessionStorage.removeItem("compakt_dj_slug");
-        sessionStorage.removeItem("compakt_dj_name");
-        sessionStorage.removeItem("compakt_dj_logo_url");
+    try {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      if (hashParams.get("type") === "recovery") {
+        const target = new URL(`${window.location.origin}/admin`);
+        target.searchParams.set("reset", "1");
+        window.location.replace(`${target.toString()}${window.location.hash}`);
+        return;
       }
-    };
 
-    if (djToResolve && sb) {
-      const maybeUseStored = async () => {
-        if (storedDjSlug && !dj) {
-          const data = await loadPublicDjBySlug(storedDjSlug);
+      const params = new URLSearchParams(window.location.search);
+      const token = initialToken ?? params.get("token");
+      const dj = initialDjSlug ?? params.get("dj");
+      const resume = params.get("resume");
 
-          if (data?.id) {
-            sessionStorage.setItem("compakt_dj_profile_id", data.id);
-            sessionStorage.setItem("compakt_dj_slug", data.dj_slug || storedDjSlug);
-            if (data.business_name) {
-              sessionStorage.setItem("compakt_dj_name", data.business_name);
+      if (!initialToken && !event && initialMode !== "resume" && resume) {
+        setShowReturnGate(true);
+      }
+
+      const storedDjProfileId = getSessionItem("compakt_dj_profile_id");
+      const storedDjSlug = getSessionItem("compakt_dj_slug");
+      const djToResolve = dj || storedDjSlug;
+
+      const sb = supabase;
+      const loadPublicDjBySlug = async (slugToLoad: string) => {
+        const response = await fetch(`/api/public/djs?slug=${encodeURIComponent(slugToLoad)}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) return null;
+        const result = await response.json();
+        return result.data as { id: string; business_name: string; dj_slug: string; logo_url?: string } | null;
+      };
+
+      const loadPublicDjById = async (idToLoad: string) => {
+        const response = await fetch(`/api/public/djs?id=${encodeURIComponent(idToLoad)}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) return null;
+        const result = await response.json();
+        return result.data as { id: string; business_name: string; dj_slug: string; logo_url?: string } | null;
+      };
+
+      const loadEventContext = async (eventToken: string) => {
+        if (!sb) return;
+
+        const { data } = await sb
+          .from("events")
+          .select("id, magic_token, token, event_type, couple_name_a, couple_name_b, event_date, venue, current_stage, created_at, dj_id")
+          .eq("magic_token", eventToken)
+          .maybeSingle();
+
+        if (!data) return;
+
+        useEventStore.setState((state) => ({
+          ...state,
+          event: {
+            id: data.id,
+            magicToken: data.magic_token,
+            eventNumber: data.token,
+            eventType: data.event_type,
+            coupleNameA: data.couple_name_a,
+            coupleNameB: data.couple_name_b,
+            eventDate: data.event_date,
+            venue: data.venue,
+            djId: data.dj_id || undefined,
+            currentStage: data.current_stage ?? 0,
+            theme: state.theme,
+            createdAt: data.created_at,
+          },
+        }));
+
+        if (data.dj_id) {
+          const profileData = await loadPublicDjById(data.dj_id);
+
+          if (profileData?.id) {
+            setSessionItem("compakt_dj_profile_id", profileData.id);
+            if (profileData.dj_slug) {
+              setSessionItem("compakt_dj_slug", profileData.dj_slug);
+            }
+            if (profileData.business_name) {
+              setSessionItem("compakt_dj_name", profileData.business_name);
               if (!entryDjName) {
-                setEntryDjName(data.business_name);
+                setEntryDjName(profileData.business_name);
               }
             }
-            if (data.logo_url) {
-              sessionStorage.setItem("compakt_dj_logo_url", data.logo_url);
+            if (profileData.logo_url) {
+              setSessionItem("compakt_dj_logo_url", profileData.logo_url);
             }
-            await loadContentFromDB(data.id);
+            await loadContentFromDB(profileData.id);
             return;
           }
 
-          sessionStorage.removeItem("compakt_dj_profile_id");
-          sessionStorage.removeItem("compakt_dj_slug");
-          sessionStorage.removeItem("compakt_dj_name");
-          sessionStorage.removeItem("compakt_dj_logo_url");
-        }
-
-        if (storedDjProfileId && !dj) {
-          const storedProfile = await loadPublicDjById(storedDjProfileId);
-
-          if (storedProfile?.id) {
-            sessionStorage.setItem("compakt_dj_profile_id", storedProfile.id);
-            if (storedProfile.dj_slug) {
-              sessionStorage.setItem("compakt_dj_slug", storedProfile.dj_slug);
-            }
-            if (storedProfile.business_name) {
-              sessionStorage.setItem("compakt_dj_name", storedProfile.business_name);
-              if (!entryDjName) {
-                setEntryDjName(storedProfile.business_name);
-              }
-            }
-            if (storedProfile.logo_url) {
-              sessionStorage.setItem("compakt_dj_logo_url", storedProfile.logo_url);
-            }
-            await loadContentFromDB(storedProfile.id);
-            return;
-          }
-
-          sessionStorage.removeItem("compakt_dj_profile_id");
-        }
-
-        const data = await loadPublicDjBySlug(djToResolve);
-
-        if (data?.id) {
-          sessionStorage.setItem("compakt_dj_profile_id", data.id);
-          sessionStorage.setItem("compakt_dj_slug", data.dj_slug || djToResolve);
-          if (data.business_name) {
-            sessionStorage.setItem("compakt_dj_name", data.business_name);
-            if (!entryDjName) {
-              setEntryDjName(data.business_name);
-            }
-          } else if (!entryDjName && typeof window !== "undefined" && initialDjSlug) {
-            setEntryDjName(initialDjSlug);
-          }
-          if (data.logo_url) {
-            sessionStorage.setItem("compakt_dj_logo_url", data.logo_url);
-          }
-          await loadContentFromDB(data.id);
+          removeSessionItem("compakt_dj_profile_id");
+          removeSessionItem("compakt_dj_slug");
+          removeSessionItem("compakt_dj_name");
+          removeSessionItem("compakt_dj_logo_url");
         }
       };
 
-      maybeUseStored().catch(() => { });
-    }
+      if (djToResolve && sb) {
+        const maybeUseStored = async () => {
+          if (storedDjSlug && !dj) {
+            const data = await loadPublicDjBySlug(storedDjSlug);
 
-    if (token) {
-      loadEventContext(token).catch(() => { });
+            if (data?.id) {
+              setSessionItem("compakt_dj_profile_id", data.id);
+              setSessionItem("compakt_dj_slug", data.dj_slug || storedDjSlug);
+              if (data.business_name) {
+                setSessionItem("compakt_dj_name", data.business_name);
+                if (!entryDjName) {
+                  setEntryDjName(data.business_name);
+                }
+              }
+              if (data.logo_url) {
+                setSessionItem("compakt_dj_logo_url", data.logo_url);
+              }
+              await loadContentFromDB(data.id);
+              return;
+            }
 
-      const stored = sessionStorage.getItem(`compakt_session_${token}`);
-      if (stored) {
-        loadEvent(token);
-        setEmailVerified(true);
-        setSessionId(stored);
-        track("link_open", { returning: true });
-      } else {
-        setPendingToken(token);
-        track("link_open", { returning: false });
+            removeSessionItem("compakt_dj_profile_id");
+            removeSessionItem("compakt_dj_slug");
+            removeSessionItem("compakt_dj_name");
+            removeSessionItem("compakt_dj_logo_url");
+          }
+
+          if (storedDjProfileId && !dj) {
+            const storedProfile = await loadPublicDjById(storedDjProfileId);
+
+            if (storedProfile?.id) {
+              setSessionItem("compakt_dj_profile_id", storedProfile.id);
+              if (storedProfile.dj_slug) {
+                setSessionItem("compakt_dj_slug", storedProfile.dj_slug);
+              }
+              if (storedProfile.business_name) {
+                setSessionItem("compakt_dj_name", storedProfile.business_name);
+                if (!entryDjName) {
+                  setEntryDjName(storedProfile.business_name);
+                }
+              }
+              if (storedProfile.logo_url) {
+                setSessionItem("compakt_dj_logo_url", storedProfile.logo_url);
+              }
+              await loadContentFromDB(storedProfile.id);
+              return;
+            }
+
+            removeSessionItem("compakt_dj_profile_id");
+          }
+
+          const data = await loadPublicDjBySlug(djToResolve);
+
+          if (data?.id) {
+            setSessionItem("compakt_dj_profile_id", data.id);
+            setSessionItem("compakt_dj_slug", data.dj_slug || djToResolve);
+            if (data.business_name) {
+              setSessionItem("compakt_dj_name", data.business_name);
+              if (!entryDjName) {
+                setEntryDjName(data.business_name);
+              }
+            } else if (!entryDjName && typeof window !== "undefined" && initialDjSlug) {
+              setEntryDjName(initialDjSlug);
+            }
+            if (data.logo_url) {
+              setSessionItem("compakt_dj_logo_url", data.logo_url);
+            }
+            await loadContentFromDB(data.id);
+          }
+        };
+
+        maybeUseStored().catch((error) => {
+          console.error("JourneyApp DJ context init failed:", error);
+        });
       }
 
-      if (!initialToken) {
+      if (token) {
+        loadEventContext(token).catch((error) => {
+          console.error("JourneyApp event context load failed:", error);
+        });
+
+        const stored = getSessionItem(`compakt_session_${token}`);
+        if (stored) {
+          loadEvent(token);
+          setEmailVerified(true);
+          setSessionId(stored);
+          track("link_open", { returning: true });
+        } else {
+          setPendingToken(token);
+          track("link_open", { returning: false });
+        }
+
+        if (!initialToken) {
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+        return;
+      }
+
+      if ((dj || resume) && !initialDjSlug) {
         window.history.replaceState({}, "", window.location.pathname);
       }
-      return;
-    }
-
-    if ((dj || resume) && !initialDjSlug) {
-      window.history.replaceState({}, "", window.location.pathname);
+    } catch (error) {
+      console.error("JourneyApp bootstrap failed:", error);
     }
   }, [entryDjName, event, initialDjSlug, initialMode, initialToken, loadEvent, track, loadContentFromDB]);
 
@@ -372,7 +400,7 @@ export function JourneyApp({
     track("email_verified", { emailDomain: data.email.includes("@") ? data.email.split("@")[1] : undefined });
 
     if (resolvedEventKey) {
-      sessionStorage.setItem(`compakt_session_${resolvedEventKey}`, data.sessionId);
+      setSessionItem(`compakt_session_${resolvedEventKey}`, data.sessionId);
       await loadEventAsync(resolvedEventKey);
     }
 
@@ -538,12 +566,12 @@ export function JourneyApp({
       </AnimatePresence>
 
       {event && currentStage > 0 && currentStage <= 4 && (
-        <div className="fixed top-[3.25rem] right-4 left-4 z-40">
+        <div className="fixed top-[calc(0.75rem+env(safe-area-inset-top,0px))] right-4 left-4 z-40 sm:top-4">
           <StageNav />
         </div>
       )}
 
-      <div className="flex items-center justify-center min-h-dvh px-4 py-20 sm:py-24 overflow-hidden">
+      <div className="flow-shell flex items-stretch justify-center overflow-hidden sm:items-center">
         <AnimatePresence mode="wait">
           <motion.div
             key={stageKey}
@@ -551,7 +579,7 @@ export function JourneyApp({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="w-full"
+            className="w-full max-w-md"
           >
             <ErrorBoundary>
               {renderStage()}

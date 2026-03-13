@@ -5,7 +5,7 @@ import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { reasonChips } from "@/data/songs";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, PanInfo } from "framer-motion";
-import { Heart, X, Star, HelpCircle, Play, Pause, Volume2, SkipForward, Undo2, ChevronUp, Music2, Share2, Check, Copy, Headphones } from "lucide-react";
+import { Heart, X, Star, HelpCircle, Play, Pause, Volume2, SkipForward, Undo2, Music2, Share2, Check, Copy, Headphones } from "lucide-react";
 import type { SwipeAction, Song, SongSwipe } from "@/lib/types";
 import { SwipeTutorial, useSwipeTutorial } from "@/components/ui/SwipeTutorial";
 import { resolveSongMedia } from "@/lib/songMedia";
@@ -75,7 +75,7 @@ export function SongTinder() {
   );
   const djProfileUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
-    const djSlug = window.sessionStorage.getItem("compakt_dj_slug")?.trim() || "";
+    const djSlug = (() => { try { return window.sessionStorage.getItem("compakt_dj_slug")?.trim() || ""; } catch { return ""; } })();
     return djSlug ? `${getSafeOrigin()}/dj/${djSlug}` : "";
   }, []);
   const progressLabel = isDone
@@ -289,7 +289,7 @@ export function SongTinder() {
   }
 
   return (
-    <div className="relative isolate mx-auto flex h-[calc(100dvh-6.75rem)] w-full max-w-md flex-col overflow-hidden px-1 sm:h-[calc(100dvh-8rem)] sm:px-0">
+    <div className="relative isolate mx-auto flex h-[calc(100dvh-6.9rem)] w-full max-w-md flex-col overflow-hidden px-1 pb-1 sm:h-[calc(100dvh-8rem)] sm:px-0">
       {/* Swipe Tutorial */}
       <AnimatePresence>
         {showTutorial && <SwipeTutorial onDismiss={dismissTutorial} />}
@@ -354,10 +354,10 @@ export function SongTinder() {
       </AnimatePresence>
 
       <div className="relative flex-1 min-h-0 w-full pt-1">
-        <div className="absolute inset-x-1 top-2 bottom-20 rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,16,24,0.82),rgba(8,10,14,0.92))] shadow-[0_28px_70px_rgba(0,0,0,0.3)] backdrop-blur-xl" />
+        <div className="absolute inset-x-1 top-2 bottom-24 rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,16,24,0.82),rgba(8,10,14,0.92))] shadow-[0_28px_70px_rgba(0,0,0,0.3)] backdrop-blur-xl" />
         {availableSongs[2] && (
           <motion.div
-            className="absolute inset-x-7 top-10 bottom-28 overflow-hidden rounded-[28px] border border-white/[0.03] bg-[linear-gradient(180deg,rgba(18,20,28,0.28),rgba(9,10,16,0.18))]"
+            className="absolute inset-x-7 top-10 bottom-32 overflow-hidden rounded-[28px] border border-white/[0.03] bg-[linear-gradient(180deg,rgba(18,20,28,0.28),rgba(9,10,16,0.18))]"
             style={{ scale: 0.94, opacity: 0.12, y: 10 }}
           >
             <SongCardStatic song={availableSongs[2]} categoryLabels={categoryLabels} />
@@ -365,7 +365,7 @@ export function SongTinder() {
         )}
         {availableSongs[1] && (
           <motion.div
-            className="absolute inset-x-4 top-6 bottom-24 overflow-hidden rounded-[30px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(24,28,38,0.34),rgba(9,10,16,0.24))]"
+            className="absolute inset-x-4 top-6 bottom-28 overflow-hidden rounded-[30px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(24,28,38,0.34),rgba(9,10,16,0.24))]"
             initial={false}
             animate={{ scale: 0.97, opacity: 0.22, y: 6 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -386,20 +386,15 @@ export function SongTinder() {
         </AnimatePresence>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-2">
         <SongSwipeActions
           onSwipe={handleSwipe}
           currentSongId={currentSong.id}
-          likeCount={likeCount}
-          superLikeCount={superLikeCount}
-          unsureCount={unsureCount}
         />
       </div>
 
-      <div className="mt-2 flex items-center justify-center">
-        <span className="flex items-center gap-1 text-[10px] text-muted">
-          <ChevronUp className="h-3 w-3" /> גררו כדי לבחור, או לחצו על הפעולה שמתאימה לכם.
-        </span>
+      <div className="mt-1 flex items-center justify-center">
+        <span className="text-[10px] text-white/30">החליקו או לחצו</span>
       </div>
 
       {/* Reason Chips Overlay */}
@@ -462,7 +457,7 @@ function SongTinderHeader({
             disabled={!canUndo}
             className={`flex h-11 w-11 items-center justify-center rounded-full border transition-all ${canUndo
               ? "border-white/10 bg-white/[0.04] text-secondary hover:border-white/20 hover:text-white"
-              : "cursor-not-allowed border-white/5 bg-white/[0.02] text-muted/40 opacity-50"
+              : "cursor-not-allowed border-white/5 bg-white/[0.02] text-white/25 opacity-50"
               }`}
             aria-label="בטל פעולה אחרונה"
             title="בטל"
@@ -512,52 +507,32 @@ function SongTinderHeader({
 function SongSwipeActions({
   currentSongId,
   onSwipe,
-  likeCount,
-  superLikeCount,
-  unsureCount,
 }: {
   currentSongId: string;
   onSwipe: (songId: string, action: SwipeAction) => void;
-  likeCount: number;
-  superLikeCount: number;
-  unsureCount: number;
 }) {
   return (
     <div className="z-20 flex-shrink-0 pb-[max(env(safe-area-inset-bottom),0.35rem)]">
-      <div className="w-full rounded-[28px] border border-white/10 bg-[rgba(8,10,16,0.74)] p-2 shadow-[0_18px_44px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
-        <div className="flex items-stretch gap-1.5">
-          <DecisionDockButton
-            label="לא לכיוון"
-            icon={<X className="w-4 h-4" strokeWidth={2.4} />}
-            tone="danger"
-            onClick={() => onSwipe(currentSongId, "dislike")}
-          />
-          <DecisionDockButton
-            label="נרצה"
-            icon={<Heart className="w-4 h-4" fill="currentColor" />}
-            tone="success"
-            count={likeCount}
-            onClick={() => onSwipe(currentSongId, "like")}
-          />
-          <DecisionDockButton
-            label="שיר חובה"
-            icon={<Star className="w-4 h-4" fill="currentColor" />}
-            tone="gold"
-            count={superLikeCount}
-            isPrimary
-            onClick={() => onSwipe(currentSongId, "super_like")}
-          />
-          <DecisionDockButton
-            label="עוד רגע"
-            icon={<Headphones className="w-4 h-4" />}
-            tone="blue"
-            count={unsureCount}
-            onClick={() => onSwipe(currentSongId, "unsure")}
-          />
-        </div>
-        <div className="mt-2 text-center">
-          <p className="text-[10px] text-muted">שמרו מה שמרגיש נכון עכשיו. תמיד אפשר לחזור ולדייק.</p>
-        </div>
+      <div className="flex items-end justify-center gap-5 px-4 py-1">
+        <DecisionDockButton
+          label="נרצה"
+          icon={<Heart className="w-5 h-5" fill="currentColor" />}
+          tone="success"
+          onClick={() => onSwipe(currentSongId, "like")}
+        />
+        <DecisionDockButton
+          label="שיר חובה"
+          icon={<Star className="w-6 h-6" fill="currentColor" />}
+          tone="gold"
+          isPrimary
+          onClick={() => onSwipe(currentSongId, "super_like")}
+        />
+        <DecisionDockButton
+          label="לא לכיוון"
+          icon={<X className="w-5 h-5" strokeWidth={2.6} />}
+          tone="danger"
+          onClick={() => onSwipe(currentSongId, "dislike")}
+        />
       </div>
     </div>
   );
@@ -1033,30 +1008,29 @@ function SongTinderReview({
             </div>
           )}
 
-          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-2">
-            <div className="grid grid-cols-3 gap-2">
-              <DecisionDockButton
-                label="לא לכיוון"
-                icon={<X className="w-4 h-4" strokeWidth={2.4} />}
-                tone="danger"
-                isActive={currentSong.swipeAction === "dislike"}
-                onClick={() => saveSwipe(currentSong.id, "dislike", [])}
-              />
-              <DecisionDockButton
-                label="נרצה"
-                icon={<Heart className="w-4 h-4" fill="currentColor" />}
-                tone="success"
-                isActive={currentSong.swipeAction === "like"}
-                onClick={() => saveSwipe(currentSong.id, "like", [])}
-              />
-              <DecisionDockButton
-                label="שיר חובה"
-                icon={<Star className="w-4 h-4" fill="currentColor" />}
-                tone="gold"
-                isActive={currentSong.swipeAction === "super_like"}
-                onClick={() => saveSwipe(currentSong.id, "super_like", [])}
-              />
-            </div>
+          <div className="flex items-end justify-center gap-5 py-2">
+            <DecisionDockButton
+              label="נרצה"
+              icon={<Heart className="w-5 h-5" fill="currentColor" />}
+              tone="success"
+              isActive={currentSong.swipeAction === "like"}
+              onClick={() => saveSwipe(currentSong.id, "like", [])}
+            />
+            <DecisionDockButton
+              label="שיר חובה"
+              icon={<Star className="w-6 h-6" fill="currentColor" />}
+              tone="gold"
+              isPrimary
+              isActive={currentSong.swipeAction === "super_like"}
+              onClick={() => saveSwipe(currentSong.id, "super_like", [])}
+            />
+            <DecisionDockButton
+              label="לא לכיוון"
+              icon={<X className="w-5 h-5" strokeWidth={2.6} />}
+              tone="danger"
+              isActive={currentSong.swipeAction === "dislike"}
+              onClick={() => saveSwipe(currentSong.id, "dislike", [])}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -1126,7 +1100,6 @@ function DecisionDockButton({
   icon,
   tone,
   isActive = false,
-  count,
   isPrimary = false,
   onClick,
 }: {
@@ -1134,59 +1107,67 @@ function DecisionDockButton({
   icon: JSX.Element;
   tone: "danger" | "success" | "gold" | "blue";
   isActive?: boolean;
-  count?: number;
   isPrimary?: boolean;
   onClick: () => void;
 }) {
   const palette =
     tone === "danger"
       ? {
-        color: "var(--accent-danger)",
-        activeBg: "rgba(255,68,102,0.14)",
-        activeBorder: "rgba(255,68,102,0.3)",
+        idle: "rgba(255,68,102,0.55)",
+        active: "var(--accent-danger)",
+        glow: "rgba(255,68,102,0.18)",
+        ring: "rgba(255,68,102,0.25)",
       }
       : tone === "success"
         ? {
-          color: "var(--accent-secondary)",
-          activeBg: "rgba(3,178,140,0.14)",
-          activeBorder: "rgba(3,178,140,0.3)",
+          idle: "rgba(3,178,140,0.55)",
+          active: "var(--accent-secondary)",
+          glow: "rgba(3,178,140,0.18)",
+          ring: "rgba(3,178,140,0.25)",
         }
         : tone === "blue"
           ? {
-            color: "var(--accent-primary)",
-            activeBg: "rgba(5,156,192,0.14)",
-            activeBorder: "rgba(5,156,192,0.3)",
+            idle: "rgba(5,156,192,0.55)",
+            active: "var(--accent-primary)",
+            glow: "rgba(5,156,192,0.18)",
+            ring: "rgba(5,156,192,0.25)",
           }
           : {
-            color: "var(--accent-gold)",
-            activeBg: "rgba(245,197,66,0.14)",
-            activeBorder: "rgba(245,197,66,0.3)",
+            idle: "rgba(245,197,66,0.6)",
+            active: "var(--accent-gold)",
+            glow: "rgba(245,197,66,0.22)",
+            ring: "rgba(245,197,66,0.3)",
           };
+
+  const size = isPrimary ? "h-16 w-16" : "h-[3.25rem] w-[3.25rem]";
 
   return (
     <motion.button
-      whileTap={{ scale: 0.96 }}
+      whileTap={{ scale: 0.88 }}
+      whileHover={{ scale: 1.08 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
       onClick={onClick}
-      className={`min-w-0 flex-1 rounded-[24px] border px-2 text-center transition-all ${isPrimary ? "py-3.5" : "py-3"}`}
-      style={{
-        background: isActive || isPrimary ? palette.activeBg : "rgba(255,255,255,0.03)",
-        borderColor: isActive || isPrimary ? palette.activeBorder : "rgba(255,255,255,0.08)",
-        color: isActive || isPrimary ? palette.color : "var(--text-secondary)",
-        boxShadow: isActive || isPrimary ? "0 14px 28px rgba(0,0,0,0.18)" : "none",
-      }}
+      className={`flex flex-col items-center gap-1.5 focus:outline-none`}
     >
       <div
-        className={`mx-auto mb-1.5 flex items-center justify-center rounded-full ${isPrimary ? "h-12 w-12" : "h-10 w-10"}`}
-        style={{ background: isActive || isPrimary ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.18)" }}
+        className={`${size} flex items-center justify-center rounded-full transition-colors duration-150`}
+        style={{
+          color: isActive ? palette.active : palette.idle,
+          background: isActive ? palette.glow : "rgba(255,255,255,0.04)",
+          boxShadow: isActive
+            ? `0 0 24px ${palette.glow}, 0 4px 16px rgba(0,0,0,0.2)`
+            : "0 4px 16px rgba(0,0,0,0.12)",
+          border: `1.5px solid ${isActive ? palette.ring : "rgba(255,255,255,0.08)"}`,
+        }}
       >
         {icon}
       </div>
-      <span className="block text-[11px] font-medium leading-4">{label}</span>
-      {typeof count === "number" ? (
-        <span className="mt-1 inline-flex rounded-full border border-white/10 bg-black/15 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-          {count}
-        </span>
-      ) : null}
+      <span
+        className="text-[10px] font-medium leading-none transition-colors duration-150"
+        style={{ color: isActive ? palette.active : "rgba(255,255,255,0.45)" }}
+      >
+        {label}
+      </span>
     </motion.button>
   );
 }
@@ -1367,7 +1348,7 @@ function SwipeCard({
   const infoChips = [song.language, song.decade, ...song.tags].filter(Boolean).slice(0, 2);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(30);
-  const [selectedPreviewSeconds, setSelectedPreviewSeconds] = useState<15 | 30>(30);
+  const previewWindowSeconds = 30;
   const formatTime = (value: number) => {
     const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
     const minutes = Math.floor(safeValue / 60);
@@ -1431,51 +1412,21 @@ function SwipeCard({
   useEffect(() => {
     setAudioCurrentTime(0);
     setAudioDuration(30);
-    setSelectedPreviewSeconds(30);
   }, [song.id]);
 
-  const stopPreview = useCallback(() => {
-    if (previewTimeoutRef.current) {
-      window.clearTimeout(previewTimeoutRef.current);
-      previewTimeoutRef.current = null;
-    }
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-    }
-    if (isPlaying) {
-      onTogglePlay();
-    }
-    setAudioCurrentTime(0);
-  }, [isPlaying, onTogglePlay]);
-
-  const playPreviewChunk = useCallback((seconds: 15 | 30) => {
-    setSelectedPreviewSeconds(seconds);
-
-    if (!hasAudioPreview) {
-      if (!isPlaying) onTogglePlay();
-      return;
-    }
-
+  const seekPreviewBy = useCallback((deltaSeconds: number) => {
+    if (!hasAudioPreview) return;
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (previewTimeoutRef.current) {
-      window.clearTimeout(previewTimeoutRef.current);
-    }
+    const maxTime = audio.duration && Number.isFinite(audio.duration)
+      ? audio.duration
+      : audioDuration || previewWindowSeconds;
+    const nextTime = Math.min(Math.max((audio.currentTime || 0) + deltaSeconds, 0), maxTime);
 
-    audio.currentTime = 0;
-    setAudioCurrentTime(0);
-    void audio.play().then(() => {
-      if (!isPlaying) {
-        onTogglePlay();
-      }
-      previewTimeoutRef.current = window.setTimeout(() => {
-        stopPreview();
-      }, seconds * 1000);
-    }).catch(() => { });
-  }, [hasAudioPreview, isPlaying, onTogglePlay, stopPreview]);
+    audio.currentTime = nextTime;
+    setAudioCurrentTime(nextTime);
+  }, [audioDuration, hasAudioPreview, previewWindowSeconds]);
 
   return (
     <motion.div
@@ -1513,7 +1464,7 @@ function SwipeCard({
       </motion.div>
 
       {/* Card Content */}
-      <div className="relative flex h-full flex-col overflow-hidden px-5 py-5">
+      <div className="relative flex h-full flex-col overflow-hidden px-4 py-4 sm:px-5 sm:py-5">
         <div
           className="absolute inset-0 opacity-40"
           style={{
@@ -1542,207 +1493,249 @@ function SwipeCard({
           </div>
         </div>
 
-        <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-between pt-3">
-          <div className="flex flex-1 flex-col items-center justify-center">
-            <motion.div
-              initial={false}
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-              className="relative mb-5"
-            >
-              <div
-                className="absolute inset-[-14%] rounded-full blur-3xl opacity-75"
-                style={{ background: "radial-gradient(circle, rgba(245,197,66,0.1), rgba(5,156,192,0.06) 44%, transparent 72%)" }}
-              />
-              <div className="relative group h-56 w-56 max-w-[72vw] overflow-hidden rounded-[34px] shadow-[0_28px_72px_rgba(0,0,0,0.38)] ring-1 ring-white/10 sm:h-64 sm:w-64">
-                {!imgError ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={song.coverUrl}
-                    alt={`${song.title} - ${song.artist}`}
-                    className="h-full w-full object-cover scale-[1.01]"
-                    onError={() => setImgError(true)}
-                  />
-                ) : (
-                  <div
-                    className="flex h-full w-full items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, rgba(5,156,192,0.25), rgba(3,178,140,0.18))" }}
-                  >
-                    <Music2 className="h-10 w-10 text-muted" />
-                  </div>
-                )}
-                <div
-                  className="absolute inset-0"
-                  style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.2) 52%, rgba(0,0,0,0.46))" }}
-                />
-                {/* Play overlay */}
-                {hasInlinePreview && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTogglePlay();
-                    }}
-                    className="absolute inset-0 flex items-center justify-center bg-black/24 opacity-0 transition-opacity group-hover:opacity-100 active:opacity-100"
-                    aria-label={isPlaying ? "השהה" : "נגן"}
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-md ring-1 ring-white/20">
-                      {isPlaying ? (
-                        <Pause className="h-6 w-6 text-white" />
-                      ) : (
-                        <Play className="ml-0.5 h-6 w-6 text-white" fill="white" />
-                      )}
-                    </div>
-                  </button>
-                )}
-              </div>
-            </motion.div>
-
-            <div className="mb-2 text-center">
-              <h3 className="line-clamp-2 text-center text-[30px] font-black leading-[1.02] tracking-[-0.04em]">{song.title}</h3>
-              <p className="mt-1.5 text-[14px] text-secondary">{song.artist}</p>
-            </div>
-
-            <div className="mb-1 flex min-h-[24px] flex-wrap items-center justify-center gap-2">
-              {infoChips.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-[10px] text-secondary backdrop-blur-sm"
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-between gap-3 pt-2">
+          <div className="rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] p-[1px] shadow-[0_18px_44px_rgba(0,0,0,0.22)]">
+            <div className="rounded-[27px] bg-[radial-gradient(circle_at_top,rgba(26,52,78,0.2),transparent_42%),linear-gradient(180deg,rgba(4,10,20,0.9),rgba(6,10,18,0.78))] px-4 py-3.5 backdrop-blur-xl">
+              <div className="flex items-center gap-3.5">
+                <motion.div
+                  initial={false}
+                  animate={{ y: [0, -3, 0] }}
+                  transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+                  className="relative shrink-0"
                 >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
+                  <div
+                    className="absolute inset-[-16%] rounded-full blur-3xl opacity-70"
+                    style={{ background: "radial-gradient(circle, rgba(245,197,66,0.08), rgba(5,156,192,0.06) 44%, transparent 72%)" }}
+                  />
+                  <div className="relative group h-24 w-24 overflow-hidden rounded-[22px] shadow-[0_20px_48px_rgba(0,0,0,0.34)] ring-1 ring-white/10 sm:h-28 sm:w-28">
+                    {!imgError ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={song.coverUrl}
+                        alt={`${song.title} - ${song.artist}`}
+                        className="h-full w-full object-cover scale-[1.01]"
+                        onError={() => setImgError(true)}
+                      />
+                    ) : (
+                      <div
+                        className="flex h-full w-full items-center justify-center"
+                        style={{ background: "linear-gradient(135deg, rgba(5,156,192,0.25), rgba(3,178,140,0.18))" }}
+                      >
+                        <Music2 className="h-8 w-8 text-muted" />
+                      </div>
+                    )}
+                    <div
+                      className="absolute inset-0"
+                      style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.16) 52%, rgba(0,0,0,0.34))" }}
+                    />
+                    {hasInlinePreview && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTogglePlay();
+                        }}
+                        className="absolute inset-0 flex items-center justify-center bg-black/16 opacity-0 transition-opacity group-hover:opacity-100 active:opacity-100"
+                        aria-label={isPlaying ? "השהה" : "נגן"}
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md ring-1 ring-white/20">
+                          {isPlaying ? (
+                            <Pause className="h-5 w-5 text-white" />
+                          ) : (
+                            <Play className="ml-0.5 h-5 w-5 text-white" fill="white" />
+                          )}
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
 
-          <div className="w-full rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-3 shadow-[0_16px_36px_rgba(0,0,0,0.18)] backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-right">
-                <p className="text-[13px] font-semibold">השמעה קצרה</p>
-                <p className="mt-0.5 text-[11px] text-muted">{previewTone}</p>
-              </div>
-              <div className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-muted">
-                {previewBadge}
-              </div>
-            </div>
+                <div className="min-w-0 flex-1 text-right">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className={`h-2.5 w-2.5 rounded-full transition-all ${isPlaying ? "bg-[var(--accent-primary)] shadow-[0_0_18px_rgba(5,156,192,0.9)]" : "bg-white/20"}`} />
+                    <p className="text-[10px] tracking-[0.2em] text-muted">NOW PLAYING</p>
+                  </div>
+                  <h3 className="mt-2 line-clamp-2 text-[27px] font-black leading-[0.98] tracking-[-0.05em] sm:text-[30px]">{song.title}</h3>
+                  <p className="mt-1 text-[14px] text-secondary">{song.artist}</p>
 
-            <div className="mt-3 flex items-center gap-3">
-              <button
-                onClick={hasInlinePreview || hasAudioPreview ? onTogglePlay : undefined}
-                disabled={!hasInlinePreview && !hasAudioPreview}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={isPlaying ? "השהה" : "נגן"}
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" fill="white" />}
-              </button>
-
-              <div className="flex-1">
-                <input
-                  id={progressId}
-                  type="range"
-                  min={0}
-                  max={hasAudioPreview ? audioDuration || selectedPreviewSeconds : selectedPreviewSeconds}
-                  value={audioCurrentTime}
-                  onChange={(event) => {
-                    const nextTime = Number(event.target.value);
-                    setAudioCurrentTime(nextTime);
-                    if (audioRef.current) {
-                      audioRef.current.currentTime = nextTime;
-                    }
-                  }}
-                  disabled={!hasAudioPreview}
-                  className="w-full accent-[var(--accent-primary)] disabled:opacity-40"
-                />
-                <div className="mt-1 flex items-center justify-between text-[10px] text-muted">
-                  <span>{formatTime(audioCurrentTime)}</span>
-                  <span>{formatTime(hasAudioPreview ? audioDuration || selectedPreviewSeconds : selectedPreviewSeconds)}</span>
+                  <div className="mt-3 flex min-h-[20px] flex-wrap items-center justify-end gap-1.5">
+                    {infoChips.slice(0, 3).map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[10px] text-secondary ring-1 ring-white/7"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                onClick={() => playPreviewChunk(15)}
-                className={`rounded-full px-2.5 py-2 text-[11px] font-semibold border transition-all ${selectedPreviewSeconds === 15 ? "text-white" : "text-secondary"
-                  }`}
-                style={{
-                  background: selectedPreviewSeconds === 15 ? "linear-gradient(135deg, rgba(5,156,192,0.88), rgba(3,178,140,0.88))" : "rgba(255,255,255,0.04)",
-                  borderColor: "rgba(255,255,255,0.08)",
-                }}
-              >
-                15 שנ׳
-              </button>
-              <button
-                onClick={() => playPreviewChunk(30)}
-                className={`rounded-full px-2.5 py-2 text-[11px] font-semibold border transition-all ${selectedPreviewSeconds === 30 ? "text-white" : "text-secondary"
-                  }`}
-                style={{
-                  background: selectedPreviewSeconds === 30 ? "linear-gradient(135deg, rgba(5,156,192,0.88), rgba(3,178,140,0.88))" : "rgba(255,255,255,0.04)",
-                  borderColor: "rgba(255,255,255,0.08)",
-                }}
-              >
-                30 שנ׳
-              </button>
-            </div>
+          <div className="w-full rounded-[26px] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-[1px] shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
+            <div className="rounded-[25px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_38%),linear-gradient(180deg,rgba(10,14,22,0.93),rgba(8,12,18,0.86))] p-3.5 backdrop-blur-xl">
+              <div className="flex items-start justify-between gap-3">
+                <div className="text-right">
+                  <p className="text-[13px] font-semibold">שליטה בהשמעה</p>
+                  <p className="mt-0.5 text-[11px] text-muted">{previewTone}</p>
+                </div>
+                <div className={`rounded-full px-2.5 py-1 text-[10px] ${isPlaying ? "bg-[rgba(5,156,192,0.14)] text-white ring-1 ring-[rgba(5,156,192,0.3)]" : "bg-white/5 text-muted ring-1 ring-white/10"}`}>
+                  {previewBadge}
+                </div>
+              </div>
 
-            {hasInlinePreview && (
-              <>
-                {youtubeId && isPlaying ? (
-                  <div className="mt-3 overflow-hidden rounded-xl">
-                    <iframe
-                      width="100%"
-                      height="112"
-                      src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&start=0&end=${selectedPreviewSeconds}&controls=1`}
-                      allow="autoplay; encrypted-media"
-                      className="rounded-xl"
-                      title={`${song.title} preview`}
-                    />
-                  </div>
-                ) : hasAudioPreview ? (
-                  <div className="space-y-2">
-                    <audio
-                      ref={audioRef}
-                      src={media.inlineUrl}
-                      preload="metadata"
-                      onEnded={() => {
-                        if (isPlaying) {
-                          onTogglePlay();
+              <div className="mt-3 rounded-[22px] bg-black/18 p-3 ring-1 ring-white/6">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={hasInlinePreview || hasAudioPreview ? onTogglePlay : undefined}
+                    disabled={!hasInlinePreview && !hasAudioPreview}
+                    className={`flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[0_14px_30px_rgba(0,0,0,0.28)] transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isPlaying ? "bg-[linear-gradient(135deg,rgba(5,156,192,0.98),rgba(3,178,140,0.96))] ring-2 ring-[rgba(5,156,192,0.25)]" : "border border-white/10 bg-white/10"}`}
+                    aria-label={isPlaying ? "השהה" : "נגן"}
+                  >
+                    {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" fill="white" />}
+                  </button>
+
+                  <div className="flex-1">
+                    <div className="mb-2 flex items-center justify-between text-[10px] text-muted">
+                      <span>{isPlaying ? "מנגן עכשיו" : "מוכן לניגון"}</span>
+                      <span>{formatTime(hasAudioPreview ? audioDuration || previewWindowSeconds : previewWindowSeconds)}</span>
+                    </div>
+                    <input
+                      id={progressId}
+                      type="range"
+                      min={0}
+                      max={hasAudioPreview ? audioDuration || previewWindowSeconds : previewWindowSeconds}
+                      value={audioCurrentTime}
+                      onChange={(event) => {
+                        const nextTime = Number(event.target.value);
+                        setAudioCurrentTime(nextTime);
+                        if (audioRef.current) {
+                          audioRef.current.currentTime = nextTime;
                         }
                       }}
-                      className="hidden"
+                      disabled={!hasAudioPreview}
+                      className="h-3 w-full accent-[var(--accent-primary)] disabled:opacity-40"
                     />
+                    <div className="mt-1.5 flex items-center justify-between text-[10px] text-muted">
+                      <span>{formatTime(audioCurrentTime)}</span>
+                      <span>{hasAudioPreview ? "preview מלא" : "מצב דמו"}</span>
+                    </div>
                   </div>
-                ) : (
-                  <button
-                    onClick={onTogglePlay}
-                    className="group mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/10 py-2 text-[11px] text-secondary transition-all hover:border-brand-blue hover:text-brand-blue"
-                  >
-                    <Volume2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
-                    השמיעו כאן
-                  </button>
-                )}
-              </>
-            )}
+                </div>
 
-            {!hasInlinePreview && hasExternalOnly && (
-              <a
-                href={media.externalUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/10 py-2 text-[11px] text-secondary transition-all hover:border-brand-blue hover:text-brand-blue"
-                dir="ltr"
-              >
-                פתחו לינק לשיר
-              </a>
-            )}
-
-            {!hasInlinePreview && !hasExternalOnly && (
-              <div className="mt-3 flex w-full items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/10 py-2 text-[11px] text-muted">
-                אין preview לשיר הזה, אבל אפשר לבחור לפי תחושה
+                <div className="mt-4 border-t border-white/6 pt-3">
+                  <div className="mb-2 flex items-center justify-between text-[10px] text-muted">
+                    <span>קפיצה מהירה</span>
+                    <span>{hasAudioPreview ? "15 / 30 שנ׳" : "זמין רק בטעימה פנימית"}</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-0.5 rounded-[18px] bg-white/[0.02] px-1 py-1">
+                    <button
+                      type="button"
+                      onClick={() => seekPreviewBy(-30)}
+                      disabled={!hasAudioPreview}
+                      className="rounded-[14px] px-1 py-2 text-center transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.97]"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <Undo2 className="h-3.5 w-3.5 text-white/45" />
+                        <span className="text-[15px] font-black tracking-[-0.03em] text-white">30-</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => seekPreviewBy(-15)}
+                      disabled={!hasAudioPreview}
+                      className="rounded-[14px] px-1 py-2 text-center transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.97]"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <Undo2 className="h-3.5 w-3.5 text-white/45" />
+                        <span className="text-[15px] font-black tracking-[-0.03em] text-white">15-</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => seekPreviewBy(15)}
+                      disabled={!hasAudioPreview}
+                      className="rounded-[14px] bg-[linear-gradient(180deg,rgba(5,156,192,0.08),rgba(3,178,140,0.03))] px-1 py-2 text-center transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.97]"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <SkipForward className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
+                        <span className="text-[15px] font-black tracking-[-0.03em] text-white">15+</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => seekPreviewBy(30)}
+                      disabled={!hasAudioPreview}
+                      className="rounded-[14px] bg-[linear-gradient(180deg,rgba(5,156,192,0.08),rgba(3,178,140,0.03))] px-1 py-2 text-center transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.97]"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <SkipForward className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
+                        <span className="text-[15px] font-black tracking-[-0.03em] text-white">30+</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
 
+              {hasInlinePreview && (
+                <>
+                  {youtubeId && isPlaying ? (
+                    <div className="mt-3 overflow-hidden rounded-xl">
+                      <iframe
+                        width="100%"
+                        height="112"
+                        src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&start=0&end=${previewWindowSeconds}&controls=1`}
+                        allow="autoplay; encrypted-media"
+                        className="rounded-xl"
+                        title={`${song.title} preview`}
+                      />
+                    </div>
+                  ) : hasAudioPreview ? (
+                    <div className="space-y-2">
+                      <audio
+                        ref={audioRef}
+                        src={media.inlineUrl}
+                        preload="metadata"
+                        onEnded={() => {
+                          if (isPlaying) {
+                            onTogglePlay();
+                          }
+                        }}
+                        className="hidden"
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={onTogglePlay}
+                      className="group mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] py-2 text-[11px] text-secondary transition-all hover:border-brand-blue hover:text-brand-blue"
+                    >
+                      <Volume2 className="h-3.5 w-3.5 group-hover:animate-pulse" />
+                      נגן דרך המקור
+                    </button>
+                  )}
+                </>
+              )}
 
-            <p className="mt-3 min-h-[16px] text-center text-[10px] leading-4 text-muted">{media.helperText}</p>
+              {!hasInlinePreview && hasExternalOnly && (
+                <a
+                  href={media.externalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] py-2 text-[11px] text-secondary transition-all hover:border-brand-blue hover:text-brand-blue"
+                  dir="ltr"
+                >
+                  פתחו preview חיצוני
+                </a>
+              )}
+
+              {!hasInlinePreview && !hasExternalOnly && (
+                <div className="mt-3 flex w-full items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/10 py-2 text-[11px] text-muted">
+                  אין preview לשיר הזה, אבל אפשר לבחור לפי תחושה
+                </div>
+              )}
+
+              <p className="mt-2.5 min-h-[16px] text-center text-[10px] leading-4 text-muted">{media.helperText}</p>
+            </div>
           </div>
         </div>
       </div>

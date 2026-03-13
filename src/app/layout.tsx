@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Rubik } from "next/font/google";
+import { AppRuntimeGuard } from "@/components/ui/AppRuntimeGuard";
 import "./globals.css";
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -46,7 +47,7 @@ export default async function RootLayout({
   return (
     <html lang="he" dir="rtl" data-theme="night" className={rubik.variable}>
       <body className="font-sans antialiased min-h-dvh">
-        {bodyContent}
+        <AppRuntimeGuard>{bodyContent}</AppRuntimeGuard>
       </body>
     </html>
   );

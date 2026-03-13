@@ -16,25 +16,25 @@ export function StageNav() {
   const currentStage = event?.currentStage ?? 0;
 
   return (
-    <div className="rounded-[22px] border border-white/10 bg-black/20 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.16)] px-3 py-2">
-      <div className="flex items-center gap-1.5 sm:gap-2 justify-center">
+    <div className="rounded-[20px] border border-white/10 bg-black/25 px-2.5 py-2 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.16)] sm:px-3">
+      <div className="flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
         {stages.map((stage, i) => {
           const isCurrent = currentStage === stage.id;
           const isDone = currentStage > stage.id;
           const isFuture = currentStage < stage.id;
 
           return (
-            <div key={stage.id} className="flex items-center gap-1.5 sm:gap-2">
+            <div key={stage.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <button
                 onClick={() => {
                   if (!isFuture) setStage(stage.id);
                 }}
                 disabled={isFuture}
-                className={`text-[11px] sm:text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full transition-all flex items-center gap-1 border ${isCurrent
-                    ? "text-white shadow-sm"
-                    : isDone
-                      ? "text-brand-green cursor-pointer"
-                      : "text-muted opacity-60 cursor-default"
+                className={`min-h-[36px] whitespace-nowrap text-[11px] sm:text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full transition-all flex items-center gap-1 border ${isCurrent
+                  ? "text-white shadow-sm"
+                  : isDone
+                    ? "text-brand-green cursor-pointer"
+                    : "text-muted opacity-60 cursor-default"
                   }`}
                 style={{
                   background: isCurrent
@@ -54,7 +54,7 @@ export function StageNav() {
               </button>
               {i < stages.length - 1 && (
                 <div
-                  className="w-4 sm:w-6 h-0.5 rounded-full flex-shrink-0"
+                  className="h-0.5 w-3 sm:w-5 rounded-full flex-shrink-0"
                   style={{
                     background: isDone
                       ? "var(--accent-secondary)"

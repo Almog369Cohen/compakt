@@ -168,7 +168,7 @@ export function MusicBrief() {
     if (!event?.magicToken) return "";
     const djSlug =
       typeof window !== "undefined"
-        ? window.sessionStorage.getItem("compakt_dj_slug")?.trim() || ""
+        ? (() => { try { return window.sessionStorage.getItem("compakt_dj_slug")?.trim() || ""; } catch { return ""; } })()
         : "";
     return djSlug
       ? `${getSafeOrigin()}/dj/${djSlug}?token=${event.magicToken}`

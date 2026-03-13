@@ -22,6 +22,26 @@ type EventSetupProps = {
   initialDjName?: string | null;
 };
 
+function getSessionItem(key: string) {
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setSessionItem(key: string, value: string) {
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch { }
+}
+
+function removeSessionItem(key: string) {
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch { }
+}
+
 export function EventSetup({ initialDjSlug = null, initialDjName = null }: EventSetupProps) {
   const event = useEventStore((s) => s.event);
   const updateEvent = useEventStore((s) => s.updateEvent);
@@ -51,132 +71,141 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
   const [availableDjs, setAvailableDjs] = useState<Array<{ id: string; business_name: string; dj_slug: string }>>([]);
 
   useEffect(() => {
-    const storedDjName = sessionStorage.getItem("compakt_dj_name") || "";
-    const storedDjId = sessionStorage.getItem("compakt_dj_profile_id") || "";
-    const storedDjSlug = sessionStorage.getItem("compakt_dj_slug") || "";
-    const preferredDjSlug = initialDjSlug?.trim() || storedDjSlug;
-    const preferredDjName = initialDjName?.trim() || storedDjName;
+    try {
+      const storedDjName = getSessionItem("compakt_dj_name") || "";
+      const storedDjId = getSessionItem("compakt_dj_profile_id") || "";
+      const storedDjSlug = getSessionItem("compakt_dj_slug") || "";
+      const preferredDjSlug = initialDjSlug?.trim() || storedDjSlug;
+      const preferredDjName = initialDjName?.trim() || storedDjName;
 
-    setDjContextReady(false);
+      setDjContextReady(false);
 
-    const initDjContext = async () => {
-      const loadAvailableDjs = async () => {
-        const response = await fetch("/api/public/djs", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
+      const initDjContext = async () => {
+        const loadAvailableDjs = async () => {
+          const response = await fetch("/api/public/djs", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
 
-        if (!response.ok) {
-          setAvailableDjs([]);
+          if (!response.ok) {
+            setAvailableDjs([]);
+            return;
+          }
+
+          const result = await response.json();
+          const data = result.data;
+
+          if (!Array.isArray(data)) {
+            setAvailableDjs([]);
+            return;
+          }
+
+          setAvailableDjs(
+            data
+              .filter(
+                (row) =>
+                  typeof row.id === "string" &&
+                  typeof row.business_name === "string" &&
+                  row.business_name.trim().length > 0 &&
+                  typeof row.dj_slug === "string" &&
+                  row.dj_slug.trim().length > 0
+              )
+              .map((row) => ({
+                id: row.id,
+                business_name: row.business_name,
+                dj_slug: row.dj_slug,
+              }))
+          );
+        };
+
+        const clearStoredDj = async () => {
+          removeSessionItem("compakt_dj_profile_id");
+          removeSessionItem("compakt_dj_slug");
+          removeSessionItem("compakt_dj_name");
+          setSelectedDjId("");
+          setSelectedDjSlug("");
+          setDjName("");
+          await loadAvailableDjs();
+          setDjContextReady(true);
+        };
+
+        if (preferredDjSlug) {
+          const response = await fetch(`/api/public/djs?slug=${encodeURIComponent(preferredDjSlug)}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+
+          const result = response.ok ? await response.json() : { data: null };
+          const data = result.data as { id: string; business_name: string | null; dj_slug: string | null } | null;
+
+          if (!data?.id) {
+            await clearStoredDj();
+            return;
+          }
+
+          setSessionItem("compakt_dj_profile_id", data.id);
+          setSessionItem("compakt_dj_slug", data.dj_slug || preferredDjSlug);
+          if (data.business_name) {
+            setSessionItem("compakt_dj_name", data.business_name);
+          }
+
+          setSelectedDjId(data.id);
+          setSelectedDjSlug(data.dj_slug || preferredDjSlug);
+          setDjName(data.business_name || preferredDjName);
+          setDjContextReady(true);
           return;
         }
 
-        const result = await response.json();
-        const data = result.data;
+        if (storedDjId) {
+          const response = await fetch(`/api/public/djs?id=${encodeURIComponent(storedDjId)}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
 
-        if (!Array.isArray(data)) {
-          setAvailableDjs([]);
+          const result = response.ok ? await response.json() : { data: null };
+          const data = result.data as { id: string; business_name: string | null; dj_slug: string | null } | null;
+
+          if (!data?.id) {
+            await clearStoredDj();
+            return;
+          }
+
+          setSelectedDjId(data.id);
+          setSelectedDjSlug(data.dj_slug || "");
+          setDjName(data.business_name || preferredDjName);
+
+          if (data.dj_slug) {
+            setSessionItem("compakt_dj_slug", data.dj_slug);
+          }
+          if (data.business_name) {
+            setSessionItem("compakt_dj_name", data.business_name);
+          }
+          setDjContextReady(true);
           return;
         }
 
-        setAvailableDjs(
-          data
-            .filter(
-              (row) =>
-                typeof row.id === "string" &&
-                typeof row.business_name === "string" &&
-                row.business_name.trim().length > 0 &&
-                typeof row.dj_slug === "string" &&
-                row.dj_slug.trim().length > 0
-            )
-            .map((row) => ({
-              id: row.id,
-              business_name: row.business_name,
-              dj_slug: row.dj_slug,
-            }))
-        );
-      };
-
-      const clearStoredDj = async () => {
-        sessionStorage.removeItem("compakt_dj_profile_id");
-        sessionStorage.removeItem("compakt_dj_slug");
-        sessionStorage.removeItem("compakt_dj_name");
-        setSelectedDjId("");
-        setSelectedDjSlug("");
-        setDjName("");
         await loadAvailableDjs();
         setDjContextReady(true);
       };
 
-      if (preferredDjSlug) {
-        const response = await fetch(`/api/public/djs?slug=${encodeURIComponent(preferredDjSlug)}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const result = response.ok ? await response.json() : { data: null };
-        const data = result.data as { id: string; business_name: string | null; dj_slug: string | null } | null;
-
-        if (!data?.id) {
-          await clearStoredDj();
-          return;
-        }
-
-        sessionStorage.setItem("compakt_dj_profile_id", data.id);
-        sessionStorage.setItem("compakt_dj_slug", data.dj_slug || preferredDjSlug);
-        if (data.business_name) {
-          sessionStorage.setItem("compakt_dj_name", data.business_name);
-        }
-
-        setSelectedDjId(data.id);
-        setSelectedDjSlug(data.dj_slug || preferredDjSlug);
-        setDjName(data.business_name || preferredDjName);
+      initDjContext().catch((error) => {
+        console.error("EventSetup DJ context init failed:", error);
+        setSelectedDjId("");
+        setSelectedDjSlug("");
+        setDjName("");
         setDjContextReady(true);
-        return;
-      }
-
-      if (storedDjId) {
-        const response = await fetch(`/api/public/djs?id=${encodeURIComponent(storedDjId)}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const result = response.ok ? await response.json() : { data: null };
-        const data = result.data as { id: string; business_name: string | null; dj_slug: string | null } | null;
-
-        if (!data?.id) {
-          await clearStoredDj();
-          return;
-        }
-
-        setSelectedDjId(data.id);
-        setSelectedDjSlug(data.dj_slug || "");
-        setDjName(data.business_name || preferredDjName);
-
-        if (data.dj_slug) {
-          sessionStorage.setItem("compakt_dj_slug", data.dj_slug);
-        }
-        if (data.business_name) {
-          sessionStorage.setItem("compakt_dj_name", data.business_name);
-        }
-        setDjContextReady(true);
-        return;
-      }
-
-      await loadAvailableDjs();
-      setDjContextReady(true);
-    };
-
-    initDjContext().catch(() => {
+      });
+    } catch (error) {
+      console.error("EventSetup bootstrap failed:", error);
       setSelectedDjId("");
       setSelectedDjSlug("");
       setDjName("");
       setDjContextReady(true);
-    });
+    }
   }, [initialDjName, initialDjSlug]);
 
   const buildLink = () => {
-    const djSlug = selectedDjSlug || sessionStorage.getItem("compakt_dj_slug");
+    const djSlug = selectedDjSlug || getSessionItem("compakt_dj_slug");
     return djSlug
       ? `${getSafeOrigin()}/dj/${djSlug}?token=${magicToken}`
       : `${getSafeOrigin()}?token=${magicToken}`;
@@ -216,7 +245,7 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
         contactEmail: normalizedEmail,
         contactPhone: normalizedPhone,
       });
-      sessionStorage.setItem(`compakt_session_${event.magicToken}`, normalizedEmail);
+      setSessionItem(`compakt_session_${event.magicToken}`, normalizedEmail);
       trackEvent("event_updated", { eventType: selectedType });
       setStep("link");
       return;
@@ -260,7 +289,7 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
 
       setMagicToken(data.eventKey);
       setEventNumber(data.eventNumber || "");
-      sessionStorage.setItem(`compakt_session_${data.eventKey}`, normalizedEmail);
+      setSessionItem(`compakt_session_${data.eventKey}`, normalizedEmail);
 
       useEventStore.setState((state) => ({
         ...state,
@@ -518,9 +547,9 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
                       setDjName(nextDj?.business_name || "");
 
                       if (nextDj) {
-                        sessionStorage.setItem("compakt_dj_profile_id", nextDj.id);
-                        sessionStorage.setItem("compakt_dj_slug", nextDj.dj_slug);
-                        sessionStorage.setItem("compakt_dj_name", nextDj.business_name);
+                        setSessionItem("compakt_dj_profile_id", nextDj.id);
+                        setSessionItem("compakt_dj_slug", nextDj.dj_slug);
+                        setSessionItem("compakt_dj_name", nextDj.business_name);
                       }
                     }}
                     className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground text-sm focus:outline-none focus:border-brand-blue transition-colors"

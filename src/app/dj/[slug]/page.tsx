@@ -27,11 +27,13 @@ export default function DJPublicPage() {
       const dbProfileRecord = await loadProfileRecordBySlug(slug);
       const dbProfile = dbProfileRecord?.profile ?? null;
       if (!cancelled && dbProfile) {
-        sessionStorage.setItem("compakt_dj_slug", slug);
-        sessionStorage.setItem("compakt_dj_name", dbProfile.businessName || slug);
-        if (dbProfileRecord?.id) {
-          sessionStorage.setItem("compakt_dj_profile_id", dbProfileRecord.id);
-        }
+        try {
+          sessionStorage.setItem("compakt_dj_slug", slug);
+          sessionStorage.setItem("compakt_dj_name", dbProfile.businessName || slug);
+          if (dbProfileRecord?.id) {
+            sessionStorage.setItem("compakt_dj_profile_id", dbProfileRecord.id);
+          }
+        } catch { }
         setProfile(dbProfile);
         setLoading(false);
         return;

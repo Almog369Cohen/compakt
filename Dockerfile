@@ -46,6 +46,7 @@ RUN node -e "\
     console.log('env.production:', lines.map(l => l.split('=')[0] + '=' + l.split('=').slice(1).join('=').length + ' chars').join(', '));\
     "
 
+ENV DOCKER_BUILD=true
 RUN npm run build
 
 # --- Runner ---

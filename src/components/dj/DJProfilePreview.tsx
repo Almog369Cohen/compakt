@@ -128,10 +128,8 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
   const styleMeta = DJ_PROFILE_STYLE_OPTIONS.find((option) => option.value === profile.profileStyle);
   const logoScale = Math.min(100, Math.max(50, profile.logoScale ?? 74));
 
-  const isLinktreePremium = profile.profileStyle === "glass_premium";
-  const isArtistStory = profile.profileStyle === "editorial_landing";
-  const isShowcaseMedia = profile.profileStyle === "club_neon";
-  const isMinimalLuxury = profile.profileStyle === "minimal_luxury";
+  const isGlassPremium = profile.profileStyle === "glass_premium";
+  const isEditorialMono = profile.profileStyle === "editorial_mono";
 
   const activeSocials = socialLinks.filter((social) => {
     const value = profile[social.key];
@@ -156,11 +154,9 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
   ].filter(Boolean);
 
   const orderedSections = useMemo(() => {
-    if (isArtistStory) return ["actions", "whatsapp", "reviews", "featuredVideo", "videoRail", "gallery", "socials", "links"] as const;
-    if (isShowcaseMedia) return ["featuredVideo", "videoRail", "actions", "whatsapp", "gallery", "reviews", "socials", "links"] as const;
-    if (isMinimalLuxury) return ["actions", "whatsapp", "featuredVideo", "reviews", "socials", "links", "gallery"] as const;
+    if (isEditorialMono) return ["actions", "whatsapp", "reviews", "socials", "links", "gallery", "featuredVideo", "videoRail"] as const;
     return ["actions", "whatsapp", "socials", "links", "featuredVideo", "videoRail", "gallery", "reviews"] as const;
-  }, [isArtistStory, isShowcaseMedia, isMinimalLuxury]);
+  }, [isEditorialMono]);
 
   const hasAnyContent = Boolean(profile.bio?.trim() || whatsappLink || activeSocials.length > 0 || galleryPhotos.length > 0 || visibleCustomLinks.length > 0 || reviews.length > 0);
 
@@ -185,25 +181,25 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
   };
 
   const renderPrimaryActions = () => (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className={`${styleTokens.sectionCardClass} ${isMinimalLuxury ? "p-0 border-0 bg-transparent backdrop-blur-none" : "p-3 sm:p-4"}`}>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className={`${styleTokens.sectionCardClass} ${isEditorialMono ? "p-0 border-0 bg-transparent backdrop-blur-none" : "p-3 sm:p-4"}`}>
       <div className={`flex flex-col gap-2 ${styleTokens.ctaVariant === "stacked" ? "" : "sm:flex-row"}`}>
         {mode === "public" ? (
           <>
-            <a href={`/?dj=${effectiveSlug}`} className={`flex-1 flex items-center justify-center gap-2 py-3.5 font-bold text-sm text-white transition-opacity hover:opacity-90 ${isMinimalLuxury ? "rounded-full" : "rounded-2xl"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+            <a href={`/?dj=${effectiveSlug}`} className={`flex-1 flex items-center justify-center gap-2 py-3.5 font-bold text-sm text-white transition-opacity hover:opacity-90 ${isEditorialMono ? "rounded-full" : "rounded-2xl"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
               <Music className="w-5 h-5" />
               התחילו עם ה-DJ הזה
             </a>
-            <a href={`/dj/${effectiveSlug}?resume=1`} className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-secondary transition-colors hover:text-white ${isMinimalLuxury ? "rounded-full border border-white/8 bg-white/[0.02]" : "rounded-2xl border border-white/10 bg-white/[0.04]"}`}>
+            <a href={`/dj/${effectiveSlug}?resume=1`} className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-secondary transition-colors hover:text-white ${isEditorialMono ? "rounded-full border border-white/8 bg-white/[0.02]" : "rounded-2xl border border-white/10 bg-white/[0.04]"}`}>
               כבר התחלתם? חזרו עם מספר אירוע
             </a>
           </>
         ) : (
-          <div className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm text-white opacity-80 cursor-default ${isMinimalLuxury ? "rounded-full" : "rounded-xl"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+          <div className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm text-white opacity-80 cursor-default ${isEditorialMono ? "rounded-full" : "rounded-xl"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
             <Music className="w-5 h-5" />
             התחילו את המסע
           </div>
         )}
-        <button onClick={handleShare} className={`px-4 py-3 text-sm font-medium transition-all ${isMinimalLuxury ? "rounded-full border border-white/10" : "rounded-xl border"}`} style={{ borderColor: `${accentColor}55`, color: accentColor }} type="button" title={copied ? "הועתק" : "שתפו / העתיקו"} disabled={mode === "preview"}>
+        <button onClick={handleShare} className={`px-4 py-3 text-sm font-medium transition-all ${isEditorialMono ? "rounded-full border border-white/10" : "rounded-xl border"}`} style={{ borderColor: `${accentColor}55`, color: accentColor }} type="button" title={copied ? "הועתק" : "שתפו / העתיקו"} disabled={mode === "preview"}>
           {copied ? "הועתק" : "שיתוף"}
         </button>
       </div>
@@ -214,12 +210,12 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
     whatsappLink ? (
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
         {mode === "public" ? (
-          <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className={`flex items-center justify-center gap-2 w-full py-4 text-white font-bold text-sm transition-opacity hover:opacity-90 ${isMinimalLuxury ? "rounded-full" : "rounded-[22px]"}`} style={{ background: "#25D366" }}>
+          <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className={`flex items-center justify-center gap-2 w-full py-4 text-white font-bold text-sm transition-opacity hover:opacity-90 ${isEditorialMono ? "rounded-full" : "rounded-[22px]"}`} style={{ background: "#25D366" }}>
             <MessageCircle className="w-5 h-5" />
             שלחו הודעה בוואטסאפ
           </a>
         ) : (
-          <div className={`flex items-center justify-center gap-2 w-full py-4 text-white font-bold text-sm opacity-80 cursor-default ${isMinimalLuxury ? "rounded-full" : "rounded-[22px]"}`} style={{ background: "#25D366" }}>
+          <div className={`flex items-center justify-center gap-2 w-full py-4 text-white font-bold text-sm opacity-80 cursor-default ${isEditorialMono ? "rounded-full" : "rounded-[22px]"}`} style={{ background: "#25D366" }}>
             <MessageCircle className="w-5 h-5" />
             שלחו הודעה בוואטסאפ
           </div>
@@ -229,14 +225,14 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
 
   const renderSocials = () =>
     activeSocials.length > 0 ? (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className={isMinimalLuxury ? "flex justify-start" : "flex justify-center"}>
-        <div className={`flex flex-wrap items-center ${isMinimalLuxury ? "gap-3" : "gap-4 justify-center"}`}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className={isEditorialMono ? "flex justify-start" : "flex justify-center"}>
+        <div className={`flex flex-wrap items-center ${isEditorialMono ? "gap-3" : "gap-4 justify-center"}`}>
           {activeSocials.map((social) => {
             const Wrapper = mode === "public" ? "a" : "div";
             const linkProps = mode === "public" ? { href: profile[social.key], target: "_blank" as const, rel: "noopener noreferrer" } : {};
             return (
               <Wrapper key={social.key} {...linkProps} className={`inline-flex items-center justify-center transition-all ${mode === "public" ? "hover:scale-[1.08] active:scale-[0.98] cursor-pointer" : ""}`} title={social.label}>
-                <span className={`flex items-center justify-center shrink-0 w-11 h-11 ${isMinimalLuxury ? "rounded-full border border-white/8 bg-white/[0.02]" : "rounded-2xl border border-white/10 bg-white/[0.03]"}`} style={{ color: social.color }}>
+                <span className={`flex items-center justify-center shrink-0 w-11 h-11 ${isEditorialMono ? "rounded-full border border-white/8 bg-white/[0.02]" : "rounded-2xl border border-white/10 bg-white/[0.03]"}`} style={{ color: social.color }}>
                   {social.icon}
                 </span>
               </Wrapper>
@@ -248,15 +244,15 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
 
   const renderUtilityLinks = () =>
     utilityLinks.length > 0 ? (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className={isMinimalLuxury ? "flex flex-wrap gap-2 justify-start" : "flex flex-wrap gap-2 justify-center"}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className={isEditorialMono ? "flex flex-wrap gap-2 justify-start" : "flex flex-wrap gap-2 justify-center"}>
         {utilityLinks.map((link, index) =>
           mode === "public" ? (
-            <a key={`${link.label}-${index}`} href={link.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-2 text-xs font-medium transition-opacity hover:opacity-80 ${isMinimalLuxury ? "rounded-full border border-white/8 px-3 py-2" : ""}`} style={{ color: accentColor }}>
+            <a key={`${link.label}-${index}`} href={link.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-2 text-xs font-medium transition-opacity hover:opacity-80 ${isEditorialMono ? "rounded-full border border-white/8 px-3 py-2" : ""}`} style={{ color: accentColor }}>
               <Link2 className="w-4 h-4" />
               {link.label}
             </a>
           ) : (
-            <div key={`${link.label}-${index}`} className={`inline-flex items-center gap-2 text-xs font-medium ${isMinimalLuxury ? "rounded-full border border-white/8 px-3 py-2" : ""}`} style={{ color: accentColor }}>
+            <div key={`${link.label}-${index}`} className={`inline-flex items-center gap-2 text-xs font-medium ${isEditorialMono ? "rounded-full border border-white/8 px-3 py-2" : ""}`} style={{ color: accentColor }}>
               <Link2 className="w-4 h-4" />
               {link.label}
             </div>
@@ -270,7 +266,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
     const linkProps = mode === "public" ? { href: link.url, target: "_blank" as const, rel: "noopener noreferrer" } : {};
     const thumbnail = getVideoThumbnail(link.url);
     return (
-      <Wrapper key={`${link.label}-${index}`} {...linkProps} className={`min-w-[240px] max-w-[240px] snap-start overflow-hidden rounded-[24px] border border-white/10 ${isShowcaseMedia ? "bg-black/20" : "bg-white/[0.04]"} ${mode === "public" ? "hover:bg-white/[0.07] transition-colors" : ""}`}>
+      <Wrapper key={`${link.label}-${index}`} {...linkProps} className={`min-w-[240px] max-w-[240px] snap-start overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.04] ${mode === "public" ? "hover:bg-white/[0.07] transition-colors" : ""}`}>
         <div className="relative aspect-[16/10] overflow-hidden">
           {thumbnail ? <img src={thumbnail} alt={link.label} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accentColor}35, ${secondaryColor}15 55%, ${surfaceColor})` }} />}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
@@ -345,7 +341,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
           <h3 className="text-sm font-bold">תיק עבודות</h3>
           <div className={`px-3 py-1.5 rounded-2xl text-[11px] ${styleTokens.highlightPillClass}`}>{galleryPhotos.length} תמונות</div>
         </div>
-        <div className={`relative ${isMinimalLuxury ? "aspect-[4/5]" : "aspect-[16/10]"} rounded-[24px] overflow-hidden bg-black/20`}>
+        <div className={`relative ${isEditorialMono ? "aspect-[4/5]" : "aspect-[16/10]"} rounded-[24px] overflow-hidden bg-black/20`}>
           <img src={galleryPhotos[galleryIndex % galleryPhotos.length]} alt={`gallery ${galleryIndex + 1}`} className="w-full h-full object-cover cursor-pointer transition-transform hover:scale-[1.02]" onClick={() => setLightboxOpen(true)} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10" />
           <button onClick={() => setLightboxOpen(true)} className="absolute top-2 left-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors" title="הגדל תמונה">
@@ -387,7 +383,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
           <div className={`px-3 py-1.5 rounded-2xl text-[11px] ${styleTokens.highlightPillClass}`}>{reviews.length} ביקורות</div>
         </div>
         {reviews.filter((review) => review.text).map((review, index) => (
-          <div key={index} className={`space-y-2 ${isMinimalLuxury ? "border-b border-white/8 pb-4 last:border-b-0 last:pb-0" : "p-4 rounded-2xl border border-glass bg-white/[0.02]"}`}>
+          <div key={index} className={`space-y-2 ${isEditorialMono ? "border-b border-white/8 pb-4 last:border-b-0 last:pb-0" : "p-4 rounded-2xl border border-glass bg-white/[0.02]"}`}>
             <div className="flex items-center gap-2">
               {review.name && <span className="text-sm font-medium">{review.name}</span>}
               <div className="flex gap-0.5">
@@ -425,7 +421,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
     socials: renderSocials(),
     links: renderUtilityLinks(),
     featuredVideo: renderFeaturedVideo(),
-    videoRail: renderVideoRail(isArtistStory ? "עוד קטעים" : "קטעי וידאו", isShowcaseMedia ? secondaryVideos : featuredVideo ? secondaryVideos : videoLinks, isMinimalLuxury),
+    videoRail: renderVideoRail(isEditorialMono ? "קטעי וידאו" : "קטעי וידאו", featuredVideo ? secondaryVideos : videoLinks, isEditorialMono),
     gallery: renderGallery(),
     reviews: renderReviews(),
   };
@@ -435,26 +431,25 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
       <div className="absolute inset-0 pointer-events-none opacity-80" style={{ background: `radial-gradient(circle at top right, ${primaryColor}20, transparent 25%), radial-gradient(circle at top left, ${secondaryColor}14, transparent 20%)` }} />
       <div className="relative max-w-md mx-auto px-4 py-4 sm:py-6">
         <div className={`${styleTokens.frameClass} overflow-hidden`}>
-          <div className={`p-4 sm:p-5 ${isMinimalLuxury ? "space-y-6" : "space-y-4"}`}>
+          <div className={`p-4 sm:p-5 ${isEditorialMono ? "space-y-6" : "space-y-4"}`}>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${styleTokens.heroCardClass} overflow-hidden`}>
-              <div className={`relative ${isArtistStory ? "min-h-[360px]" : isShowcaseMedia ? "min-h-[280px]" : isMinimalLuxury ? "min-h-[220px]" : "min-h-[240px]"}`}>
+              <div className={`relative ${isEditorialMono ? "min-h-[320px]" : "min-h-[240px]"}`}>
                 {profile.coverUrl ? (
                   <>
                     <img src={profile.coverUrl} alt="cover" className="absolute inset-0 w-full h-full object-cover" />
-                    <div className="absolute inset-0" style={{ background: isMinimalLuxury ? "linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.85))" : `linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.76)), linear-gradient(135deg, ${primaryColor}20, transparent 45%, ${secondaryColor}15)` }} />
+                    <div className="absolute inset-0" style={{ background: isEditorialMono ? "linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.88))" : `linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.76)), linear-gradient(135deg, ${primaryColor}20, transparent 45%, ${secondaryColor}15)` }} />
                   </>
                 ) : (
                   <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${primaryColor}66, ${secondaryColor}33 55%, ${surfaceColor})` }} />
                 )}
-                <div className={`relative z-10 p-5 flex flex-col ${isArtistStory || isShowcaseMedia || isMinimalLuxury ? "justify-between" : "justify-end"} h-full`}>
+                <div className={`relative z-10 p-5 flex flex-col ${isEditorialMono ? "justify-between" : "justify-end"} h-full`}>
                   <div className="flex items-center justify-between gap-3">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] ${styleTokens.highlightPillClass}`}>
                       <Sparkles className="w-3 h-3" />
                       {styleMeta?.shortName ?? styleMeta?.label ?? "Style"}
                     </span>
-                    {isShowcaseMedia && <span className="text-[11px] uppercase tracking-[0.28em] text-white/60">SHOWCASE</span>}
                   </div>
-                  {isArtistStory ? (
+                  {isEditorialMono ? (
                     <div className="space-y-5">
                       <div className="flex items-center gap-3">
                         {profile.logoUrl ? (
@@ -467,7 +462,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="text-[11px] uppercase tracking-[0.28em] text-white/55 mb-2">{heroMeta.join(" · ") || "ARTIST PAGE"}</div>
+                          <div className="text-[11px] uppercase tracking-[0.28em] text-white/55 mb-2">{heroMeta.join(" · ") || "EDITORIAL PROFILE"}</div>
                           <h1 className="text-3xl sm:text-4xl font-bold leading-tight text-white text-balance">{profile.businessName || "שם העסק שלך"}</h1>
                           {profile.tagline && <p className="text-base text-white/82 mt-2 leading-7 max-w-[18rem]">{profile.tagline}</p>}
                         </div>
@@ -478,40 +473,27 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
                     <div className="space-y-4">
                       <div className="flex items-end gap-3">
                         {profile.logoUrl ? (
-                          <div className={`rounded-2xl overflow-hidden border border-white/15 shadow-lg shrink-0 ${isMinimalLuxury ? "w-12 h-12" : "w-14 h-14"}`}>
+                          <div className={`rounded-2xl overflow-hidden border border-white/15 shadow-lg shrink-0 ${isEditorialMono ? "w-12 h-12" : "w-14 h-14"}`}>
                             <img src={profile.logoUrl} alt="logo" className={`w-full h-full ${profile.logoFit === "cover" ? "object-cover" : "object-contain"}`} style={{ transform: `scale(${logoScale / 100})` }} />
                           </div>
                         ) : (
-                          <div className={`rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0 ${isMinimalLuxury ? "w-12 h-12" : "w-14 h-14"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
-                            <Headphones className={isMinimalLuxury ? "w-6 h-6" : "w-7 h-7"} />
+                          <div className={`rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0 ${isEditorialMono ? "w-12 h-12" : "w-14 h-14"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+                            <Headphones className={isEditorialMono ? "w-6 h-6" : "w-7 h-7"} />
                           </div>
                         )}
                         <div className="min-w-0">
                           {heroMeta.length > 0 && <div className="text-[11px] uppercase tracking-[0.28em] text-white/55 mb-2">{heroMeta.join(" · ")}</div>}
-                          <h1 className={`${isMinimalLuxury ? "text-xl" : "text-2xl"} font-bold leading-tight text-white text-balance`}>{profile.businessName || "שם העסק שלך"}</h1>
-                          {profile.tagline && <p className={`text-white/80 mt-1 ${isMinimalLuxury ? "text-xs" : "text-sm"}`}>{profile.tagline}</p>}
+                          <h1 className={`${isEditorialMono ? "text-xl" : "text-2xl"} font-bold leading-tight text-white text-balance`}>{profile.businessName || "שם העסק שלך"}</h1>
+                          {profile.tagline && <p className={`text-white/80 mt-1 ${isEditorialMono ? "text-xs" : "text-sm"}`}>{profile.tagline}</p>}
                         </div>
                       </div>
-                      {isShowcaseMedia && featuredVideo && (
-                        <div className="rounded-[22px] border border-white/10 bg-black/20 p-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-white/12 flex items-center justify-center text-white">
-                              <Play className="w-5 h-5 fill-current" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-[11px] uppercase tracking-[0.18em] text-white/55">Featured showreel</div>
-                              <div className="text-sm font-semibold text-white line-clamp-1">{featuredVideo.label}</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {isMinimalLuxury && profile.bio && <p className="max-w-[15rem] text-sm leading-7 text-white/76">{profile.bio}</p>}
+                      {isEditorialMono && profile.bio && <p className="max-w-[15rem] text-sm leading-7 text-white/76">{profile.bio}</p>}
                     </div>
                   )}
                 </div>
               </div>
             </motion.div>
-            {!isArtistStory && profile.bio && isLinktreePremium && (
+            {!isEditorialMono && profile.bio && isGlassPremium && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }} className={`${styleTokens.sectionCardClass} p-4`} style={{ borderColor: `${surfaceColor}88` }}>
                 <p className="text-sm text-secondary leading-relaxed whitespace-pre-line">{profile.bio}</p>
               </motion.div>

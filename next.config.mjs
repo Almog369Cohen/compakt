@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
+const isDocker = process.env.DOCKER_BUILD === "true";
+
 const nextConfig = {
-    output: "standalone",
+    ...(isDocker ? { output: "standalone" } : {}),
+    allowedDevOrigins: ["127.0.0.1", "localhost"],
     typescript: {
         ignoreBuildErrors: true,
     },
