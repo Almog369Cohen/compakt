@@ -1,11 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Rubik } from "next/font/google";
 import { AppRuntimeGuard } from "@/components/ui/AppRuntimeGuard";
-import { OptionalClerkProvider } from "@/components/providers/OptionalClerkProvider";
 import "./globals.css";
-
-const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-const clerkEnabled = Boolean(clerkPublishableKey);
 
 const rubik = Rubik({
   subsets: ["hebrew", "latin"],
@@ -38,16 +34,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const bodyContent = clerkEnabled ? (
-    <OptionalClerkProvider publishableKey={clerkPublishableKey}>{children}</OptionalClerkProvider>
-  ) : (
-    children
-  );
-
   return (
     <html lang="he" dir="rtl" data-theme="night" className={rubik.variable}>
       <body className="font-sans antialiased min-h-dvh">
-        <AppRuntimeGuard>{bodyContent}</AppRuntimeGuard>
+        <AppRuntimeGuard>{children}</AppRuntimeGuard>
       </body>
     </html>
   );

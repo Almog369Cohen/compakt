@@ -1,10 +1,5 @@
-import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createMiddlewareSupabase } from "@/lib/supabase-server";
-import { clerkMiddleware } from "@clerk/nextjs/server";
-
-const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-const clerkEnabled = Boolean(clerkPublishableKey && clerkSecretKey);
 
 /**
  * Next.js Middleware — runs on every matched route.
@@ -13,10 +8,7 @@ const clerkEnabled = Boolean(clerkPublishableKey && clerkSecretKey);
  * - /admin, /hq → redirect to /admin?login=1 if no session
  * - /api/admin/* → return 401 JSON if no session
  */
-async function handleRequest(
-  req: NextRequest,
-  getClerkUserId?: () => Promise<string | null>
-) {
+async function handleRequest(req: NextRequest) {
   const res = NextResponse.next();
   const { pathname } = req.nextUrl;
   const requiresAdminAuth =
@@ -27,8 +19,6 @@ async function handleRequest(
   }
 
   const bypassCookie = req.cookies.get("compakt-admin-bypass")?.value;
-  const clerkUserId = getClerkUserId ? await getClerkUserId() : null;
-  const hasClerkUser = Boolean(clerkUserId);
 
   let hasSupabaseUser = false;
   try {
@@ -41,7 +31,7 @@ async function handleRequest(
     hasSupabaseUser = false;
   }
 
-  const isAuthenticated = hasClerkUser || Boolean(bypassCookie) || hasSupabaseUser;
+  const isAuthenticated = Boolean(bypassCookie) || hasSupabaseUser;
 
   if (pathname.startsWith("/api/admin")) {
     if (!isAuthenticated) {
@@ -63,24 +53,8 @@ async function handleRequest(
   return res;
 }
 
-export default async function middleware(req: NextRequest, event: NextFetchEvent) {
-  if (!clerkEnabled) {
-    return handleRequest(req);
-  }
-
-  const middlewareWithClerk = clerkMiddleware(
-    async (auth, clerkReq: NextRequest) =>
-      handleRequest(clerkReq, async () => {
-        const clerkAuth = await auth();
-        return clerkAuth.userId ?? null;
-      }),
-    {
-      publishableKey: clerkPublishableKey,
-      secretKey: clerkSecretKey,
-    }
-  );
-
-  return middlewareWithClerk(req, event);
+export default async function middleware(req: NextRequest) {
+  return handleRequest(req);
 }
 
 export const config = {
