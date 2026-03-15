@@ -40,23 +40,111 @@ export function PreOnboardingLanding({ onStartTrial, onStartFree }: PreOnboardin
             ומקלה על ניהול האירוע המושלם
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+          {/* CTA Options - 2 Clear Choices */}
+          <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto mb-12">
+            {/* Option 1: Premium Trial */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="glass-card p-6 border-2 border-brand-blue/30 relative overflow-hidden group cursor-pointer"
               onClick={onStartTrial}
-              className="btn-primary text-lg px-8 py-4 w-full sm:w-auto"
             >
-              <Sparkles className="w-5 h-5" />
-              התחל 14 יום חינם
-            </motion.button>
+              {/* Popular Badge */}
+              <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-brand-blue text-white text-xs font-bold">
+                מומלץ ביותר
+              </div>
 
-            <button
+              {/* Glow Effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/20 to-brand-green/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-6 h-6 text-brand-blue" />
+                  <h3 className="text-xl font-bold">Premium Trial</h3>
+                </div>
+
+                <div className="text-3xl font-bold mb-2">
+                  14 יום <span className="text-brand-green">חינם</span>
+                </div>
+
+                <p className="text-sm text-secondary mb-4">
+                  נסה את כל הפיצ&apos;רים המתקדמים ללא התחייבות
+                </p>
+
+                <ul className="space-y-2 mb-6 text-sm">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-green" />
+                    <span>ייבוא מ-Spotify</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-green" />
+                    <span>שאלונים מתקדמים</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-green" />
+                    <span>אנליטיקס מלא</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-green" />
+                    <span>תמיכה מועדפת</span>
+                  </li>
+                </ul>
+
+                <button className="btn-primary w-full">
+                  התחל עכשיו →
+                </button>
+
+                <p className="text-xs text-muted text-center mt-3">
+                  💳 נדרש כרטיס אשראי • ללא חיוב ב-14 ימים
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Option 2: Free Starter */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="glass-card p-6 border border-white/10 relative overflow-hidden group cursor-pointer"
               onClick={onStartFree}
-              className="text-secondary hover:text-foreground transition-colors text-lg"
             >
-              או התחל בחינם →
-            </button>
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-6 h-6 text-brand-green" />
+                  <h3 className="text-xl font-bold">Starter</h3>
+                </div>
+
+                <div className="text-3xl font-bold mb-2">
+                  <span className="text-brand-green">חינם</span> לתמיד
+                </div>
+
+                <p className="text-sm text-secondary mb-4">
+                  התחל מיד עם הפיצ&apos;רים הבסיסיים
+                </p>
+
+                <ul className="space-y-2 mb-6 text-sm">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-green" />
+                    <span>קישור לזוגות</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-green" />
+                    <span>שאלונים בסיסיים</span>
+                  </li>
+                  <li className="flex items-center gap-2 opacity-50">
+                    <span className="text-xs">❌ ייבוא Spotify</span>
+                  </li>
+                  <li className="flex items-center gap-2 opacity-50">
+                    <span className="text-xs">❌ אנליטיקס</span>
+                  </li>
+                </ul>
+
+                <button className="btn-secondary w-full">
+                  התחל בחינם →
+                </button>
+
+                <p className="text-xs text-muted text-center mt-3">
+                  ✅ ללא כרטיס אשראי • שדרוג בכל עת
+                </p>
+              </div>
+            </motion.div>
           </div>
 
           {/* Trial Benefits */}
