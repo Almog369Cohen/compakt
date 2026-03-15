@@ -200,7 +200,7 @@ export function OnboardingChecklistV2({ onComplete, isTrialUser }: OnboardingChe
 
           {isTrialUser && (
             <p className="text-xs text-muted mt-4">
-              💎 זכור: יש לך 30 יום לנסות את כל הפיצ&apos;רים של Premium
+              💎 זכור: יש לך 14 יום לנסות את כל הפיצ&apos;רים של Premium
             </p>
           )}
         </motion.div>

@@ -9,6 +9,7 @@ import type { PlanKey } from "@/lib/access";
 import { PreOnboardingLanding } from "./PreOnboardingLanding";
 import { PlanSelector } from "./PlanSelector";
 import { OnboardingStepProfileV2 } from "./steps/OnboardingStepProfileV2";
+import { OnboardingStepPayment } from "./steps/OnboardingStepPayment";
 import { OnboardingStepSongsV2 } from "./steps/OnboardingStepSongsV2";
 import { OnboardingStepQuestionsV2 } from "./steps/OnboardingStepQuestionsV2";
 import { OnboardingStepLinkV2 } from "./steps/OnboardingStepLinkV2";
@@ -28,6 +29,8 @@ export function OnboardingFlowV2() {
   const setCurrentStep = useOnboardingStoreV2((s) => s.setCurrentStep);
   const completeStep = useOnboardingStoreV2((s) => s.completeStep);
   const finishOnboarding = useOnboardingStoreV2((s) => s.finishOnboarding);
+  const completePayment = useOnboardingStoreV2((s) => s.completePayment);
+  const skipPayment = useOnboardingStoreV2((s) => s.skipPayment);
 
   const startTrial = usePricingStore((s) => s.startTrial);
   const profileId = useProfileStore((s) => s.profileId);
@@ -38,7 +41,7 @@ export function OnboardingFlowV2() {
   useEffect(() => {
     if (selectedPlan === "premium" && isTrialUser && profileId && currentStep === 1) {
       // Start trial in background
-      startTrial(profileId, 30).catch((error) => {
+      startTrial(profileId, 14).catch((error) => {
         console.error("Failed to start trial:", error);
       });
     }
@@ -62,13 +65,23 @@ export function OnboardingFlowV2() {
   const handleStepComplete = (step: number) => {
     completeStep(step);
 
-    if (step === 4) {
+    if (step === 5) {
       // Last step - show celebration
       setShowCelebration(true);
     } else {
       // Move to next step
       setCurrentStep((step + 1) as OnboardingStepV2);
     }
+  };
+
+  const handlePaymentComplete = () => {
+    completePayment();
+    handleStepComplete(1);
+  };
+
+  const handlePaymentSkip = () => {
+    skipPayment();
+    handleStepComplete(1);
   };
 
   const handleCelebrationComplete = () => {
@@ -117,31 +130,34 @@ export function OnboardingFlowV2() {
             exit={{ opacity: 0, x: -20 }}
           >
             <OnboardingStepProfileV2
-              onComplete={() => handleStepComplete(1)}
+              onComplete={() => {
+                completeStep(1);
+                // If Premium trial, show payment step, otherwise skip to songs
+                if (selectedPlan === "premium" && isTrialUser) {
+                  setCurrentStep(2);
+                } else {
+                  setCurrentStep(3);
+                }
+              }}
               onSkip={() => {
                 completeStep(1);
-                setCurrentStep(2);
+                setCurrentStep(selectedPlan === "premium" && isTrialUser ? 2 : 3);
               }}
               isTrialUser={isTrialUser}
             />
           </motion.div>
         )}
 
-        {currentStep === 2 && (
+        {currentStep === 2 && selectedPlan === "premium" && isTrialUser && (
           <motion.div
             key="step-2"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
           >
-            <OnboardingStepSongsV2
-              onComplete={() => handleStepComplete(2)}
-              onBack={() => setCurrentStep(1)}
-              onSkip={() => {
-                completeStep(2);
-                setCurrentStep(3);
-              }}
-              isTrialUser={isTrialUser}
+            <OnboardingStepPayment
+              onComplete={handlePaymentComplete}
+              onSkip={handlePaymentSkip}
             />
           </motion.div>
         )}
@@ -153,9 +169,9 @@ export function OnboardingFlowV2() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
           >
-            <OnboardingStepQuestionsV2
+            <OnboardingStepSongsV2
               onComplete={() => handleStepComplete(3)}
-              onBack={() => setCurrentStep(2)}
+              onBack={() => setCurrentStep(selectedPlan === "premium" && isTrialUser ? 2 : 1)}
               onSkip={() => {
                 completeStep(3);
                 setCurrentStep(4);
@@ -172,9 +188,28 @@ export function OnboardingFlowV2() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
           >
-            <OnboardingStepLinkV2
+            <OnboardingStepQuestionsV2
               onComplete={() => handleStepComplete(4)}
               onBack={() => setCurrentStep(3)}
+              onSkip={() => {
+                completeStep(4);
+                setCurrentStep(5);
+              }}
+              isTrialUser={isTrialUser}
+            />
+          </motion.div>
+        )}
+
+        {currentStep === 5 && (
+          <motion.div
+            key="step-5"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+          >
+            <OnboardingStepLinkV2
+              onComplete={() => handleStepComplete(5)}
+              onBack={() => setCurrentStep(4)}
               isTrialUser={isTrialUser}
             />
           </motion.div>

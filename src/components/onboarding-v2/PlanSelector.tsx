@@ -51,8 +51,8 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
             <button
               onClick={() => handleSelect("premium")}
               className={`w-full text-right transition-all ${selectedPlan === "premium"
-                  ? "ring-2 ring-brand-blue"
-                  : "hover:ring-1 hover:ring-white/20"
+                ? "ring-2 ring-brand-blue"
+                : "hover:ring-1 hover:ring-white/20"
                 }`}
             >
               <div className="glass-card p-6 relative overflow-hidden">
@@ -117,8 +117,8 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
             <button
               onClick={() => handleSelect("starter")}
               className={`w-full text-right transition-all ${selectedPlan === "starter"
-                  ? "ring-2 ring-brand-blue"
-                  : "hover:ring-1 hover:ring-white/20"
+                ? "ring-2 ring-brand-blue"
+                : "hover:ring-1 hover:ring-white/20"
                 }`}
             >
               <div className="glass-card p-6 relative">
@@ -179,8 +179,8 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
               <div>
                 <div className="font-medium mb-1">טיפ: רוב ה-DJs מתחילים ב-Premium Trial</div>
                 <div className="text-sm text-secondary">
-                  עם ה-trial תוכל לנסות את כל הפיצ&apos;רים ללא הגבלה ל-30 יום, ורק אז להחליט אם לשדרג.
-                  זה לא מחייב ואפשר לבטל בכל עת.
+                  עם ה-trial תוכל לנסות את כל הפיצ&apos;רים ללא הגבלה ל-14 יום, ורק אז להחליט אם לשדרג.
+                  ללא חיוב בתקופת הניסיון • ביטול בכל עת.
                 </div>
               </div>
             </div>

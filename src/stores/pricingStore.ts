@@ -62,7 +62,7 @@ export const PLANS: Plan[] = [
   {
     key: "premium",
     name: "Premium",
-    price: 199,
+    price: 149,
     currency: "₪",
     interval: "month",
     features: [
@@ -93,12 +93,12 @@ interface PricingState {
   trialStartedAt: string | null;
   discountCode: string | null;
   discountExpiresAt: string | null;
-  
+
   // Computed
   trialDaysLeft: number;
   isTrialExpired: boolean;
   hasActiveDiscount: boolean;
-  
+
   // Actions
   setCurrentPlan: (plan: PlanKey) => void;
   setTrialInfo: (info: {
@@ -139,7 +139,7 @@ export const usePricingStore = create<PricingState>()(
       setTrialInfo: (info) => {
         const daysLeft = info.endsAt ? get().calculateTrialDaysLeft() : 0;
         const isExpired = info.endsAt ? new Date(info.endsAt) < new Date() : false;
-        
+
         set({
           trialActive: info.active && !isExpired,
           trialEndsAt: info.endsAt,
@@ -150,10 +150,10 @@ export const usePricingStore = create<PricingState>()(
       },
 
       setDiscountInfo: (info) => {
-        const hasActive = info.code && info.expiresAt 
-          ? new Date(info.expiresAt) > new Date() 
+        const hasActive = info.code && info.expiresAt
+          ? new Date(info.expiresAt) > new Date()
           : false;
-        
+
         set({
           discountCode: info.code,
           discountExpiresAt: info.expiresAt,
@@ -164,12 +164,12 @@ export const usePricingStore = create<PricingState>()(
       calculateTrialDaysLeft: () => {
         const { trialEndsAt } = get();
         if (!trialEndsAt) return 0;
-        
+
         const now = new Date();
         const endsAt = new Date(trialEndsAt);
         const diffTime = endsAt.getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
+
         return Math.max(0, diffDays);
       },
 
@@ -181,7 +181,7 @@ export const usePricingStore = create<PricingState>()(
         try {
           const { error } = await supabase
             .from("profiles")
-            .update({ 
+            .update({
               plan,
               updated_at: new Date().toISOString(),
             })
@@ -193,9 +193,9 @@ export const usePricingStore = create<PricingState>()(
           return { success: true };
         } catch (error) {
           console.error("Failed to upgrade plan:", error);
-          return { 
-            success: false, 
-            error: error instanceof Error ? error.message : "Failed to upgrade plan" 
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : "Failed to upgrade plan"
           };
         }
       },
@@ -330,7 +330,7 @@ export const usePricingStore = create<PricingState>()(
           const trialEndsAt = data.trial_ends_at;
           const trialStartedAt = data.trial_started_at;
           const isTrialActive = trialEndsAt && new Date(trialEndsAt) > new Date();
-          
+
           set({
             currentPlan: plan,
             trialActive: Boolean(isTrialActive),

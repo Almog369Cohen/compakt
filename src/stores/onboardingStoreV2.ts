@@ -12,22 +12,26 @@ interface OnboardingStateV2 {
   completedSteps: number[];
   skippedSteps: number[];
   onboardingComplete: boolean;
-  
+
   // Plan selection
   selectedPlan: PlanKey;
   isTrialUser: boolean;
-  
+
+  // Payment
+  paymentCompleted: boolean;
+  skippedPayment: boolean;
+
   // Quick Start selections
   useQuickStartSongs: boolean;
   useQuickStartQuestions: boolean;
-  
+
   // Upsell tracking
   hasSeenUpsells: {
     spotify: boolean;
     advancedQuestions: boolean;
     googleCalendar: boolean;
   };
-  
+
   // Actions
   setShowPreOnboarding: (show: boolean) => void;
   setShowPlanSelector: (show: boolean) => void;
@@ -42,6 +46,8 @@ interface OnboardingStateV2 {
   setUseQuickStartSongs: (use: boolean) => void;
   setUseQuickStartQuestions: (use: boolean) => void;
   markUpsellSeen: (upsell: keyof OnboardingStateV2["hasSeenUpsells"]) => void;
+  completePayment: () => void;
+  skipPayment: () => void;
 }
 
 const initialState = {
@@ -53,6 +59,8 @@ const initialState = {
   onboardingComplete: false,
   selectedPlan: "premium" as PlanKey,
   isTrialUser: false,
+  paymentCompleted: false,
+  skippedPayment: false,
   useQuickStartSongs: true,
   useQuickStartQuestions: true,
   hasSeenUpsells: {
@@ -153,6 +161,19 @@ export const useOnboardingStoreV2 = create<OnboardingStateV2>()(
             [upsell]: true,
           },
         }));
+      },
+
+      completePayment: () => {
+        set({ paymentCompleted: true, skippedPayment: false });
+      },
+
+      skipPayment: () => {
+        set({
+          paymentCompleted: false,
+          skippedPayment: true,
+          selectedPlan: "starter",
+          isTrialUser: false,
+        });
       },
     }),
     {

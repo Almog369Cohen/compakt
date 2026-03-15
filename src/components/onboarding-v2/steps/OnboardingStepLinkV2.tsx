@@ -155,7 +155,7 @@ ${coupleLink}
                 <div>
                   <h3 className="font-bold text-lg mb-1">ה-Premium Trial שלך פעיל! 🎉</h3>
                   <p className="text-sm text-secondary">
-                    יש לך {trialDaysLeft || 30} יום לנסות את כל הפיצ&apos;רים
+                    יש לך {trialDaysLeft || 14} יום לנסות את כל הפיצ&apos;רים
                   </p>
                 </div>
               </div>
