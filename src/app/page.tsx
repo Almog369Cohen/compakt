@@ -1,30 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
-import { JourneyApp } from "@/components/journey/JourneyApp";
-import { LandingHome } from "@/components/journey/LandingHome";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [mode, setMode] = useState<"landing" | "new" | "resume">("landing");
-  const [shouldBypassLanding, setShouldBypassLanding] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      setShouldBypassLanding(Boolean(params.get("token") || params.get("dj") || params.get("resume")));
-    } catch {
-      setShouldBypassLanding(false);
-    }
-  }, []);
+    // Root path is for DJs only - redirect to admin panel
+    router.replace("/admin");
+  }, [router]);
 
   return (
-    <ErrorBoundary fallbackMessage="אירעה שגיאה בטעינת המסך. נסו לרענן או לחזור שוב.">
-      {mode !== "landing" || shouldBypassLanding ? (
-        <JourneyApp initialMode={mode === "resume" ? "resume" : "new"} />
-      ) : (
-        <LandingHome onStart={() => setMode("new")} onResume={() => setMode("resume")} />
-      )}
-    </ErrorBoundary>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+        <p className="mt-4 text-white/60">מעביר לפאנל הניהול...</p>
+      </div>
+    </div>
   );
 }
