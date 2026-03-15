@@ -21,12 +21,23 @@ async function handleRequest(req: NextRequest) {
   const bypassCookie = req.cookies.get("compakt-admin-bypass")?.value;
 
   let hasSupabaseUser = false;
+  let userRole: string | null = null;
   try {
     const supabase = createMiddlewareSupabase(req, res);
     const {
       data: { user },
     } = await supabase.auth.getUser();
     hasSupabaseUser = Boolean(user);
+
+    // Get user role for /hq access control
+    if (user && pathname.startsWith("/hq")) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+      userRole = profile?.role || null;
+    }
   } catch {
     hasSupabaseUser = false;
   }
@@ -40,7 +51,21 @@ async function handleRequest(req: NextRequest) {
     return res;
   }
 
-  if (pathname.startsWith("/admin") || pathname.startsWith("/hq")) {
+  if (pathname.startsWith("/hq")) {
+    if (!isAuthenticated) {
+      const loginUrl = req.nextUrl.clone();
+      loginUrl.pathname = "/admin";
+      loginUrl.searchParams.set("login", "1");
+      return NextResponse.redirect(loginUrl);
+    }
+    // Only staff and owner can access /hq
+    if (userRole !== "staff" && userRole !== "owner") {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
+    return res;
+  }
+
+  if (pathname.startsWith("/admin")) {
     if (!isAuthenticated) {
       const loginUrl = req.nextUrl.clone();
       loginUrl.pathname = "/admin";
