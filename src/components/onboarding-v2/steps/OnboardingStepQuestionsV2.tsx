@@ -153,15 +153,15 @@ export function OnboardingStepQuestionsV2({ onComplete, onBack, onSkip, isTrialU
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-3 h-3 text-brand-green" />
-                    <span>שאלות מותאמות לסוג אירוע (חתונה/בר מצווה/וכו')</span>
+                    <span>שאלות מותאמות לסוג אירוע (חתונה/בר מצווה/וכו&apos;)</span>
                   </li>
                 </ul>
                 <button
                   onClick={handleAdvancedQuestions}
                   disabled={!isTrialUser}
                   className={`text-sm font-medium ${isTrialUser
-                      ? "text-brand-blue hover:text-brand-blue/80"
-                      : "text-secondary cursor-not-allowed"
+                    ? "text-brand-blue hover:text-brand-blue/80"
+                    : "text-secondary cursor-not-allowed"
                     }`}
                 >
                   {isTrialUser ? "למד עוד →" : "🔒 זמין ב-Premium"}
