@@ -1,5 +1,6 @@
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 import { createMiddlewareSupabase } from "@/lib/supabase-server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const clerkSecretKey = process.env.CLERK_SECRET_KEY;
@@ -67,7 +68,6 @@ export default async function middleware(req: NextRequest, event: NextFetchEvent
     return handleRequest(req);
   }
 
-  const { clerkMiddleware } = await import("@clerk/nextjs/server");
   const middlewareWithClerk = clerkMiddleware(
     async (auth, clerkReq: NextRequest) =>
       handleRequest(clerkReq, async () => {
