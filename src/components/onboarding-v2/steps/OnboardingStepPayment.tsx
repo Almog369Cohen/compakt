@@ -2,115 +2,54 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, Lock, Check, AlertCircle } from "lucide-react";
+import { Lock, Check, AlertCircle, ExternalLink } from "lucide-react";
+import { useAdminStore } from "@/stores/adminStore";
 
 interface OnboardingStepPaymentProps {
   onComplete: () => void;
   onSkip: () => void;
 }
 
-export function OnboardingStepPayment({ onComplete, onSkip }: OnboardingStepPaymentProps) {
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [cardHolder, setCardHolder] = useState("");
-  const [idNumber, setIdNumber] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+export function OnboardingStepPayment({ onSkip }: OnboardingStepPaymentProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const userId = useAdminStore((s) => s.userId);
+  const userEmail = useAdminStore((s) => s.userEmail);
 
-  const formatCardNumber = (value: string) => {
-    const cleaned = value.replace(/\s/g, "");
-    const chunks = cleaned.match(/.{1,4}/g);
-    return chunks ? chunks.join(" ") : cleaned;
-  };
-
-  const formatExpiry = (value: string) => {
-    const cleaned = value.replace(/\D/g, "");
-    if (cleaned.length >= 2) {
-      return cleaned.slice(0, 2) + "/" + cleaned.slice(2, 4);
-    }
-    return cleaned;
-  };
-
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\s/g, "");
-    if (value.length <= 16 && /^\d*$/.test(value)) {
-      setCardNumber(value);
-      if (errors.cardNumber) {
-        setErrors({ ...errors, cardNumber: "" });
-      }
-    }
-  };
-
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "");
-    if (value.length <= 4) {
-      setExpiry(value);
-      if (errors.expiry) {
-        setErrors({ ...errors, expiry: "" });
-      }
-    }
-  };
-
-  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value.length <= 3 && /^\d*$/.test(value)) {
-      setCvv(value);
-      if (errors.cvv) {
-        setErrors({ ...errors, cvv: "" });
-      }
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (cardNumber.length !== 16) {
-      newErrors.cardNumber = "מספר כרטיס חייב להכיל 16 ספרות";
-    }
-
-    if (expiry.length !== 4) {
-      newErrors.expiry = "תוקף לא תקין";
-    } else {
-      const month = parseInt(expiry.slice(0, 2));
-      const year = parseInt("20" + expiry.slice(2, 4));
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1;
-
-      if (month < 1 || month > 12) {
-        newErrors.expiry = "חודש לא תקין";
-      } else if (year < currentYear || (year === currentYear && month < currentMonth)) {
-        newErrors.expiry = "הכרטיס פג תוקף";
-      }
-    }
-
-    if (cvv.length !== 3) {
-      newErrors.cvv = "CVV חייב להכיל 3 ספרות";
-    }
-
-    if (!cardHolder.trim()) {
-      newErrors.cardHolder = "שם בעל הכרטיס חובה";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+  const handleProceedToPayment = async () => {
     setIsProcessing(true);
+    setError(null);
 
-    // Simulate processing
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      if (!userId || !userEmail) {
+        setError('חסרים פרטי משתמש. אנא נסה שוב.');
+        setIsProcessing(false);
+        return;
+      }
 
-    setIsProcessing(false);
-    onComplete();
+      const response = await fetch('/api/payment/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          email: userEmail,
+          plan: 'premium'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.paymentUrl) {
+        throw new Error(data.error || 'Failed to create payment session');
+      }
+
+      window.location.href = data.paymentUrl;
+
+    } catch (err) {
+      console.error('Payment error:', err);
+      setError('אירעה שגיאה. אנא נסה שוב.');
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -121,11 +60,11 @@ export function OnboardingStepPayment({ onComplete, onSkip }: OnboardingStepPaym
         className="text-center mb-8"
       >
         <div className="w-16 h-16 rounded-full bg-brand-blue/10 flex items-center justify-center mx-auto mb-4">
-          <CreditCard className="w-8 h-8 text-brand-blue" />
+          <Lock className="w-8 h-8 text-brand-blue" />
         </div>
-        <h2 className="text-3xl font-bold mb-2">פרטי תשלום</h2>
+        <h2 className="text-3xl font-bold mb-2">תשלום מאובטח</h2>
         <p className="text-secondary">
-          הכנס את פרטי הכרטיס שלך כדי להתחיל את תקופת הניסיון
+          מעבר לדף התשלום המאובטח של Morning
         </p>
       </motion.div>
 
@@ -153,7 +92,7 @@ export function OnboardingStepPayment({ onComplete, onSkip }: OnboardingStepPaym
           <span className="text-muted">•</span>
           <div className="text-xs text-muted">PCI DSS Compliant</div>
           <span className="text-muted">•</span>
-          <div className="text-xs text-muted">Secured by Cardcom</div>
+          <div className="text-xs text-muted">Secured by Morning</div>
         </div>
       </motion.div>
 
@@ -198,149 +137,80 @@ export function OnboardingStepPayment({ onComplete, onSkip }: OnboardingStepPaym
         </div>
       </motion.div>
 
-      {/* Payment Form */}
-      <motion.form
+      {/* Payment Card */}
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        onSubmit={handleSubmit}
         className="glass-card p-6 mb-6"
       >
-        <div className="space-y-4">
-          {/* Card Number */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              מספר כרטיס אשראי
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={formatCardNumber(cardNumber)}
-                onChange={handleCardNumberChange}
-                placeholder="1234 5678 9012 3456"
-                className={`input-field pr-12 ${errors.cardNumber ? "border-red-500" : ""}`}
-                dir="ltr"
-              />
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex gap-1">
-                <div className="w-8 h-5 bg-gradient-to-r from-blue-600 to-blue-400 rounded opacity-60" />
-                <div className="w-8 h-5 bg-gradient-to-r from-orange-600 to-orange-400 rounded opacity-60" />
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-blue to-brand-green flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-white" />
+          </div>
+
+          <h3 className="text-xl font-bold mb-2">
+            מעבר לתשלום מאובטח
+          </h3>
+
+          <p className="text-secondary mb-6">
+            אתה עומד לעבור לדף התשלום המאובטח של Morning<br />
+            (חשבונית ירוקה)
+          </p>
+
+          <div className="glass-card p-4 mb-6">
+            <div className="space-y-3 text-sm text-right">
+              <div className="flex items-center justify-between">
+                <span className="text-secondary">תוכנית:</span>
+                <span className="font-medium">Premium</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-secondary">מחיר:</span>
+                <span className="font-medium">₪149/חודש</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-secondary">תקופת ניסיון:</span>
+                <span className="font-medium text-brand-green">14 יום חינם</span>
               </div>
             </div>
-            {errors.cardNumber && (
-              <p className="text-xs text-red-500 mt-1">{errors.cardNumber}</p>
-            )}
           </div>
 
-          {/* Expiry & CVV */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                תוקף (MM/YY)
-              </label>
-              <input
-                type="text"
-                value={formatExpiry(expiry)}
-                onChange={handleExpiryChange}
-                placeholder="12/25"
-                className={`input-field ${errors.expiry ? "border-red-500" : ""}`}
-                dir="ltr"
-              />
-              {errors.expiry && (
-                <p className="text-xs text-red-500 mt-1">{errors.expiry}</p>
-              )}
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+              {error}
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                CVV
-              </label>
-              <input
-                type="text"
-                value={cvv}
-                onChange={handleCvvChange}
-                placeholder="123"
-                className={`input-field ${errors.cvv ? "border-red-500" : ""}`}
-                dir="ltr"
-              />
-              {errors.cvv && (
-                <p className="text-xs text-red-500 mt-1">{errors.cvv}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Card Holder */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              שם בעל הכרטיס
-            </label>
-            <input
-              type="text"
-              value={cardHolder}
-              onChange={(e) => {
-                setCardHolder(e.target.value);
-                if (errors.cardHolder) {
-                  setErrors({ ...errors, cardHolder: "" });
-                }
-              }}
-              placeholder="ישראל ישראלי"
-              className={`input-field ${errors.cardHolder ? "border-red-500" : ""}`}
-            />
-            {errors.cardHolder && (
-              <p className="text-xs text-red-500 mt-1">{errors.cardHolder}</p>
-            )}
-          </div>
-
-          {/* ID Number (Optional) */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              ת.ז. (אופציונלי)
-            </label>
-            <input
-              type="text"
-              value={idNumber}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, "");
-                if (value.length <= 9) {
-                  setIdNumber(value);
-                }
-              }}
-              placeholder="123456789"
-              className="input-field"
-              dir="ltr"
-            />
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isProcessing}
-          className="btn-primary w-full mt-6"
-        >
-          {isProcessing ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              מעבד...
-            </>
-          ) : (
-            <>
-              <Check className="w-5 h-5" />
-              התחל 14 יום חינם
-            </>
           )}
-        </button>
 
-        {/* Payment Methods */}
-        <div className="mt-4 pt-4 border-t border-white/5">
-          <p className="text-xs text-center text-muted mb-2">אמצעי תשלום מקובלים:</p>
-          <div className="flex items-center justify-center gap-3">
-            <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Visa</div>
-            <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Mastercard</div>
-            <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Amex</div>
-            <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Isracard</div>
+          <button
+            onClick={handleProceedToPayment}
+            disabled={isProcessing}
+            className="btn-primary w-full"
+          >
+            {isProcessing ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                מעביר...
+              </>
+            ) : (
+              <>
+                <ExternalLink className="w-5 h-5" />
+                מעבר לתשלום מאובטח
+              </>
+            )}
+          </button>
+
+          {/* Payment Methods */}
+          <div className="mt-4 pt-4 border-t border-white/5">
+            <p className="text-xs text-center text-muted mb-2">אמצעי תשלום מקובלים:</p>
+            <div className="flex items-center justify-center gap-3">
+              <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Visa</div>
+              <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Mastercard</div>
+              <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Amex</div>
+              <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Isracard</div>
+            </div>
           </div>
         </div>
-      </motion.form>
+      </motion.div>
 
       {/* Skip Option */}
       <motion.div

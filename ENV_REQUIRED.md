@@ -26,6 +26,9 @@
 | `GOOGLE_CLIENT_SECRET` | Server | Google Cloud Console | Calendar sync |
 | `GOOGLE_CALENDAR_REDIRECT_URI` | Server | Your domain + `/api/gcal/callback` | Calendar OAuth callback |
 | `GCS_BUCKET` | Server | Existing Google Cloud Storage bucket name | Used by `/api/uploads` for SongManager cover/audio uploads |
+| `MORNING_API_KEY` | Server | Morning (Green Invoice) Dashboard → API | API key for payment processing |
+| `MORNING_PAYMENT_URL` | Server | Morning product payment page URL | Payment link for Premium subscription |
+| `MORNING_WEBHOOK_SECRET` | Server | Morning webhook configuration | Secret for webhook signature verification |
 
 ## Run Locally
 
