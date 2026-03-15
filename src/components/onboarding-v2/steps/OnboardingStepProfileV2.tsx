@@ -17,15 +17,11 @@ export function OnboardingStepProfileV2({ onComplete, onSkip, isTrialUser }: Onb
 
   const [businessName, setBusinessName] = useState(profile.businessName || "");
   const [djSlug, setDjSlug] = useState(profile.djSlug || "");
-  const [bio, setBio] = useState(profile.bio || "");
-  const [whatsappNumber, setWhatsappNumber] = useState(profile.whatsappNumber || "");
 
   const handleContinue = () => {
     setProfile({
       businessName: businessName.trim(),
       djSlug: djSlug.trim().toLowerCase(),
-      bio: bio.trim(),
-      whatsappNumber: whatsappNumber.trim(),
     });
     onComplete();
   };
@@ -113,31 +109,10 @@ export function OnboardingStepProfileV2({ onComplete, onSkip, isTrialUser }: Onb
               <p className="text-xs text-muted mt-1">רק אותיות באנגלית, מספרים ומקפים</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                ביו קצר
-              </label>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="DJ מקצועי עם 10 שנות ניסיון באירועים..."
-                rows={3}
-                className="input-field resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                WhatsApp
-              </label>
-              <input
-                type="tel"
-                value={whatsappNumber}
-                onChange={(e) => setWhatsappNumber(e.target.value)}
-                placeholder="050-1234567"
-                className="input-field"
-                dir="ltr"
-              />
+            <div className="p-4 rounded-lg bg-brand-blue/5 border border-brand-blue/10">
+              <p className="text-sm text-secondary">
+                💡 <strong>טיפ:</strong> תוכל להוסיף ביו, תמונות ופרטי קשר נוספים בהמשך בעריכת הפרופיל
+              </p>
             </div>
           </div>
 

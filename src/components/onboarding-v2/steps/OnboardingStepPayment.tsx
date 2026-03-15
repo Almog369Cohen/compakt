@@ -136,14 +136,24 @@ export function OnboardingStepPayment({ onComplete, onSkip }: OnboardingStepPaym
         transition={{ delay: 0.1 }}
         className="glass-card p-4 mb-6 border border-brand-green/20"
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 mb-3">
           <Lock className="w-5 h-5 text-brand-green mt-0.5 flex-shrink-0" />
           <div>
             <div className="font-medium mb-1">תשלום מאובטח 🔒</div>
             <div className="text-sm text-secondary">
-              לא נחייב אותך עד תום 14 ימי הניסיון • ביטול בכל עת • הצפנת SSL
+              לא נחייב אותך עד תום 14 ימי הניסיון • ביטול בכל עת
             </div>
           </div>
+        </div>
+        <div className="flex items-center justify-center gap-3 pt-3 border-t border-white/5">
+          <div className="text-xs text-muted flex items-center gap-1">
+            <Lock className="w-3 h-3" />
+            256-bit SSL
+          </div>
+          <span className="text-muted">•</span>
+          <div className="text-xs text-muted">PCI DSS Compliant</div>
+          <span className="text-muted">•</span>
+          <div className="text-xs text-muted">Secured by Cardcom</div>
         </div>
       </motion.div>
 
@@ -300,14 +310,15 @@ export function OnboardingStepPayment({ onComplete, onSkip }: OnboardingStepPaym
           )}
         </button>
 
-        {/* Security Icons */}
-        <div className="flex items-center justify-center gap-4 mt-4 text-xs text-muted">
-          <div className="flex items-center gap-1">
-            <Lock className="w-3 h-3" />
-            <span>SSL מאובטח</span>
+        {/* Payment Methods */}
+        <div className="mt-4 pt-4 border-t border-white/5">
+          <p className="text-xs text-center text-muted mb-2">אמצעי תשלום מקובלים:</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Visa</div>
+            <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Mastercard</div>
+            <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Amex</div>
+            <div className="px-3 py-1.5 rounded bg-white/5 text-xs font-medium">Isracard</div>
           </div>
-          <span>•</span>
-          <span>PCI DSS Compliant</span>
         </div>
       </motion.form>
 
