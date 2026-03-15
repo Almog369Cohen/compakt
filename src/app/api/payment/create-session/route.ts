@@ -12,14 +12,70 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // For now, we'll use Morning's payment page URL
-    // You'll need to create a product in Morning and get the URL
-    const morningPaymentUrl = process.env.MORNING_PAYMENT_URL || 'https://www.greeninvoice.co.il/pay/YOUR_PAYMENT_ID';
+    const morningApiKey = process.env.MORNING_API_KEY;
+
+    if (!morningApiKey) {
+      console.error('Missing MORNING_API_KEY');
+      return NextResponse.json(
+        { error: 'Payment configuration error' },
+        { status: 500 }
+      );
+    }
+
+    // Create payment session with Morning API
+    const morningResponse = await fetch('https://api.greeninvoice.co.il/api/v1/payments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${morningApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 320, // Payment type
+        client: {
+          name: 'Compakt Customer',
+          email: email
+        },
+        income: [{
+          description: 'Compakt Premium - 14 יום ניסיון חינם',
+          quantity: 1,
+          price: 149,
+          currency: 'ILS',
+          vatType: 0 // No VAT
+        }],
+        payment: {
+          type: 'credit',
+          dealType: 'subscription',
+          trialDays: 14
+        },
+        remarks: `User ID: ${userId}, Plan: ${plan}`,
+        lang: 'he'
+      })
+    });
+
+    if (!morningResponse.ok) {
+      const errorData = await morningResponse.json();
+      console.error('Morning API error:', errorData);
+      return NextResponse.json(
+        { error: 'Failed to create payment session' },
+        { status: 500 }
+      );
+    }
+
+    const morningData = await morningResponse.json();
+    const paymentUrl = morningData.url || morningData.paymentUrl;
+
+    if (!paymentUrl) {
+      console.error('No payment URL in Morning response:', morningData);
+      return NextResponse.json(
+        { error: 'Invalid payment response' },
+        { status: 500 }
+      );
+    }
 
     // Update user status to pending
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ 
+      .update({
         subscription_status: 'pending',
         updated_at: new Date().toISOString()
       })
@@ -27,18 +83,11 @@ export async function POST(req: NextRequest) {
 
     if (updateError) {
       console.error('Error updating profile:', updateError);
-      return NextResponse.json(
-        { error: 'Failed to update profile' },
-        { status: 500 }
-      );
     }
 
-    // Add user metadata to the URL
-    const paymentUrl = `${morningPaymentUrl}?userId=${userId}&email=${encodeURIComponent(email)}&plan=${plan}`;
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       paymentUrl,
-      success: true 
+      success: true
     });
 
   } catch (error) {

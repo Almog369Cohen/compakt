@@ -207,7 +207,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
               <div className="rounded-[24px] border border-white/8 bg-black/15 p-2 backdrop-blur-sm">
                 <div className="grid gap-2 sm:grid-cols-[1.2fr_0.9fr_auto]">
                   <a
-                    href={`/?dj=${effectiveSlug}`}
+                    href={`/dj/${effectiveSlug}?start=1`}
                     className="group relative flex min-h-[54px] items-center justify-between overflow-hidden rounded-[18px] px-4 py-3 text-right text-white transition-all duration-200 hover:scale-[1.01] hover:opacity-95"
                     style={{
                       background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
@@ -236,8 +236,8 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
                     <a
                       href={eventNumber.trim() ? `/dj/${effectiveSlug}?resume=1&event=${encodeURIComponent(eventNumber.trim())}` : `/dj/${effectiveSlug}?resume=1`}
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${eventNumber.trim()
-                          ? "bg-white/[0.12] text-white/90 hover:bg-white/[0.18]"
-                          : "bg-white/[0.05] text-white/40 pointer-events-none"
+                        ? "bg-white/[0.12] text-white/90 hover:bg-white/[0.18]"
+                        : "bg-white/[0.05] text-white/40 pointer-events-none"
                         }`}
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
