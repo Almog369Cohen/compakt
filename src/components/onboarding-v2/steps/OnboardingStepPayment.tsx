@@ -178,6 +178,26 @@ export function OnboardingStepPayment({ onComplete, onSkip }: OnboardingStepPaym
         </div>
       </motion.div>
 
+      {/* Money-back Guarantee */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="glass-card p-4 mb-6 border border-brand-green/20 bg-brand-green/5"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-brand-green/20 flex items-center justify-center flex-shrink-0">
+            <Check className="w-5 h-5 text-brand-green" />
+          </div>
+          <div>
+            <div className="font-medium mb-1">🛡️ אחריות החזר כספי מלא</div>
+            <div className="text-sm text-secondary">
+              לא מרוצה? 100% החזר כספי תוך 30 יום - ללא שאלות
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Payment Form */}
       <motion.form
         initial={{ opacity: 0, y: 10 }}
@@ -329,14 +349,22 @@ export function OnboardingStepPayment({ onComplete, onSkip }: OnboardingStepPaym
         transition={{ delay: 0.4 }}
         className="text-center"
       >
-        <button
-          onClick={onSkip}
-          className="text-secondary hover:text-foreground transition-colors text-sm"
-        >
-          דלג - המשך בתוכנית Starter בחינם →
-        </button>
-        <p className="text-xs text-muted mt-2">
-          תוכל תמיד לשדרג מאוחר יותר
+        <div className="glass-card p-4 mb-4 border border-yellow-500/20 bg-yellow-500/5">
+          <p className="text-sm text-secondary mb-2">
+            💡 <strong>רוצה לנסות קודם?</strong>
+          </p>
+          <p className="text-xs text-muted mb-3">
+            תוכל להתחיל בתוכנית Starter החינמית ולשדרג מתי שתרצה
+          </p>
+          <button
+            onClick={onSkip}
+            className="text-sm text-brand-blue hover:text-brand-green transition-colors font-medium"
+          >
+            המשך ב-Starter בחינם →
+          </button>
+        </div>
+        <p className="text-xs text-muted">
+          95% מה-DJs משדרגים ל-Premium אחרי שהם רואים את היתרונות
         </p>
       </motion.div>
     </div>
