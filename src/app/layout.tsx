@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Rubik } from "next/font/google";
 import { AppRuntimeGuard } from "@/components/ui/AppRuntimeGuard";
+import { OptionalClerkProvider } from "@/components/providers/OptionalClerkProvider";
 import "./globals.css";
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -32,17 +33,16 @@ export const viewport: Viewport = {
   themeColor: "#0a0a0f",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const bodyContent = clerkEnabled
-    ? await (async () => {
-      const { ClerkProvider } = await import("@clerk/nextjs");
-      return <ClerkProvider publishableKey={clerkPublishableKey}>{children}</ClerkProvider>;
-    })()
-    : children;
+  const bodyContent = clerkEnabled ? (
+    <OptionalClerkProvider publishableKey={clerkPublishableKey}>{children}</OptionalClerkProvider>
+  ) : (
+    children
+  );
 
   return (
     <html lang="he" dir="rtl" data-theme="night" className={rubik.variable}>

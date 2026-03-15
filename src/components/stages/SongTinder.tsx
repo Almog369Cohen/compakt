@@ -5,13 +5,15 @@ import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { reasonChips } from "@/data/songs";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, PanInfo } from "framer-motion";
-import { Heart, X, Star, HelpCircle, Play, Pause, Volume2, SkipForward, Undo2, Music2, Share2, Check, Copy, Headphones } from "lucide-react";
+import { Heart, X, Star, HelpCircle, Play, Pause, Volume2, SkipForward, Undo2, Music2, Share2, Check, Copy, Headphones, Sparkles } from "lucide-react";
 import type { SwipeAction, Song, SongSwipe } from "@/lib/types";
 import { SwipeTutorial, useSwipeTutorial } from "@/components/ui/SwipeTutorial";
 import { resolveSongMedia } from "@/lib/songMedia";
 import { safeCopyText } from "@/lib/clipboard";
 import { getSafeOrigin } from "@/lib/utils";
 import { useProfileStore } from "@/stores/profileStore";
+import { buildTasteInsight } from "@/lib/tasteProfile";
+import type { TasteInsight } from "@/lib/tasteProfile";
 import {
   DEFAULT_SONG_CATEGORY_LABELS,
   SONG_CATEGORY_COLORS,
@@ -20,8 +22,10 @@ import {
 const SWIPE_THRESHOLD = 80;
 const SWIPE_UP_THRESHOLD = 80;
 const MIN_SWIPES = 10;
+const TASTE_REVEAL_AT = 8;
 
 export function SongTinder() {
+  const event = useEventStore((s) => s.event);
   const saveSwipe = useEventStore((s) => s.saveSwipe);
   const getSwipedSongIds = useEventStore((s) => s.getSwipedSongIds);
   const swipes = useEventStore((s) => s.swipes);
@@ -51,6 +55,22 @@ export function SongTinder() {
     prevSwipes: SongSwipe[];
   } | null>(null);
 
+  const [tasteRevealShown, setTasteRevealShown] = useState(false);
+  const [showTasteReveal, setShowTasteReveal] = useState(false);
+
+  const tasteInsight = useMemo<TasteInsight | null>(
+    () => buildTasteInsight(swipes, songMap),
+    [swipes, songMap],
+  );
+
+  useEffect(() => {
+    if (tasteRevealShown) return;
+    if (swipes.length >= TASTE_REVEAL_AT && tasteInsight) {
+      setShowTasteReveal(true);
+      setTasteRevealShown(true);
+    }
+  }, [swipes.length, tasteInsight, tasteRevealShown]);
+
   const likeCount = swipes.filter((s) => s.action === "like" || s.action === "super_like").length;
   const superLikeCount = swipes.filter((s) => s.action === "super_like").length;
   const unsureCount = swipes.filter((s) => s.action === "unsure").length;
@@ -79,10 +99,10 @@ export function SongTinder() {
     return djSlug ? `${getSafeOrigin()}/dj/${djSlug}` : "";
   }, []);
   const progressLabel = isDone
-    ? "הכיוון המוזיקלי כבר מרגיש ברור"
+    ? "כבר יש לנו כיוון טוב"
     : remainingCount > 0
-      ? `נשארו עוד ${remainingCount} שירים לבחירה`
-      : "עוד רגע והבחירה נסגרת";
+      ? `עוד ${remainingCount} שירים`
+      : "כמעט סיימנו";
   const feedbackCopy: Record<SwipeAction, { label: string; style: CSSProperties }> = {
     like: {
       label: "נשמר לבחירה שלכם",
@@ -251,12 +271,12 @@ export function SongTinder() {
         >
           <Music2 className="w-8 h-8 text-brand-blue" />
         </div>
-        <h2 className="text-2xl font-bold mb-2">עדיין אין שירים זמינים</h2>
+        <h2 className="text-2xl font-bold mb-2">עוד אין שירים כאן</h2>
         <p className="text-sm text-secondary mb-2">
-          הדיג׳יי עוד לא הוסיף מספיק שירים למסך הבחירה.
+          הדיג׳יי עוד לא הוסיף שירים לבחירה.
         </p>
         <p className="text-xs text-muted">
-          אפשר להמשיך מאוחר יותר מאותו לינק בדיוק.
+          אפשר לחזור מאוחר יותר מאותו לינק.
         </p>
       </motion.div>
     );
@@ -282,6 +302,8 @@ export function SongTinder() {
         swipeCount={swipes.length}
         likedSongs={likedSongs}
         djProfileUrl={djProfileUrl}
+        tasteInsight={tasteInsight}
+        eventNumber={event?.eventNumber}
         onReview={handleOpenReviewMode}
         onFinish={handleFinish}
       />
@@ -353,6 +375,15 @@ export function SongTinder() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showTasteReveal && tasteInsight && (
+          <TasteInsightReveal
+            insight={tasteInsight}
+            onDismiss={() => setShowTasteReveal(false)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="relative flex-1 min-h-0 w-full pt-1">
         <div className="absolute inset-x-1 top-2 bottom-24 rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,16,24,0.82),rgba(8,10,14,0.92))] shadow-[0_28px_70px_rgba(0,0,0,0.3)] backdrop-blur-xl" />
         {availableSongs[2] && (
@@ -409,6 +440,67 @@ export function SongTinder() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function TasteInsightReveal({
+  insight,
+  onDismiss,
+}: {
+  insight: TasteInsight;
+  onDismiss: () => void;
+}) {
+  useEffect(() => {
+    const timeout = window.setTimeout(onDismiss, 6000);
+    return () => window.clearTimeout(timeout);
+  }, [onDismiss]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.92, y: 24 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96, y: -16 }}
+      transition={{ type: "spring", stiffness: 340, damping: 28 }}
+      onClick={onDismiss}
+      className="fixed inset-x-4 top-36 z-50 mx-auto max-w-md cursor-pointer"
+    >
+      <div className="overflow-hidden rounded-[28px] border border-white/12 bg-[linear-gradient(135deg,rgba(14,18,28,0.96),rgba(8,10,16,0.96))] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.4)] backdrop-blur-2xl">
+        <div className="flex items-start gap-3">
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            style={{ background: "linear-gradient(135deg, rgba(245,197,66,0.2), rgba(5,156,192,0.2))" }}
+          >
+            <Sparkles className="h-5 w-5" style={{ color: "var(--accent-gold)" }} />
+          </div>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="text-[10px] tracking-[0.2em] text-muted">הכיוון המוזיקלי שלכם מתגבש</p>
+            <p className="mt-1 text-[15px] font-bold leading-snug">{insight.headline}</p>
+            <div className="mt-2.5 flex flex-wrap justify-end gap-1.5">
+              {insight.traits.map((trait) => (
+                <span
+                  key={trait}
+                  className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-secondary"
+                >
+                  {trait}
+                </span>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-end gap-2">
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/8">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: "linear-gradient(90deg, rgba(245,197,66,0.9), rgba(5,156,192,0.9))" }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.round(insight.confidence * 100)}%` }}
+                  transition={{ duration: 1.2, ease: "easeOut" }}
+                />
+              </div>
+              <span className="text-[10px] text-muted">{Math.round(insight.confidence * 100)}% ביטחון</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -605,6 +697,8 @@ function SongTinderCompletion({
   swipeCount,
   likedSongs,
   djProfileUrl,
+  tasteInsight,
+  eventNumber,
   onReview,
   onFinish,
 }: {
@@ -614,6 +708,8 @@ function SongTinderCompletion({
   swipeCount: number;
   likedSongs: Array<Song & { swipeAction: SwipeAction }>;
   djProfileUrl: string;
+  tasteInsight: TasteInsight | null;
+  eventNumber?: string;
   onReview: () => void;
   onFinish: () => void;
 }) {
@@ -676,16 +772,41 @@ function SongTinderCompletion({
           </motion.div>
           <p className="text-[11px] tracking-[0.24em] text-muted">הבחירה הושלמה</p>
           <h2 className="mt-2 text-[30px] font-black leading-[1.02] tracking-[-0.05em]">
-            יש לנו עכשיו
+            כבר יש לנו
             <br />
-            לב מוזיקלי לערב
+            כיוון מוזיקלי
           </h2>
           <p className="mx-auto mt-3 max-w-[28ch] text-sm leading-6 text-secondary">
             {likedSongs.length > 0
-              ? "מה שסימנתם כבר יוצר תמונה ברורה. אפשר לעבור שוב על השירים שבחרתם, לשתף, או להמשיך הלאה."
-              : "כבר נבנה כיוון מוזיקלי ראשוני. אפשר לשתף, להמשיך הלאה, או לחזור לעבור שוב על הבחירות."}
+              ? "הבחירות שלכם כבר נותנות תמונה ברורה. אפשר להשמיע שוב, לשתף, או להמשיך."
+              : "כבר נבנה כיוון מוזיקלי ראשוני. אפשר לשתף, להמשיך, או לחזור לבחירות."}
           </p>
+          {eventNumber && (
+            <p className="mt-2 text-[11px] font-mono text-brand-blue/70" dir="ltr">
+              אירוע #{eventNumber}
+            </p>
+          )}
         </div>
+
+        {tasteInsight && (
+          <div className="mb-4 rounded-[24px] border border-white/10 bg-[linear-gradient(135deg,rgba(245,197,66,0.06),rgba(5,156,192,0.06))] p-4 text-right">
+            <div className="flex items-center justify-end gap-2 mb-2">
+              <p className="text-[11px] tracking-[0.18em] text-muted">הכיוון המוזיקלי שלכם</p>
+              <Sparkles className="h-3.5 w-3.5" style={{ color: "var(--accent-gold)" }} />
+            </div>
+            <p className="text-[15px] font-bold leading-snug">{tasteInsight.headline}</p>
+            <div className="mt-2.5 flex flex-wrap justify-end gap-1.5">
+              {tasteInsight.traits.map((trait) => (
+                <span
+                  key={trait}
+                  className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-secondary"
+                >
+                  {trait}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mb-4 grid grid-cols-3 gap-2">
           <CompletionMetric
@@ -710,15 +831,15 @@ function SongTinderCompletion({
 
         <div className="mb-4 flex items-center justify-between gap-4 rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-right">
           <div>
-            <p className="text-sm font-semibold">עברתם על {swipeCount} שירים</p>
+            <p className="text-sm font-semibold">{swipeCount} שירים מאחוריכם</p>
             <p className="mt-1 text-xs text-muted">
               {likedSongs.length > 0
-                ? "רוצים עוד רגע של דיוק? חזרו לבחירות ששמרתם והשמיעו אותן שוב."
-                : "עוד לא שמרתם שירים לבחירה הסופית, וזה בסדר גמור. אפשר להמשיך או לפתוח שוב את מסך הבחירה."}
+                ? "רוצים לדייק? חזרו לשירים שבחרתם והשמיעו שוב."
+                : "עוד לא שמרתם שירים, וזה בסדר גמור. אפשר להמשיך או לחזור לבחירות."}
             </p>
           </div>
           <div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[11px] text-secondary">
-            {likedSongs.length > 0 ? `${likedSongs.length} לבחירה` : "עדיין בלי בחירות"}
+            {likedSongs.length > 0 ? `${likedSongs.length} נבחרו` : "עוד בלי בחירות"}
           </div>
         </div>
 
@@ -733,13 +854,13 @@ function SongTinderCompletion({
           }}
         >
           <Headphones className="w-4 h-4" />
-          {likedSongs.length > 0 ? "השמיעו שוב את השירים שבחרתם" : "אין עדיין שירים להשמעה חוזרת"}
+          {likedSongs.length > 0 ? "השמיעו שוב את הבחירות" : "עוד אין שירים להשמעה"}
         </button>
 
         <div className={`mb-4 grid gap-2 ${likedSongs.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
           {likedSongs.length > 0 ? (
             <button onClick={() => setShowLikedSongs((value) => !value)} className="btn-secondary w-full py-3 text-sm">
-              {showLikedSongs ? "סגרו את הרשימה" : "ראו את הרשימה"}
+              {showLikedSongs ? "סגירה" : "הרשימה שלכם"}
             </button>
           ) : null}
           <button
@@ -748,7 +869,7 @@ function SongTinderCompletion({
             className="btn-secondary flex w-full items-center justify-center gap-2 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {shareDone ? <Check className="w-4 h-4" /> : djProfileUrl ? <Share2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            {shareDone ? "הועתק / נשלח" : "שתפו את הפרופיל"}
+            {shareDone ? "נשלח" : "שתפו את הפרופיל"}
           </button>
         </div>
 

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/nextjs";
 import type { Session } from "@supabase/supabase-js";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +20,8 @@ import { useProfileStore } from "@/stores/profileStore";
 import { supabase } from "@/lib/supabase";
 import type { FeatureKey } from "@/lib/access";
 import { HydrationGuard } from "@/components/ui/HydrationGuard";
+import { OnboardingFlowV2 } from "@/components/onboarding-v2/OnboardingFlowV2";
+import { useOnboardingStoreV2 } from "@/stores/onboardingStoreV2";
 
 type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "couples" | "events" | "analytics";
 
@@ -41,51 +42,8 @@ const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode; launchRe
   { id: "analytics", label: "אנליטיקות", icon: <BarChart3 className="w-4 h-4" />, launchReady: false },
 ];
 
-function ClerkAdminAuthSync() {
-  const { isLoaded, isSignedIn, userId } = useAuth();
-  const { user } = useUser();
-  const setAuthState = useAdminStore((s) => s.setAuthState);
-  const resetAuthState = useAdminStore((s) => s.resetAuthState);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (isSignedIn) {
-      setAuthState({
-        isAuthenticated: true,
-        userId: userId ?? null,
-        userEmail: user?.primaryEmailAddress?.emailAddress ?? null,
-        authError: null,
-      });
-      return;
-    }
-
-    resetAuthState();
-  }, [isLoaded, isSignedIn, resetAuthState, setAuthState, user, userId]);
-
-  return null;
-}
-
-function ClerkAdminLogoutButton() {
-  const { signOut } = useClerk();
-  const resetAuthState = useAdminStore((s) => s.resetAuthState);
-  const router = useRouter();
-
-  return (
-    <button
-      onClick={() => {
-        signOut().then(() => {
-          resetAuthState();
-          router.replace("/admin");
-        });
-      }}
-      className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
-      aria-label="התנתקות"
-    >
-      <LogOut className="w-4 h-4" />
-    </button>
-  );
-}
+// Clerk is optional - only used when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set
+// When not set, the app uses Supabase auth only
 
 type AdminPageContentProps = {
   clerkEnabled: boolean;
@@ -110,10 +68,17 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
   const authError = useAdminStore((s) => s.authError);
   const logout = useAdminStore((s) => s.logout);
   const resetContent = useAdminStore((s) => s.resetContent);
+  const songs = useAdminStore((s) => s.songs);
+  const questions = useAdminStore((s) => s.questions);
   const loadProfileFromDB = useProfileStore((s) => s.loadProfileFromDB);
   const resetProfile = useProfileStore((s) => s.resetProfile);
   const profileId = useProfileStore((s) => s.profileId);
   const djSlug = useProfileStore((s) => s.profile.djSlug);
+  const profile = useProfileStore((s) => s.profile);
+
+  // Onboarding state
+  const onboardingComplete = useOnboardingStoreV2((s) => s.onboardingComplete);
+  const showPreOnboarding = useOnboardingStoreV2((s) => s.showPreOnboarding);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -292,6 +257,10 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
   const isContentReady = !profileId || (!contentLoading && contentLoadedProfileId === profileId);
 
+  // Check if user is new and should see onboarding
+  // Show onboarding if user is new (don't wait for content to load)
+  const shouldShowOnboarding = isAuthenticated && !onboardingComplete && !profile.businessName && songs.length === 0 && questions.length === 0;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(false);
@@ -302,26 +271,26 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
     if ((authMode === "email" || bypassClerk) && !normalizedEmail) {
       setResetTone("error");
-      setResetMessage("הזן אימייל כדי להמשיך");
+      setResetMessage("צריך אימייל כדי להמשיך");
       return;
     }
 
     if (!isRecoveryMode && !normalizedPassword) {
       setResetTone("error");
-      setResetMessage("הזן סיסמה כדי להמשיך");
+      setResetMessage("הזינו סיסמה כדי להמשיך");
       return;
     }
 
     if (isSignUp) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
         setResetTone("error");
-        setResetMessage("כתובת האימייל לא תקינה");
+        setResetMessage("נראה שכתובת האימייל לא תקינה");
         return;
       }
 
       if (normalizedPassword.length < 8 || !/[A-Za-z]/.test(normalizedPassword) || !/\d/.test(normalizedPassword)) {
         setResetTone("error");
-        setResetMessage("בחר סיסמה של לפחות 8 תווים עם אות באנגלית ומספר");
+        setResetMessage("הסיסמה צריכה להכיל לפחות 8 תווים, אות באנגלית ומספר");
         return;
       }
     }
@@ -343,7 +312,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
     if (isSignUp && result === "pending_confirmation") {
       setResetTone("success");
-      setResetMessage("החשבון נוצר. אם נדרש אישור מייל, בדוק את תיבת הדואר ואז התחבר.");
+      setResetMessage("החשבון נוצר — בדקו את המייל ואז התחברו.");
       setIsSignUp(false);
       setPassword("");
       return;
@@ -353,7 +322,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
       const latestAuthError = useAdminStore.getState().authError;
       setResetTone("error");
       setResetMessage(
-        latestAuthError || (isSignUp ? "לא הצלחנו ליצור חשבון חדש." : "לא הצלחנו להתחבר לחשבון.")
+        latestAuthError || (isSignUp ? "לא הצלחנו ליצור חשבון, נסו שוב." : "לא הצלחנו להתחבר, בדקו את הפרטים.")
       );
       setError(true);
       setTimeout(() => setError(false), 3000);
@@ -371,7 +340,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
     if (!email.trim()) {
       setResetTone("error");
-      setResetMessage("הזן אימייל כדי לשלוח קישור איפוס");
+      setResetMessage("הזינו אימייל כדי לשלוח קישור איפוס");
       return;
     }
 
@@ -388,7 +357,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     }
 
     setResetTone("success");
-    setResetMessage("שלחנו אליך מייל עם קישור לאיפוס סיסמה");
+    setResetMessage("שלחנו מייל עם קישור לאיפוס — בדקו את תיבת הדואר");
   };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -403,13 +372,13 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
     if (!newPassword || newPassword.length < 6) {
       setResetTone("error");
-      setResetMessage("הסיסמה החדשה חייבת להכיל לפחות 6 תווים");
+      setResetMessage("הסיסמה צריכה להכיל לפחות 6 תווים");
       return;
     }
 
     if (newPassword !== confirmPassword) {
       setResetTone("error");
-      setResetMessage("הסיסמאות לא תואמות");
+      setResetMessage("הסיסמאות לא זהות, נסו שוב");
       return;
     }
 
@@ -424,7 +393,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     }
 
     setResetTone("success");
-    setResetMessage("הסיסמה עודכנה. אפשר להתחבר עכשיו עם הסיסמה החדשה");
+    setResetMessage("הסיסמה עודכנה — אפשר להתחבר עכשיו");
     setIsRecoveryMode(false);
     setNewPassword("");
     setConfirmPassword("");
@@ -446,62 +415,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     );
   }
 
-  if ((!isAuthenticated || isRecoveryMode) && clerkEnabled && !bypassClerk) {
-    return (
-      <div className="min-h-dvh gradient-hero flex items-center justify-center px-4">
-        {clerkEnabled ? <ClerkAdminAuthSync /> : null}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="glass-card p-8 w-full max-w-md text-center"
-        >
-          <div
-            className="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4"
-            style={{ background: "linear-gradient(135deg, #059cc0, #03b28c)" }}
-          >
-            <Lock className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-xl font-bold mb-1">Compakt Admin</h1>
-          <p className="text-sm text-secondary mb-6">
-            {isSignUp ? "צרו חשבון DJ חדש עם Clerk" : "התחברו עם Clerk"}
-          </p>
-
-          <div className="flex justify-center mb-4">
-            {isSignUp ? (
-              <SignUp routing="hash" signInUrl="/admin" fallbackRedirectUrl="/admin" />
-            ) : (
-              <SignIn routing="hash" signUpUrl="/admin" fallbackRedirectUrl="/admin" />
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsSignUp((v) => !v)}
-            className="text-xs text-secondary hover:text-brand-blue mt-3 transition-colors"
-          >
-            {isSignUp ? "כבר יש לי חשבון → כניסה" : "אין לי חשבון → הרשמה"}
-          </button>
-
-          <div className="mt-4 pt-4 border-t border-glass">
-            <button
-              type="button"
-              onClick={() => {
-                setBypassClerk(true);
-                setAuthMode("legacy");
-                setIsSignUp(false);
-                setIsRecoveryMode(false);
-                setResetMessage(null);
-                setError(false);
-              }}
-              className="text-xs text-secondary hover:text-brand-blue transition-colors"
-            >
-              כניסה עם סיסמה
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  // Clerk auth UI removed - using Supabase auth only
 
   if (!isAuthenticated || isRecoveryMode) {
     return (
@@ -521,10 +435,10 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
           <h1 className="text-xl font-bold mb-1">Compakt Admin</h1>
           <p className="text-sm text-secondary mb-6">
             {isRecoveryMode
-              ? "בחרו סיסמה חדשה לחשבון שלכם"
+              ? "בחרו סיסמה חדשה"
               : authMode === "email"
-                ? isSignUp ? "צרו חשבון DJ חדש" : "התחברו עם אימייל וסיסמה"
-                : "הכניסו סיסמה כדי להיכנס"}
+                ? isSignUp ? "צרו חשבון DJ חדש" : "התחברו כדי להמשיך"
+                : "הזינו סיסמה כדי להיכנס"}
           </p>
 
           {(authMode === "email" || bypassClerk) && !isRecoveryMode && (
@@ -605,7 +519,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
           {(error || authError) && (
             <p className="text-xs mb-3" style={{ color: "var(--accent-danger)" }}>
-              {authError || (isSignUp ? "לא הצלחנו ליצור חשבון חדש." : "סיסמה שגויה")}
+              {authError || (isSignUp ? "לא הצלחנו ליצור חשבון, נסו שוב." : "הסיסמה לא נכונה, נסו שוב")}
             </p>
           )}
 
@@ -760,10 +674,14 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     );
   }
 
+  // Show onboarding for new users
+  if (shouldShowOnboarding || showPreOnboarding) {
+    return <OnboardingFlowV2 />;
+  }
+
   if (!isContentReady && ["songs", "questions", "upsells", "couples", "analytics"].includes(activeTab)) {
     return (
       <div className="min-h-dvh gradient-hero">
-        {clerkEnabled ? <ClerkAdminAuthSync /> : null}
         <header className="sticky top-0 z-50 glass-card rounded-none border-x-0 border-t-0 px-4 py-3">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -783,7 +701,6 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
   return (
     <div className="min-h-dvh gradient-hero">
-      {clerkEnabled ? <ClerkAdminAuthSync /> : null}
       {/* Header */}
       <header className="sticky top-0 z-50 glass-card rounded-none border-x-0 border-t-0 px-4 py-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
@@ -821,15 +738,13 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
             </nav>
 
             <ThemeToggle />
-            {clerkEnabled ? <ClerkAdminLogoutButton /> : (
-              <button
-                onClick={logout}
-                className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
-                aria-label="התנתקות"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            )}
+            <button
+              onClick={logout}
+              className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
+              aria-label="התנתקות"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </header>
@@ -923,30 +838,13 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
   );
 }
 
-function AdminPageWithClerk() {
-  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useAuth();
-
+export default function AdminPage() {
+  // Clerk is disabled - using Supabase auth only
   return (
     <AdminPageContent
-      clerkEnabled={true}
-      clerkLoaded={clerkLoaded}
-      clerkSignedIn={Boolean(clerkSignedIn)}
+      clerkEnabled={false}
+      clerkLoaded={false}
+      clerkSignedIn={false}
     />
   );
-}
-
-export default function AdminPage() {
-  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-
-  if (!clerkEnabled) {
-    return (
-      <AdminPageContent
-        clerkEnabled={false}
-        clerkLoaded={false}
-        clerkSignedIn={false}
-      />
-    );
-  }
-
-  return <AdminPageWithClerk />;
 }

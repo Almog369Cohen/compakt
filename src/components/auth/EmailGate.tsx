@@ -38,12 +38,12 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
     const lookupKey = (eventId || eventNumber).trim();
 
     if (!lookupKey) {
-      setError("הזינו מספר אירוע");
+      setError("צריך מספר אירוע כדי להמשיך");
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      setError("הזינו כתובת מייל תקינה");
+      setError("נראה שחסרה כתובת מייל תקינה");
       return;
     }
 
@@ -59,7 +59,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
       const sendData = await sendRes.json();
 
       if (!sendRes.ok) {
-        setError(sendData.error || "שגיאה באיתור האירוע");
+        setError(sendData.error || "לא הצלחנו למצוא את האירוע — בדקו את המספר");
         return;
       }
 
@@ -71,7 +71,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
         setOtp(sendData.devOtp);
       }
     } catch {
-      setError("שגיאה בשליחת הקוד");
+      setError("משהו לא הסתדר, נסו שוב");
     } finally {
       setLoading(false);
     }
@@ -81,12 +81,12 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!sessionId) {
-      setError("חסר סשן אימות. נסו לשלוח קוד מחדש.");
+      setError("נראה שפג התוקף — שלחו קוד חדש");
       return;
     }
 
     if (!otp.trim()) {
-      setError("הזינו את קוד האימות");
+      setError("הזינו את הקוד שקיבלתם במייל");
       return;
     }
 
@@ -106,7 +106,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
       const verifyData = await verifyRes.json();
 
       if (!verifyRes.ok) {
-        setError(verifyData.error || "שגיאה באימות האירוע");
+        setError(verifyData.error || "הקוד לא תקין, נסו שוב");
         return;
       }
 
@@ -120,7 +120,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
         });
       }, 800);
     } catch {
-      setError("שגיאה באימות");
+      setError("משהו לא הסתדר, נסו שוב בעוד רגע");
     } finally {
       setLoading(false);
     }
@@ -151,14 +151,14 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
                 >
                   <Mail className="w-7 h-7 text-white" />
                 </motion.div>
-                <h2 className="text-xl font-bold mb-1">חזרה לאירוע שלכם</h2>
+                <h2 className="text-xl font-bold mb-1">נכנסים לאירוע</h2>
                 {djName && (
                   <p className="text-sm text-secondary mb-1">
                     השאלון של <span className="font-semibold text-brand-blue">{djName}</span>
                   </p>
                 )}
                 <p className="text-xs text-muted">
-                  הזינו מספר אירוע ומייל ונשלח לכם קוד כניסה כדי להמשיך מאיפה שעצרתם
+                  מספר אירוע + מייל — ונשלח קוד כניסה כדי להמשיך מאיפה שעצרתם
                 </p>
               </div>
 
@@ -214,7 +214,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
                       <KeyRound className="w-4 h-4 text-muted absolute left-4 top-1/2 -translate-y-1/2" />
                     </div>
                     <p className="text-[11px] text-center text-muted">
-                      שלחנו קוד למייל שהזנתם. הזינו אותו כאן כדי להיכנס לאירוע.
+                      שלחנו קוד למייל שלכם — הזינו אותו כאן ונמשיך
                     </p>
                   </div>
                 )}
@@ -239,7 +239,7 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      {otpSent ? "אמתו והיכנסו" : "שלחו קוד כניסה"}
+                      {otpSent ? "המשיכו" : "שלחו לי קוד"}
                       <ArrowLeft className="w-4 h-4" />
                     </>
                   )}
@@ -273,8 +273,8 @@ export function EmailGate({ eventId, onVerified, djName }: EmailGateProps) {
               >
                 <CheckCircle className="w-16 h-16 text-brand-green mx-auto mb-3" />
               </motion.div>
-              <h2 className="text-xl font-bold">!מאומת</h2>
-              <p className="text-sm text-muted mt-1">...מתחילים</p>
+              <h2 className="text-xl font-bold">מעולה, אפשר להמשיך</h2>
+              <p className="text-sm text-muted mt-1">עוד רגע...</p>
             </motion.div>
           )}
         </AnimatePresence>

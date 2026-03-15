@@ -22,8 +22,8 @@ export default function GlobalError({
             >
               <AlertTriangle className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-xl font-bold mb-2">האפליקציה נתקלה בשגיאה</h1>
-            <p className="text-secondary text-sm mb-2">השגיאה קרתה לפני שהמסך הצליח להיטען במלואו.</p>
+            <h1 className="text-xl font-bold mb-2">משהו לא הסתדר</h1>
+            <p className="text-secondary text-sm mb-2">המסך לא הספיק להיטען כמו שצריך.</p>
             <p className="text-xs text-white/55 mb-6 break-words">{error.message || "שגיאה לא מזוהה"}</p>
             <div className="flex flex-col gap-3">
               <button onClick={reset} className="btn-primary flex items-center justify-center gap-2">

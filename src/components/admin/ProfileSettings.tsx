@@ -686,10 +686,32 @@ export function ProfileSettings() {
           </div>
 
           <div className={sectionClass}>
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <MessageSquareQuote className="w-4 h-4 text-brand-blue" />
-              ביקורות
-            </h3>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <MessageSquareQuote className="w-4 h-4 text-brand-blue" />
+                ביקורות
+              </h3>
+              <button
+                onClick={async () => {
+                  const slug = djSlugValue.trim();
+                  if (!slug) {
+                    alert("חובה להגדיר כתובת (slug) לפני שליחת לינק לזוגות");
+                    return;
+                  }
+                  const reviewLink = `${getSafeOrigin()}/dj/${slug}/review`;
+                  const success = await safeCopyText(reviewLink);
+                  if (success) {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-dashboard-border bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-secondary hover:text-foreground hover:bg-white/[0.08] hover:border-dashboard-border-hover transition-all"
+                title="העתק לינק לזוגות למילוי ביקורת"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-brand-green" /> : <Link2 className="w-3.5 h-3.5" />}
+                {copied ? "הועתק!" : "לינק לזוגות"}
+              </button>
+            </div>
             {reviews.map((review, i) => (
               <div key={i} className="space-y-2 p-3 rounded-xl border border-glass">
                 <div className="flex gap-2 items-center">

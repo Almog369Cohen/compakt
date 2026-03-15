@@ -78,9 +78,9 @@ export function DreamsRequests() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-2"
       >
-        <h1 className="text-2xl font-bold mb-1">✨ הרגעים שלכם</h1>
+        <h1 className="text-2xl font-bold mb-1">הרגעים החשובים באירוע</h1>
         <p className="text-secondary text-sm">
-          ספרו לנו על הרגעים המיוחדים, בקשות וחלומות
+          בקשות מיוחדות, שירי חובה, רגעים חשובים — הכול יגיע מסודר ל-DJ
         </p>
         <motion.div
           initial={{ opacity: 0 }}
@@ -99,7 +99,7 @@ export function DreamsRequests() {
         transition={{ delay: 0.1 }}
         className="glass-card p-5"
       >
-        <h3 className="font-semibold mb-3 text-sm">רגעים מיוחדים</h3>
+        <h3 className="font-semibold mb-3 text-sm">רגעים חשובים באירוע</h3>
         <div className="flex flex-wrap gap-2 mb-3">
           {specialMoments.map((m) => (
             <button
@@ -167,14 +167,14 @@ export function DreamsRequests() {
         transition={{ delay: 0.15 }}
         className="glass-card p-5"
       >
-        <h3 className="font-semibold mb-3 text-sm">בקשות חופשיות</h3>
+        <h3 className="font-semibold mb-3 text-sm">עוד משהו שחשוב לך?</h3>
         <div className="flex gap-2">
           <input
             type="text"
             value={freeText}
             onChange={(e) => setFreeText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addTextRequest("free_text", freeText, setFreeText)}
-            placeholder="...שיר ספציפי, אמן, רגע"
+            placeholder="שיר, אמן, רגע, כל מה שחשוב..."
             className="flex-1 px-3 py-2 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors"
           />
           <button
@@ -204,17 +204,17 @@ export function DreamsRequests() {
         transition={{ delay: 0.2 }}
         className="glass-card p-5"
       >
-        <h3 className="font-semibold mb-3 text-sm">כן ולא</h3>
+        <h3 className="font-semibold mb-3 text-sm">מה חובה ומה ממש לא</h3>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-brand-green mb-1 block font-medium">✅ כן — חובה</label>
+            <label className="text-xs text-brand-green mb-1 block font-medium">✅ חובה לנגן</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={doText}
                 onChange={(e) => setDoText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addTextRequest("do", doText, setDoText)}
-                placeholder="שירים / סגנונות שחייבים"
+                placeholder="שיר, סגנון, אמן..."
                 className="flex-1 px-3 py-2 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-green transition-colors"
               />
               <button
@@ -239,7 +239,7 @@ export function DreamsRequests() {
 
           <div>
             <label className="text-xs mb-1 block font-medium" style={{ color: "var(--accent-danger)" }}>
-              ❌ לא — קו אדום
+              ❌ ממש לא לנגן
             </label>
             <div className="flex gap-2">
               <input
@@ -247,7 +247,7 @@ export function DreamsRequests() {
                 value={dontText}
                 onChange={(e) => setDontText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addTextRequest("dont", dontText, setDontText)}
-                placeholder="שירים / סגנונות שלא בשום אופן"
+                placeholder="שיר, סגנון, דבר שלא מתאים לכם..."
                 className="flex-1 px-3 py-2 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-accent-danger transition-colors"
               />
               <button
@@ -280,7 +280,7 @@ export function DreamsRequests() {
         transition={{ delay: 0.25 }}
         className="glass-card p-5"
       >
-        <h3 className="font-semibold mb-3 text-sm">🔗 לינקים לדוגמה</h3>
+        <h3 className="font-semibold mb-3 text-sm">לינקים להשראה</h3>
         <div className="flex gap-2">
           <input
             type="url"
@@ -372,7 +372,7 @@ export function DreamsRequests() {
           className="btn-primary w-full text-base flex items-center justify-center gap-2"
         >
           <ChevronLeft className="w-5 h-5" />
-          סיימנו! צרו Music Brief
+          ממשיכים לסיכום
         </button>
       </motion.div>
     </div>

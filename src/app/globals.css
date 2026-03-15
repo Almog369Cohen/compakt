@@ -11,13 +11,23 @@
   --glass-border: rgba(5, 156, 192, 0.15);
   --glass-blur: 20px;
 
+  /* Dashboard enhanced backgrounds */
+  --dashboard-card-primary: rgba(20, 24, 32, 0.85);
+  --dashboard-card-secondary: rgba(16, 20, 28, 0.75);
+  --dashboard-card-hover: rgba(28, 32, 40, 0.95);
+  --dashboard-border: rgba(255, 255, 255, 0.08);
+  --dashboard-border-hover: rgba(255, 255, 255, 0.14);
+
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.75);
-  --text-muted: rgba(255, 255, 255, 0.50);
+  --text-secondary: rgba(255, 255, 255, 0.85);
+  --text-muted: rgba(255, 255, 255, 0.60);
 
   --accent-primary: #059cc0;
   --accent-secondary: #03b28c;
-  --accent-danger: #ff4466;
+  --accent-danger: #ef4444;
+  --accent-warning: #f59e0b;
+  --accent-success: #10b981;
+  --accent-info: #3b82f6;
   --accent-gold: #f5c542;
 
   --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);

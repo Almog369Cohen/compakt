@@ -32,9 +32,9 @@ export default function Error({
           <AlertTriangle className="w-8 h-8 text-white" />
         </motion.div>
 
-        <h1 className="text-xl font-bold mb-2">משהו השתבש</h1>
+        <h1 className="text-xl font-bold mb-2">משהו לא הסתדר</h1>
         <p className="text-secondary text-sm mb-6">
-          קרתה שגיאה לא צפויה. אפשר לנסות שוב או לחזור לדף הבית.
+          קרה משהו לא צפוי. אפשר לנסות שוב או לחזור הביתה.
         </p>
 
         <div className="flex flex-col gap-3">

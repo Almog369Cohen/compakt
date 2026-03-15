@@ -26,7 +26,17 @@ const config: Config = {
           DEFAULT: "var(--accent-primary)",
           secondary: "var(--accent-secondary)",
           danger: "var(--accent-danger)",
+          warning: "var(--accent-warning)",
+          success: "var(--accent-success)",
+          info: "var(--accent-info)",
           gold: "var(--accent-gold)",
+        },
+        dashboard: {
+          card: "var(--dashboard-card-primary)",
+          "card-secondary": "var(--dashboard-card-secondary)",
+          "card-hover": "var(--dashboard-card-hover)",
+          border: "var(--dashboard-border)",
+          "border-hover": "var(--dashboard-border-hover)",
         },
       },
       borderColor: {

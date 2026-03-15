@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEventStore } from "@/stores/eventStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { EventSetup } from "@/components/stages/EventSetup";
@@ -8,6 +9,7 @@ import { SongTinder } from "@/components/stages/SongTinder";
 import { DreamsRequests } from "@/components/stages/DreamsRequests";
 import { MusicBrief } from "@/components/stages/MusicBrief";
 import { EmailGate } from "@/components/auth/EmailGate";
+import { DJSelectionGate } from "@/components/journey/DJSelectionGate";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { StageNav } from "@/components/ui/StageNav";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
@@ -57,6 +59,13 @@ export type JourneyAppProps = {
   initialDjSlug?: string | null;
   initialDjName?: string | null;
   initialMode?: "new" | "resume";
+};
+
+type PublicDj = {
+  id: string;
+  business_name: string;
+  dj_slug: string;
+  logo_url?: string;
 };
 
 function parseMaybeJson(value: string | null): string | string[] | number | "" {
@@ -142,6 +151,7 @@ export function JourneyApp({
   initialDjName = null,
   initialMode = "new",
 }: JourneyAppProps) {
+  const router = useRouter();
   const event = useEventStore((s) => s.event);
   const theme = useEventStore((s) => s.theme);
   const loadEvent = useEventStore((s) => s.loadEvent);
@@ -435,6 +445,24 @@ export function JourneyApp({
     }
   };
 
+  const handleSelectDj = useCallback((dj: PublicDj) => {
+    const cleanedId = dj.id.trim();
+    const cleanedSlug = dj.dj_slug.trim().toLowerCase();
+    const cleanedName = (dj.business_name || dj.dj_slug).trim();
+    const cleanedLogoUrl = dj.logo_url?.trim() || "";
+
+    if (!cleanedSlug) return;
+
+    setSessionItem("compakt_dj_profile_id", cleanedId);
+    setSessionItem("compakt_dj_slug", cleanedSlug);
+    setSessionItem("compakt_dj_name", cleanedName);
+    if (cleanedLogoUrl) {
+      setSessionItem("compakt_dj_logo_url", cleanedLogoUrl);
+    }
+    setEntryDjName(cleanedName);
+    router.push(`/dj/${encodeURIComponent(cleanedSlug)}`);
+  }, [router]);
+
   if (pendingToken && !emailVerified) {
     return (
       <main className="min-h-dvh gradient-hero relative">
@@ -470,6 +498,19 @@ export function JourneyApp({
               </button>
             </div>
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!event && !initialToken && !initialDjSlug && initialMode !== "resume") {
+    return (
+      <main className="min-h-dvh gradient-hero relative">
+        <div className="fixed top-4 left-4 z-50">
+          <ThemeToggle />
+        </div>
+        <div className="flex items-center justify-center min-h-dvh px-4 py-16">
+          <DJSelectionGate onSelect={handleSelectDj} />
         </div>
       </main>
     );
@@ -548,16 +589,21 @@ export function JourneyApp({
               exit={{ scale: 0.9, y: 20 }}
               className="glass-card p-6 max-w-sm w-full text-center"
             >
-              <h3 className="text-lg font-bold mb-2">!שמחים שחזרתם</h3>
+              <h3 className="text-lg font-bold mb-2">טוב שחזרתם</h3>
+              {event?.eventNumber && (
+                <p className="text-xs font-mono text-brand-blue mb-2" dir="ltr">
+                  אירוע #{event.eventNumber}
+                </p>
+              )}
               <p className="text-sm text-secondary mb-4">
-                מצאנו התקדמות קודמת. רוצים להמשיך מאיפה שעצרתם?
+                ההתקדמות שלכם נשמרה. רוצים להמשיך מאיפה שעצרתם?
               </p>
               <div className="flex gap-3">
                 <button onClick={handleResume} className="btn-primary flex-1 text-sm">
-                  המשיכו מאיפה שעצרתי
+                  המשיכו מאיפה שעצרנו
                 </button>
                 <button onClick={handleStartFresh} className="btn-secondary flex-1 text-sm">
-                  התחלה מחדש
+                  מהתחלה
                 </button>
               </div>
             </motion.div>

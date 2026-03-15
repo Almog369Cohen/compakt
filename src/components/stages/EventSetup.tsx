@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useEventStore } from "@/stores/eventStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Music, PartyPopper, Briefcase, Star, Heart, Copy, Check, Share2, Mail, Loader2 } from "lucide-react";
+import { Music, PartyPopper, Briefcase, Star, Heart, Copy, Check, Share2, Mail, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import type { EventType } from "@/lib/types";
 import { getSafeOrigin } from "@/lib/utils";
 
@@ -59,11 +59,12 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
   const [copied, setCopied] = useState(false);
   const [magicToken, setMagicToken] = useState(event?.magicToken || "");
   const [eventNumber, setEventNumber] = useState(event?.eventNumber || "");
-  const [nameHint, setNameHint] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const [djName, setDjName] = useState("");
   const [selectedDjId, setSelectedDjId] = useState("");
   const [selectedDjSlug, setSelectedDjSlug] = useState("");
@@ -216,24 +217,17 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
     const normalizedPhone = phone.trim();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      setEmailError("הזינו כתובת מייל תקינה");
+      setEmailError("נראה שחסרה כתובת מייל תקינה");
       return;
     }
     setEmailError(null);
 
-    if (normalizedPhone.length < 9) {
-      setPhoneError("הזינו מספר טלפון תקין");
+    if (normalizedPhone && normalizedPhone.length < 9) {
+      setPhoneError("נראה שהמספר קצר מדי");
       return;
     }
     setPhoneError(null);
     setFormError(null);
-
-    if (!coupleNameA.trim() && !coupleNameB.trim()) {
-      setNameHint(true);
-      setTimeout(() => setNameHint(false), 1600);
-      const ok = confirm("רוצים להמשיך בלי שמות? אפשר גם להוסיף אחר כך");
-      if (!ok) return;
-    }
 
     if (event) {
       updateEvent({
@@ -252,7 +246,7 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
     }
 
     if (!djContextReady) {
-      setFormError("טוען את פרטי הדיג׳יי, נסו שוב בעוד רגע.");
+      setFormError("עוד רגע, טוען את פרטי הדיג׳יי...");
       return;
     }
 
@@ -260,7 +254,7 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
     const djSlug = selectedDjSlug || undefined;
 
     if (!djProfileId && !djSlug) {
-      setFormError("בחרו דיג׳יי לפני יצירת האירוע.");
+      setFormError("צריך לבחור דיג׳יי כדי להמשיך");
       return;
     }
 
@@ -284,7 +278,7 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "יצירת האירוע נכשלה");
+        throw new Error(data.error || "משהו לא הסתדר, נסו שוב בעוד רגע");
       }
 
       setMagicToken(data.eventKey);
@@ -319,7 +313,7 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
       trackEvent("event_created", { eventType: selectedType });
       setStep("link");
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "יצירת האירוע נכשלה");
+      setFormError(error instanceof Error ? error.message : "משהו לא הסתדר, נסו שוב בעוד רגע");
     } finally {
       setSubmitting(false);
     }
@@ -337,7 +331,7 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
   };
 
   const shareWhatsApp = () => {
-    const text = `🎵 הצטרפו למסע המוזיקלי שלנו!\n${buildLink()}`;
+    const text = `🎵 בואו נבנה את הוייב לאירוע!\n${buildLink()}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
@@ -376,8 +370,8 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
               >
                 <Music className="w-7 h-7 text-white" />
               </motion.div>
-              <p className="text-xl font-extrabold mb-1">בואו ניצור את האירוע שלכם</p>
-              <p className="text-secondary text-sm">כמה פרטים קצרים ומתחילים</p>
+              <p className="text-xl font-extrabold mb-1">פותחים אירוע חדש</p>
+              <p className="text-secondary text-sm">כמה פרטים ויוצאים לדרך</p>
               {djName ? (
                 <p className="text-xs text-brand-blue mt-2">
                   השאלון של <span className="font-semibold">{djName}</span>
@@ -405,80 +399,6 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-muted mb-1">שם ראשון</label>
-                  <input
-                    type="text"
-                    value={coupleNameA}
-                    onChange={(e) => setCoupleNameA(e.target.value)}
-                    placeholder="דנה"
-                    className={`w-full px-3 py-2.5 rounded-xl bg-transparent border text-foreground placeholder:text-muted text-sm focus:outline-none transition-colors ${nameHint ? "border-accent-danger" : "border-glass focus:border-brand-blue"
-                      }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-muted mb-1">שם שני</label>
-                  <input
-                    type="text"
-                    value={coupleNameB}
-                    onChange={(e) => setCoupleNameB(e.target.value)}
-                    placeholder="אלון"
-                    className={`w-full px-3 py-2.5 rounded-xl bg-transparent border text-foreground placeholder:text-muted text-sm focus:outline-none transition-colors ${nameHint ? "border-accent-danger" : "border-glass focus:border-brand-blue"
-                      }`}
-                  />
-                </div>
-              </div>
-
-              {nameHint && (
-                <p className="text-xs" style={{ color: "var(--accent-danger)" }}>
-                  מומלץ להוסיף לפחות שם אחד (אפשר גם אחר כך)
-                </p>
-              )}
-
-              <div>
-                <label className="block text-xs text-muted mb-1">תאריך (אופציונלי)</label>
-                <input
-                  type="date"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground text-sm focus:outline-none focus:border-brand-blue transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-muted mb-1">אולם / מקום (אופציונלי)</label>
-                <input
-                  type="text"
-                  value={venue}
-                  onChange={(e) => setVenue(e.target.value)}
-                  placeholder="שם האולם או העיר"
-                  className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-brand-blue transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-muted mb-1">טלפון ליצירת קשר</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    setPhoneError(null);
-                  }}
-                  placeholder="050-000-0000"
-                  dir="ltr"
-                  className={`w-full px-3 py-2.5 rounded-xl bg-transparent border text-foreground placeholder:text-muted text-sm focus:outline-none transition-colors text-center ${phoneError ? "border-accent-danger" : "border-glass focus:border-brand-blue"
-                    }`}
-                />
-                {phoneError && (
-                  <p className="text-xs mt-1" style={{ color: "var(--accent-danger)" }}>
-                    {phoneError}
-                  </p>
-                )}
-                <p className="text-xs text-muted mt-1">הטלפון נשמר ליצירת קשר בלבד</p>
-              </div>
-
               <div>
                 <label className="block text-xs text-muted mb-1">
                   <Mail className="w-3 h-3 inline ml-1" />
@@ -501,8 +421,93 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
                     {emailError}
                   </p>
                 )}
-                <p className="text-xs text-muted mt-1">המייל משמש לשיוך וחזרה לאירוע</p>
+                <p className="text-xs text-muted mt-1">עם המייל אפשר לחזור לאירוע בכל שלב</p>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setShowDetails((v) => !v)}
+                className="flex items-center justify-center gap-1.5 w-full text-xs text-secondary hover:text-brand-blue transition-colors py-1"
+              >
+                {showDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                {showDetails ? "פחות פרטים" : "שמות, תאריך, אולם, טלפון (אופציונלי)"}
+              </button>
+
+              <AnimatePresence initial={false}>
+                {showDetails && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden space-y-4"
+                  >
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-muted mb-1">שם ראשון</label>
+                        <input
+                          type="text"
+                          value={coupleNameA}
+                          onChange={(e) => setCoupleNameA(e.target.value)}
+                          placeholder="דנה"
+                          className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-muted mb-1">שם שני</label>
+                        <input
+                          type="text"
+                          value={coupleNameB}
+                          onChange={(e) => setCoupleNameB(e.target.value)}
+                          placeholder="אלון"
+                          className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-muted mb-1">תאריך (אופציונלי)</label>
+                      <input
+                        type="date"
+                        value={eventDate}
+                        onChange={(e) => setEventDate(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-muted mb-1">אולם / מקום (אופציונלי)</label>
+                      <input
+                        type="text"
+                        value={venue}
+                        onChange={(e) => setVenue(e.target.value)}
+                        placeholder="שם האולם או העיר"
+                        className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-brand-blue transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-muted mb-1">טלפון ליצירת קשר (אופציונלי)</label>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          setPhoneError(null);
+                        }}
+                        placeholder="050-000-0000"
+                        dir="ltr"
+                        className={`w-full px-3 py-2.5 rounded-xl bg-transparent border text-foreground placeholder:text-muted text-sm focus:outline-none transition-colors text-center ${phoneError ? "border-accent-danger" : "border-glass focus:border-brand-blue"
+                          }`}
+                      />
+                      {phoneError && (
+                        <p className="text-xs mt-1" style={{ color: "var(--accent-danger)" }}>
+                          {phoneError}
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {formError && (
                 <p className="text-xs text-center" style={{ color: "var(--accent-danger)" }}>
@@ -523,13 +528,13 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
                 ) : !djContextReady ? (
                   "טוען דיג׳יי..."
                 ) : (
-                  "← צרו אירוע ונתחיל"
+                  "← נתחיל"
                 )}
               </button>
 
               {submitting && (
                 <p className="text-xs text-center text-muted">
-                  יוצר את האירוע שלכם, אין צורך ללחוץ שוב
+                  עוד רגע, יוצרים את האירוע...
                 </p>
               )}
 
@@ -561,7 +566,7 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-muted mt-1">fallback רק אם הגעתם בלי לינק ישיר מהדיג׳יי</p>
+                  <p className="text-xs text-muted mt-1">אם הגעתם בלי לינק מהדיג׳יי, בחרו כאן</p>
                 </div>
               )}
 
@@ -595,9 +600,9 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
               <Check className="w-8 h-8 text-white" />
             </motion.div>
 
-            <h2 className="text-xl font-bold mb-2">!האירוע נוצר</h2>
+            <h2 className="text-xl font-bold mb-2">מעולה, האירוע נוצר</h2>
             <p className="text-secondary text-sm mb-6">
-              שמרו את מספר האירוע והלינק כדי לחזור בכל זמן
+              שמרו את המספר — אפשר לחזור איתו בכל שלב
             </p>
 
             {eventNumber && (
@@ -636,7 +641,7 @@ export function EventSetup({ initialDjSlug = null, initialDjName = null }: Event
               onClick={handleContinue}
               className="btn-primary w-full text-base"
             >
-              ← בואו נתחיל
+              ← ממשיכים
             </button>
           </motion.div>
         )}

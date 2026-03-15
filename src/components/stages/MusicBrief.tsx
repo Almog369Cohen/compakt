@@ -16,9 +16,12 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { formatDate, getSafeOrigin } from "@/lib/utils";
+import { buildTasteInsight } from "@/lib/tasteProfile";
+import { buildEventMoments } from "@/lib/eventMoments";
 
 const CELEBRATION_EMOJIS = ["🎉", "🎵", "🎶", "✨", "💫", "🎧", "🎤", "💃", "🕺", "🌟"];
 
@@ -136,7 +139,7 @@ export function MusicBrief() {
         displayValue = labels?.[a.answerValue - (question?.sliderMin || 1)] || String(a.answerValue);
       } else {
         const opt = question?.options?.find((o) => o.value === a.answerValue);
-        displayValue = opt?.label || a.answerValue;
+        displayValue = opt?.label || String(a.answerValue);
       }
       return {
         question: question?.questionHe || "",
@@ -187,6 +190,50 @@ export function MusicBrief() {
       { label: "לינק אירוע", value: journeyLink || "—" },
     ];
   }, [event, journeyLink]);
+
+  const tasteInsight = useMemo(
+    () => buildTasteInsight(swipes, songMap),
+    [swipes, songMap],
+  );
+
+  const eventMoments = useMemo(
+    () => buildEventMoments(swipes, songMap),
+    [swipes, songMap],
+  );
+
+  const djRecommendation = useMemo(() => {
+    if (!tasteInsight) return null;
+    const lines: string[] = [];
+
+    lines.push(tasteInsight.headline + ".");
+
+    const positiveCount = swipes.filter(
+      (s) => s.action === "like" || s.action === "super_like",
+    ).length;
+    const dislikeCount = swipes.filter((s) => s.action === "dislike").length;
+
+    if (positiveCount > 0 && dislikeCount > 0) {
+      const ratio = positiveCount / (positiveCount + dislikeCount);
+      if (ratio > 0.7) {
+        lines.push("הזוג פתוח מוזיקלית ואוהב מגוון — אפשר להרחיב את הטווח.");
+      } else if (ratio < 0.4) {
+        lines.push("הזוג מאוד סלקטיבי — כדאי להישאר קרוב למה שסימנו.");
+      }
+    }
+
+    if (superLiked.length > 0) {
+      lines.push(
+        `יש ${superLiked.length} שירי חובה שצריכים להיות ברשימה הסופית.`,
+      );
+    }
+
+    if (dislikeReasons.length > 0) {
+      const topReason = dislikeReasons[0][0];
+      lines.push(`הסיבה הנפוצה ביותר לדחייה: "${topReason}".`);
+    }
+
+    return lines.join(" ");
+  }, [tasteInsight, swipes, superLiked.length, dislikeReasons]);
 
   const celebrationParticles = useMemo(
     () =>
@@ -441,21 +488,21 @@ export function MusicBrief() {
           className="btn-secondary text-sm flex items-center gap-2 py-2 px-4"
         >
           {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copiedLink ? "הועתק!" : "העתק לינק"}
+          {copiedLink ? "הועתק" : "העתקו לינק"}
         </button>
         <button
           onClick={handleCopyText}
           className="btn-secondary text-sm flex items-center gap-2 py-2 px-4"
         >
           {copiedText ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copiedText ? "הועתק!" : "העתק סיכום"}
+          {copiedText ? "הועתק" : "העתקו סיכום"}
         </button>
         <button
           onClick={handleShareWhatsApp}
           className="btn-secondary text-sm flex items-center gap-2 py-2 px-4"
         >
           <Share2 className="w-4 h-4" />
-          שתפו
+          שתפו בוואטסאפ
         </button>
       </motion.div>
 
@@ -467,9 +514,9 @@ export function MusicBrief() {
             animate={{ opacity: 1, y: 0 }}
             className="glass-card p-5 text-center"
           >
-            <p className="text-sm font-medium mb-1">אין עדיין מספיק נתונים לסיכום</p>
+            <p className="text-sm font-medium mb-1">עוד אין כאן מספיק מידע</p>
             <p className="text-xs text-secondary">
-              חזרו לשלבים הקודמים, ענו על כמה שאלות וסמנו שירים — ואז ה-Music Brief יתמלא.
+              ברגע שיהיו כמה בחירות, הסיכום יתמלא מעצמו.
             </p>
           </motion.div>
         )}
@@ -486,7 +533,7 @@ export function MusicBrief() {
           >
             <Music className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold mb-1">Music Brief</h1>
+          <h1 className="text-2xl font-bold mb-1">הסיכום המוזיקלי שלכם</h1>
           <h2 className="text-lg text-secondary mb-1">{eventTitle}</h2>
           {event?.eventDate && (
             <p className="text-sm text-muted">{formatDate(event.eventDate)}</p>
@@ -499,13 +546,107 @@ export function MusicBrief() {
           )}
         </motion.div>
 
+        {tasteInsight && djRecommendation && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.02 }}
+            className="glass-card p-5 overflow-hidden"
+            style={{ background: "linear-gradient(135deg, rgba(14,18,28,0.92), rgba(8,10,16,0.92))", border: "1px solid rgba(245,197,66,0.15)" }}
+          >
+            <div className="flex items-center justify-end gap-2 mb-3">
+              <h3 className="font-bold text-sm">כיוון מוזיקלי</h3>
+              <Sparkles className="w-4 h-4" style={{ color: "var(--accent-gold)" }} />
+            </div>
+            <p className="text-sm leading-relaxed text-secondary mb-3">{djRecommendation}</p>
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {tasteInsight.traits.map((trait) => (
+                <span
+                  key={trait}
+                  className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-secondary"
+                >
+                  {trait}
+                </span>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-end gap-2">
+              <div className="h-1 w-24 overflow-hidden rounded-full bg-white/8">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${Math.round(tasteInsight.confidence * 100)}%`,
+                    background: "linear-gradient(90deg, rgba(245,197,66,0.9), rgba(5,156,192,0.9))",
+                  }}
+                />
+              </div>
+              <span className="text-[10px] text-muted">{Math.round(tasteInsight.confidence * 100)}% ביטחון</span>
+            </div>
+          </motion.div>
+        )}
+
+        {(eventMoments.buckets.length > 0 || eventMoments.gaps.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.025 }}
+            className="glass-card p-5 space-y-4"
+          >
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <Music className="w-4 h-4 text-brand-blue" />
+              חלוקה לרגעי אירוע
+            </h3>
+
+            {eventMoments.buckets.map((bucket) => (
+              <div key={bucket.key} className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold">{bucket.label}</p>
+                  <span className="text-[11px] text-muted">{bucket.songs.length} שירים</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {bucket.songs.slice(0, 6).map((song) => (
+                    <span
+                      key={song.id}
+                      className="text-[11px] rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-secondary"
+                    >
+                      {song.title}
+                    </span>
+                  ))}
+                  {bucket.songs.length > 6 && (
+                    <span className="text-[11px] text-muted px-1 py-1">+{bucket.songs.length - 6}</span>
+                  )}
+                </div>
+                {bucket.hasMustPlay && (
+                  <p className="text-[11px] flex items-center gap-1" style={{ color: "var(--accent-gold)" }}>
+                    <Star className="w-3 h-3" fill="var(--accent-gold)" />
+                    יש שירי חובה ברגע הזה
+                  </p>
+                )}
+              </div>
+            ))}
+
+            {eventMoments.gaps.length > 0 && (
+              <div className="space-y-1.5 pt-2 border-t border-white/8">
+                <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--accent-gold)" }}>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  מה עוד כדאי לבדוק
+                </p>
+                {eventMoments.gaps.map((gap) => (
+                  <p key={gap.key} className="text-[11px] text-secondary leading-5 pr-5">
+                    → {gap.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.03 }}
           className="glass-card p-5"
         >
-          <h3 className="font-bold text-sm mb-3">פרטים טכניים לאימות</h3>
+          <h3 className="font-bold text-sm">פרטי אירוע</h3>
           <div className="space-y-2">
             {technicalDetails.map((item) => (
               <div key={item.label} className="text-sm">
@@ -549,7 +690,7 @@ export function MusicBrief() {
           >
             <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
               <Star className="w-4 h-4" style={{ color: "var(--accent-gold)" }} fill="var(--accent-gold)" />
-              !חייבים ({superLiked.length})
+              שירי חובה ({superLiked.length})
             </h3>
             <div className="space-y-2">
               {superLiked.map((song) =>
@@ -616,7 +757,7 @@ export function MusicBrief() {
           >
             <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
               <XCircle className="w-4 h-4" style={{ color: "var(--accent-danger)" }} />
-              קווים אדומים
+              ממש לא לנגן
             </h3>
             {dislikeReasons.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-3">

@@ -13,15 +13,45 @@ function getErrorMessage(value: unknown) {
   return "אירעה שגיאת ריצה לא צפויה.";
 }
 
+function isChunkLoadFailure(value: unknown) {
+  const message = getErrorMessage(value).toLowerCase();
+  return (
+    message.includes("loading chunk") ||
+    message.includes("chunkloaderror") ||
+    message.includes("failed to fetch rsc payload")
+  );
+}
+
+function recoverFromChunkFailure() {
+  if (typeof window === "undefined") return false;
+
+  const reloadKey = `compakt-chunk-reload:${window.location.pathname}`;
+
+  if (window.sessionStorage.getItem(reloadKey) === "1") {
+    window.sessionStorage.removeItem(reloadKey);
+    return false;
+  }
+
+  window.sessionStorage.setItem(reloadKey, "1");
+  window.location.reload();
+  return true;
+}
+
 export function AppRuntimeGuard({ children }: { children: React.ReactNode }) {
   const [runtimeFailure, setRuntimeFailure] = useState<RuntimeFailure | null>(null);
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
+      if (isChunkLoadFailure(event.error || event.message) && recoverFromChunkFailure()) {
+        return;
+      }
       setRuntimeFailure({ message: getErrorMessage(event.error || event.message) });
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (isChunkLoadFailure(event.reason) && recoverFromChunkFailure()) {
+        return;
+      }
       setRuntimeFailure({ message: getErrorMessage(event.reason) });
     };
 

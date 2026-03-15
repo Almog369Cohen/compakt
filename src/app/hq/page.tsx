@@ -2,7 +2,6 @@
 
 import { Fragment, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion } from "framer-motion";
 import { LogOut, Users, Activity, Shield, RefreshCw, Save, History, ChevronDown, ChevronUp, ChevronLeft } from "lucide-react";
@@ -69,43 +68,17 @@ type ProfileDraft = {
   feature_overrides: Partial<Record<FeatureKey, boolean>>;
 };
 
-function ClerkHQAuthSync() {
-  const { isLoaded, isSignedIn, userId } = useAuth();
-  const { user } = useUser();
-  const setAuthState = useAdminStore((s) => s.setAuthState);
-  const resetAuthState = useAdminStore((s) => s.resetAuthState);
+// Clerk components removed - using Supabase auth only
 
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (isSignedIn) {
-      setAuthState({
-        isAuthenticated: true,
-        userId: userId ?? null,
-        userEmail: user?.primaryEmailAddress?.emailAddress ?? null,
-        authError: null,
-      });
-      return;
-    }
-
-    resetAuthState();
-  }, [isLoaded, isSignedIn, resetAuthState, setAuthState, user, userId]);
-
-  return null;
-}
-
-function ClerkHQLogoutButton() {
-  const { signOut } = useClerk();
-  const resetAuthState = useAdminStore((s) => s.resetAuthState);
+function HQLogoutButton() {
+  const logout = useAdminStore((s) => s.logout);
   const router = useRouter();
 
   return (
     <button
       onClick={() => {
-        signOut().then(() => {
-          resetAuthState();
-          router.replace("/admin");
-        });
+        logout();
+        router.replace("/admin");
       }}
       className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
       aria-label="התנתקות"
@@ -119,7 +92,6 @@ export default function HQPage() {
   const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
   const isAuthenticated = useAdminStore((s) => s.isAuthenticated);
   const checkSession = useAdminStore((s) => s.checkSession);
-  const logout = useAdminStore((s) => s.logout);
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<HQTab>("users");
@@ -268,7 +240,6 @@ export default function HQPage() {
 
   return (
     <div className="min-h-dvh gradient-hero">
-      {clerkEnabled ? <ClerkHQAuthSync /> : null}
       {/* Header */}
       <header className="sticky top-0 z-50 glass-card rounded-none border-x-0 border-t-0 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
@@ -319,15 +290,7 @@ export default function HQPage() {
             </nav>
 
             <ThemeToggle />
-            {clerkEnabled ? <ClerkHQLogoutButton /> : (
-              <button
-                onClick={logout}
-                className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
-                aria-label="התנתקות"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            )}
+            <HQLogoutButton />
           </div>
         </div>
       </header>

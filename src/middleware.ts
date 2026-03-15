@@ -1,5 +1,4 @@
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
-import { clerkMiddleware } from "@clerk/nextjs/server";
 import { createMiddlewareSupabase } from "@/lib/supabase-server";
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -63,22 +62,23 @@ async function handleRequest(
   return res;
 }
 
-const middlewareWithClerk = clerkMiddleware(
-  async (auth, req: NextRequest) =>
-    handleRequest(req, async () => {
-      const clerkAuth = await auth();
-      return clerkAuth.userId ?? null;
-    }),
-  {
-    publishableKey: clerkPublishableKey,
-    secretKey: clerkSecretKey,
-  }
-);
-
-export default function middleware(req: NextRequest, event: NextFetchEvent) {
+export default async function middleware(req: NextRequest, event: NextFetchEvent) {
   if (!clerkEnabled) {
     return handleRequest(req);
   }
+
+  const { clerkMiddleware } = await import("@clerk/nextjs/server");
+  const middlewareWithClerk = clerkMiddleware(
+    async (auth, clerkReq: NextRequest) =>
+      handleRequest(clerkReq, async () => {
+        const clerkAuth = await auth();
+        return clerkAuth.userId ?? null;
+      }),
+    {
+      publishableKey: clerkPublishableKey,
+      secretKey: clerkSecretKey,
+    }
+  );
 
   return middlewareWithClerk(req, event);
 }

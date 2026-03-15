@@ -94,7 +94,7 @@ export function QuestionFlow() {
       setDirection(-1);
       setCurrentIndex((i) => i - 1);
     } else {
-      const ok = confirm("לחזור להגדרות האירוע? אפשר תמיד לחזור אחר כך");
+      const ok = confirm("לחזור לפרטי האירוע? התשובות נשמרות");
       if (ok) setStage(0);
     }
   }, [currentIndex, setStage]);
@@ -191,14 +191,14 @@ export function QuestionFlow() {
             className="flex items-center gap-1 text-sm text-secondary hover:text-foreground transition-colors h-10"
           >
             <ChevronRight className="w-4 h-4" />
-            הקודם
+            חזרה
           </button>
 
           <button
             onClick={goNext}
             className="flex items-center gap-1 text-sm text-brand-blue hover:text-brand-blue/80 transition-colors font-medium h-10"
           >
-            המשך
+            ממשיכים
             <ChevronLeft className="w-4 h-4" />
           </button>
         </div>
@@ -235,7 +235,7 @@ function EthnicMusicModal({
       >
         <div>
           <h3 className="font-bold text-lg">מה העדה שלכם?</h3>
-          <p className="text-xs text-muted">אפשר לכתוב חופשי (למשל: מרוקאי/תימני/בוכרי/רוסי/מעורב וכו׳)</p>
+          <p className="text-xs text-muted">כתבו חופשי — מרוקאי, תימני, בוכרי, רוסי, מעורב וכו׳</p>
         </div>
 
         <textarea
@@ -248,10 +248,10 @@ function EthnicMusicModal({
 
         <div className="flex gap-2">
           <button type="button" onClick={onSave} className="btn-primary flex-1">
-            שמור
+            שמור והמשיכו
           </button>
           <button type="button" onClick={onClose} className="btn-secondary flex-1">
-            ביטול
+            לא עכשיו
           </button>
         </div>
       </motion.div>

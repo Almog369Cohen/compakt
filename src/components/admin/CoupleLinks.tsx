@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { GuestCalculatorAnswer, QuestionOption } from "@/lib/types";
+import { computeMusicalReadiness } from "@/lib/musicalReadiness";
 
 interface CoupleEvent {
   id: string;
@@ -699,6 +700,32 @@ export function CoupleLinks() {
   const upcomingEvents = useMemo(() => sortedEvents.filter((event) => !isPastEvent(event.event_date)), [sortedEvents]);
   const pastEvents = useMemo(() => sortedEvents.filter((event) => isPastEvent(event.event_date)).reverse(), [sortedEvents]);
 
+  const crossEventInsights = useMemo(() => {
+    if (events.length < 2) return null;
+    const total = events.length;
+    const completed = events.filter((e) => e.isComplete).length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const avgSwipes = total > 0 ? Math.round(events.reduce((sum, e) => sum + e.swipeCount, 0) / total) : 0;
+    const avgAnswers = total > 0 ? Math.round(events.reduce((sum, e) => sum + e.answerCount, 0) / total) : 0;
+    const stuckCount = events.filter((e) => !e.isComplete && e.current_stage <= 1 && e.answerCount === 0).length;
+
+    const tips: string[] = [];
+    if (completionRate < 50 && total >= 3) {
+      tips.push(`רק ${completionRate}% מהזוגות סיימו את השאלון — שקלו לשלוח תזכורות`);
+    }
+    if (avgSwipes < 5 && total >= 3) {
+      tips.push(`ממוצע ${avgSwipes} סוויפים לזוג — אולי כדאי לבדוק את בחירת השירים`);
+    }
+    if (stuckCount > 0) {
+      tips.push(`${stuckCount} זוגות תקועים בהתחלה — שלחו להם תזכורת`);
+    }
+    if (completionRate >= 70) {
+      tips.push("שיעור השלמה גבוה — הזוגות שלך מגיבים טוב לתהליך!");
+    }
+
+    return { total, completed, completionRate, avgSwipes, avgAnswers, stuckCount, tips };
+  }, [events]);
+
   return (
     <div className="space-y-4">
       <div className="rounded-[24px] border border-white/10 bg-[rgba(12,16,24,0.72)] backdrop-blur-xl shadow-[0_16px_36px_rgba(0,0,0,0.16)] p-4 md:p-5">
@@ -724,6 +751,50 @@ export function CoupleLinks() {
           </button>
         </div>
       </div>
+
+      {crossEventInsights && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-4 space-y-3"
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-brand-blue" />
+            <h3 className="text-sm font-bold">תמונת מצב כוללת</h3>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+            <div className="glass-card p-2 rounded-lg">
+              <p className="text-lg font-bold text-brand-blue">{crossEventInsights.total}</p>
+              <p className="text-[11px] text-muted">אירועים</p>
+            </div>
+            <div className="glass-card p-2 rounded-lg">
+              <p className="text-lg font-bold text-brand-blue">{crossEventInsights.completed}</p>
+              <p className="text-[11px] text-muted">הושלמו</p>
+            </div>
+            <div className="glass-card p-2 rounded-lg">
+              <p className="text-lg font-bold" style={{ color: crossEventInsights.completionRate >= 60 ? "var(--accent-secondary)" : "var(--accent-gold)" }}>{crossEventInsights.completionRate}%</p>
+              <p className="text-[11px] text-muted">השלמה</p>
+            </div>
+            <div className="glass-card p-2 rounded-lg">
+              <p className="text-lg font-bold text-brand-blue">{crossEventInsights.avgSwipes}</p>
+              <p className="text-[11px] text-muted">ממוצע סוויפים</p>
+            </div>
+            <div className="glass-card p-2 rounded-lg">
+              <p className="text-lg font-bold text-brand-blue">{crossEventInsights.avgAnswers}</p>
+              <p className="text-[11px] text-muted">ממוצע תשובות</p>
+            </div>
+          </div>
+          {crossEventInsights.tips.length > 0 && (
+            <div className="space-y-1 pt-1 border-t border-white/8">
+              {crossEventInsights.tips.map((tip, i) => (
+                <p key={i} className="text-[11px] text-secondary leading-5">
+                  → {tip}
+                </p>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Create Form */}
       <AnimatePresence>
@@ -849,6 +920,18 @@ export function CoupleLinks() {
             const questionMap = detail ? new Map(detail.questions.map((question) => [question.id, question])) : new Map<string, DetailEventData["questions"][number]>();
             const songMap = detail ? new Map(detail.songs.map((song) => [song.id, song])) : new Map<string, DetailEventData["songs"][number]>();
             const snapshot = buildCoupleSnapshot({ detail, questionMap, songMap });
+            const readiness = computeMusicalReadiness({
+              answerCount: ev.answerCount,
+              swipeCount: ev.swipeCount,
+              requestCount: ev.requestCount || 0,
+              superLikeCount: detail ? detail.swipes.filter((s) => s.action === "super_like").length : 0,
+              likeCount: detail ? detail.swipes.filter((s) => s.action === "like").length : 0,
+              dislikeCount: detail ? detail.swipes.filter((s) => s.action === "dislike").length : 0,
+              currentStage: ev.current_stage,
+              hasDate: !!ev.event_date,
+              hasVenue: !!ev.venue,
+              hasMomentRequests: detail ? detail.requests.some((r) => r.request_type === "special_moment") : false,
+            });
             const swipeFilter = swipeFilterByEvent[ev.id] || "all";
             const filteredSwipes = detail ? detail.swipes.filter((swipe) => swipeFilter === "all" ? true : swipe.action === swipeFilter) : [];
             const crm = crmByEvent[ev.id] || {
@@ -887,6 +970,12 @@ export function CoupleLinks() {
                         {ev.token && <span className="text-[11px] font-mono text-brand-blue">#{ev.token}</span>}
                         <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.03] text-muted">
                           {STAGE_LABELS[ev.current_stage] || `שלב ${ev.current_stage}`}
+                        </span>
+                        <span
+                          className="text-[11px] px-2 py-0.5 rounded-full border"
+                          style={{ borderColor: `${readiness.color}33`, color: readiness.color, background: `${readiness.color}0d` }}
+                        >
+                          {readiness.totalScore}% {readiness.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted mt-1">
@@ -940,6 +1029,36 @@ export function CoupleLinks() {
                           </div>
 
                           <div className="space-y-2">
+                            <div className="glass-card p-3 space-y-2.5">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-semibold">מוכנות מוזיקלית</p>
+                                <span className="text-xs font-bold" style={{ color: readiness.color }}>{readiness.totalScore}%</span>
+                              </div>
+                              <div className="h-2 w-full overflow-hidden rounded-full bg-white/8">
+                                <div
+                                  className="h-full rounded-full transition-all duration-500"
+                                  style={{ width: `${readiness.totalScore}%`, background: readiness.color }}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                {readiness.dimensions.map((dim) => (
+                                  <div key={dim.label} className="flex items-center gap-2">
+                                    <span className="text-[11px] text-muted w-20 shrink-0 text-right">{dim.label}</span>
+                                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/8">
+                                      <div
+                                        className="h-full rounded-full transition-all duration-500"
+                                        style={{
+                                          width: `${dim.maxScore > 0 ? (dim.score / dim.maxScore) * 100 : 0}%`,
+                                          background: dim.status === "empty" ? "var(--accent-danger)" : dim.status === "partial" ? "var(--accent-gold)" : "var(--accent-secondary)",
+                                        }}
+                                      />
+                                    </div>
+                                    <span className="text-[10px] text-muted w-28 shrink-0">{dim.hint}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
                             <div className="flex items-center gap-2 glass-card p-2 rounded-lg">
                               <code className="text-xs text-brand-blue flex-1 truncate" dir="ltr">{getLink(ev.magic_token)}</code>
                               <button onClick={() => copyLink(ev.magic_token, ev.id)} className="p-1.5 rounded-lg hover:bg-brand-blue/10 transition-colors">
@@ -1040,11 +1159,42 @@ export function CoupleLinks() {
                                 )}
                               </div>
                               <div className="glass-card p-3 space-y-2">
-                                <p className="text-sm font-semibold">סקירה חכמה</p>
-                                <p className="text-xs text-muted">שאלון: {ev.answerCount > 0 ? "יש תוכן" : "עדיין ריק"}</p>
-                                <p className="text-xs text-muted">שירים: {ev.swipeCount > 0 ? "יש בחירות" : "עוד לא התחילו"}</p>
-                                <p className="text-xs text-muted">בקשות: {(ev.requestCount || 0) > 0 ? "יש בקשות מיוחדות" : "אין בקשות עדיין"}</p>
-                                <p className="text-xs text-muted">השלב הבא: {ev.current_stage <= 1 ? "לעודד מילוי שאלון" : ev.current_stage === 2 ? "לעבור על בחירות שירים" : ev.current_stage === 3 ? "לסגור בקשות מיוחדות" : "מוכן לסיכום אחרון"}</p>
+                                <p className="text-sm font-semibold">מה צריך לעשות עכשיו?</p>
+                                {(() => {
+                                  const actions: { text: string; urgent: boolean }[] = [];
+                                  if (ev.current_stage <= 1 && ev.answerCount === 0) {
+                                    actions.push({ text: "הזוג עוד לא התחילו — שלחו להם תזכורת בוואטסאפ עם הלינק", urgent: true });
+                                  } else if (ev.current_stage === 1 && ev.answerCount > 0) {
+                                    actions.push({ text: `הזוג ענו על ${ev.answerCount} שאלות ועדיין בשאלון — אפשר לעודד אותם להמשיך`, urgent: false });
+                                  }
+                                  if (ev.current_stage === 2 && ev.swipeCount < 5) {
+                                    actions.push({ text: "התחילו לבחור שירים אבל עדיין מעט — שווה לתת להם זמן", urgent: false });
+                                  }
+                                  if (ev.swipeCount >= 10 && ev.current_stage >= 2) {
+                                    actions.push({ text: `יש ${ev.swipeCount} בחירות שירים — עברו על לשונית 'שירים' לראות מה אהבו ומה פסלו`, urgent: false });
+                                  }
+                                  if ((ev.requestCount || 0) > 0) {
+                                    actions.push({ text: `יש ${ev.requestCount} בקשות מיוחדות — בדקו שאין דברים דחופים`, urgent: true });
+                                  }
+                                  if (ev.current_stage >= 4) {
+                                    actions.push({ text: "הזוג סיימו הכול — הגיע הזמן לתאם שיחת סגירה ולהכין playlist סופי", urgent: true });
+                                  }
+                                  if (!ev.event_date) {
+                                    actions.push({ text: "אין תאריך אירוע — עדכנו כדי לקבל תזכורות בזמן", urgent: false });
+                                  }
+                                  if (actions.length === 0) {
+                                    actions.push({ text: "הכול מתקדם כרגיל, אין פעולות דחופות", urgent: false });
+                                  }
+                                  return actions.map((action, i) => (
+                                    <div
+                                      key={i}
+                                      className={`flex items-start gap-2 rounded-xl border px-2.5 py-2 text-xs leading-5 ${action.urgent ? "border-[var(--accent-gold)]/20 bg-[rgba(245,197,66,0.06)]" : "border-glass"}`}
+                                    >
+                                      <span className="shrink-0 mt-0.5">{action.urgent ? "⚡" : "→"}</span>
+                                      <span className={action.urgent ? "text-foreground" : "text-secondary"}>{action.text}</span>
+                                    </div>
+                                  ));
+                                })()}
                               </div>
                             </div>
 

@@ -18,6 +18,11 @@ export function StageNav() {
   return (
     <div className="rounded-[20px] border border-white/10 bg-black/25 px-2.5 py-2 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.16)] sm:px-3">
       <div className="flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
+        {event?.eventNumber && (
+          <span className="text-[10px] font-mono text-brand-blue/70 px-1.5 py-0.5 rounded-md bg-brand-blue/[0.06] border border-brand-blue/10 flex-shrink-0 hidden sm:inline" dir="ltr">
+            #{event.eventNumber}
+          </span>
+        )}
         {stages.map((stage, i) => {
           const isCurrent = currentStage === stage.id;
           const isDone = currentStage > stage.id;

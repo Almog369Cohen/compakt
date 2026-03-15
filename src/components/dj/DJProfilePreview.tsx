@@ -13,16 +13,12 @@ import {
   ChevronRight,
   Link2,
   Maximize2,
-  Sparkles,
   Play,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Lightbox } from "@/components/ui/Lightbox";
 import type { ProfileState } from "@/stores/profileStore";
-import {
-  DJ_PROFILE_STYLE_OPTIONS,
-  resolveDJProfileStyleTokens,
-} from "@/lib/djProfileStyles";
+import { resolveDJProfileStyleTokens } from "@/lib/djProfileStyles";
 
 const socialLinks = [
   { key: "instagramUrl" as const, label: "Instagram", icon: <Instagram className="w-5 h-5" />, color: "#E1306C" },
@@ -118,6 +114,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [eventNumber, setEventNumber] = useState("");
 
   const brandColors = profile.brandColors || { primary: profile.accentColor || "#059cc0", secondary: "#03b28c", accent: profile.accentColor || "#059cc0", surface: "#1f2937" };
   const primaryColor = brandColors.primary || "#059cc0";
@@ -125,7 +122,6 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
   const accentColor = brandColors.accent || primaryColor;
   const surfaceColor = brandColors.surface || "#1f2937";
   const styleTokens = resolveDJProfileStyleTokens(profile.profileStyle);
-  const styleMeta = DJ_PROFILE_STYLE_OPTIONS.find((option) => option.value === profile.profileStyle);
   const logoScale = Math.min(100, Math.max(50, profile.logoScale ?? 74));
 
   const isGlassPremium = profile.profileStyle === "glass_premium";
@@ -181,27 +177,99 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
   };
 
   const renderPrimaryActions = () => (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className={`${styleTokens.sectionCardClass} ${isEditorialMono ? "p-0 border-0 bg-transparent backdrop-blur-none" : "p-3 sm:p-4"}`}>
-      <div className={`flex flex-col gap-2 ${styleTokens.ctaVariant === "stacked" ? "" : "sm:flex-row"}`}>
-        {mode === "public" ? (
-          <>
-            <a href={`/?dj=${effectiveSlug}`} className={`flex-1 flex items-center justify-center gap-2 py-3.5 font-bold text-sm text-white transition-opacity hover:opacity-90 ${isEditorialMono ? "rounded-full" : "rounded-2xl"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.08 }}
+      className={`${styleTokens.sectionCardClass} overflow-hidden ${isEditorialMono ? "p-0 border-white/8 bg-white/[0.02]" : "p-0"}`}
+    >
+      <div
+        className="relative overflow-hidden"
+        style={{
+          background: isEditorialMono
+            ? "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))"
+            : `radial-gradient(circle at top right, ${primaryColor}20, transparent 35%), linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))`,
+        }}
+      >
+        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(135deg,rgba(255,255,255,0.06),transparent_30%,transparent_70%,rgba(255,255,255,0.03))]" />
+        <div className="relative p-4 sm:p-5">
+          {mode === "public" ? (
+            <div className="space-y-4">
+              <div className="space-y-2 text-right">
+                <h3 className="text-[22px] sm:text-2xl font-semibold tracking-[-0.04em] text-white leading-[1.05]">
+                  מתחילים מכאן
+                </h3>
+                <p className="text-[13px] sm:text-sm text-white/64 leading-6 max-w-[28ch]">
+                  פרופיל, פתיחה, והמשך חלק לשאלון.
+                </p>
+              </div>
+
+              <div className="rounded-[24px] border border-white/8 bg-black/15 p-2 backdrop-blur-sm">
+                <div className="grid gap-2 sm:grid-cols-[1.2fr_0.9fr_auto]">
+                  <a
+                    href={`/?dj=${effectiveSlug}`}
+                    className="group relative flex min-h-[54px] items-center justify-between overflow-hidden rounded-[18px] px-4 py-3 text-right text-white transition-all duration-200 hover:scale-[1.01] hover:opacity-95"
+                    style={{
+                      background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                      boxShadow: `0 14px 36px ${primaryColor}20`,
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.16),transparent_38%,rgba(0,0,0,0.08))]" />
+                    <div className="relative z-10 flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-black/15 ring-1 ring-white/10">
+                        <Music className="h-4 w-4 shrink-0" />
+                      </div>
+                      <span className="text-sm font-semibold tracking-[-0.02em]">נתחיל עם ה-DJ הזה</span>
+                    </div>
+                    <span className="relative z-10 text-[11px] text-white/70">חדש</span>
+                  </a>
+
+                  <div className="flex min-h-[54px] items-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-2">
+                    <input
+                      type="text"
+                      value={eventNumber}
+                      onChange={(e) => setEventNumber(e.target.value)}
+                      placeholder="מספר אירוע"
+                      className="flex-1 bg-transparent text-sm font-medium text-white/90 placeholder:text-white/40 focus:outline-none"
+                      dir="ltr"
+                    />
+                    <a
+                      href={eventNumber.trim() ? `/dj/${effectiveSlug}?resume=1&event=${encodeURIComponent(eventNumber.trim())}` : `/dj/${effectiveSlug}?resume=1`}
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${eventNumber.trim()
+                          ? "bg-white/[0.12] text-white/90 hover:bg-white/[0.18]"
+                          : "bg-white/[0.05] text-white/40 pointer-events-none"
+                        }`}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+
+                  <button
+                    onClick={handleShare}
+                    className="flex min-h-[54px] items-center justify-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium transition-colors duration-200 hover:bg-white/[0.06]"
+                    style={{ color: accentColor }}
+                    type="button"
+                    title={copied ? "הועתק" : "שתפו / העתיקו"}
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                    <span>{copied ? "הועתק" : "שיתוף"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="flex items-center justify-between gap-3 rounded-[24px] px-5 py-4 text-white opacity-85"
+              style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+            >
               <Music className="w-5 h-5" />
-              התחילו עם ה-DJ הזה
-            </a>
-            <a href={`/dj/${effectiveSlug}?resume=1`} className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-secondary transition-colors hover:text-white ${isEditorialMono ? "rounded-full border border-white/8 bg-white/[0.02]" : "rounded-2xl border border-white/10 bg-white/[0.04]"}`}>
-              כבר התחלתם? חזרו עם מספר אירוע
-            </a>
-          </>
-        ) : (
-          <div className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm text-white opacity-80 cursor-default ${isEditorialMono ? "rounded-full" : "rounded-xl"}`} style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
-            <Music className="w-5 h-5" />
-            התחילו את המסע
-          </div>
-        )}
-        <button onClick={handleShare} className={`px-4 py-3 text-sm font-medium transition-all ${isEditorialMono ? "rounded-full border border-white/10" : "rounded-xl border"}`} style={{ borderColor: `${accentColor}55`, color: accentColor }} type="button" title={copied ? "הועתק" : "שתפו / העתיקו"} disabled={mode === "preview"}>
-          {copied ? "הועתק" : "שיתוף"}
-        </button>
+              <div className="text-right">
+                <p className="text-[11px] text-white/70 mb-1">CTA ראשי</p>
+                <p className="text-base font-bold">נתחיל את המסע</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -321,14 +389,10 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
       </motion.div>
     ) : null;
 
-  const renderVideoRail = (title: string, items: VisibleLink[], compact = false) =>
+  const renderVideoRail = (items: VisibleLink[], compact = false) =>
     items.length > 0 ? (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }} className={`${styleTokens.sectionCardClass} ${compact ? "p-4 space-y-3" : "p-4 sm:p-5 space-y-3"}`}>
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-bold">{title}</h3>
-          <div className={`px-3 py-1.5 rounded-2xl text-[11px] ${styleTokens.highlightPillClass}`}>{items.length} קטעים</div>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }} className={`${styleTokens.sectionCardClass} ${compact ? "p-3" : "p-3 sm:p-4"}`}>
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
           {items.map((link, index) => renderVideoCard(link, index))}
         </div>
       </motion.div>
@@ -336,11 +400,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
 
   const renderGallery = () =>
     galleryPhotos.length > 0 ? (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className={`${styleTokens.sectionCardClass} p-4 sm:p-5 space-y-4`}>
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-bold">תיק עבודות</h3>
-          <div className={`px-3 py-1.5 rounded-2xl text-[11px] ${styleTokens.highlightPillClass}`}>{galleryPhotos.length} תמונות</div>
-        </div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className={`${styleTokens.sectionCardClass} p-3 sm:p-4`}>
         <div className={`relative ${isEditorialMono ? "aspect-[4/5]" : "aspect-[16/10]"} rounded-[24px] overflow-hidden bg-black/20`}>
           <img src={galleryPhotos[galleryIndex % galleryPhotos.length]} alt={`gallery ${galleryIndex + 1}`} className="w-full h-full object-cover cursor-pointer transition-transform hover:scale-[1.02]" onClick={() => setLightboxOpen(true)} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10" />
@@ -421,7 +481,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
     socials: renderSocials(),
     links: renderUtilityLinks(),
     featuredVideo: renderFeaturedVideo(),
-    videoRail: renderVideoRail(isEditorialMono ? "קטעי וידאו" : "קטעי וידאו", featuredVideo ? secondaryVideos : videoLinks, isEditorialMono),
+    videoRail: renderVideoRail(featuredVideo ? secondaryVideos : videoLinks, isEditorialMono),
     gallery: renderGallery(),
     reviews: renderReviews(),
   };
@@ -443,12 +503,7 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
                   <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${primaryColor}66, ${secondaryColor}33 55%, ${surfaceColor})` }} />
                 )}
                 <div className={`relative z-10 p-5 flex flex-col ${isEditorialMono ? "justify-between" : "justify-end"} h-full`}>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] ${styleTokens.highlightPillClass}`}>
-                      <Sparkles className="w-3 h-3" />
-                      {styleMeta?.shortName ?? styleMeta?.label ?? "Style"}
-                    </span>
-                  </div>
+                  <div className="flex items-center justify-between gap-3" />
                   {isEditorialMono ? (
                     <div className="space-y-5">
                       <div className="flex items-center gap-3">
@@ -462,12 +517,12 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="text-[11px] uppercase tracking-[0.28em] text-white/55 mb-2">{heroMeta.join(" · ") || "EDITORIAL PROFILE"}</div>
-                          <h1 className="text-3xl sm:text-4xl font-bold leading-tight text-white text-balance">{profile.businessName || "שם העסק שלך"}</h1>
-                          {profile.tagline && <p className="text-base text-white/82 mt-2 leading-7 max-w-[18rem]">{profile.tagline}</p>}
+                          {heroMeta.length > 0 && <div className="mb-3 text-[10px] uppercase tracking-[0.32em] text-white/45">{heroMeta.join(" · ")}</div>}
+                          <h1 className="text-3xl sm:text-[40px] font-semibold leading-[0.95] tracking-[-0.05em] text-white text-balance">{profile.businessName || "שם העסק שלך"}</h1>
+                          {profile.tagline && <p className="mt-3 text-[15px] text-white/78 leading-7 max-w-[18rem]">{profile.tagline}</p>}
                         </div>
                       </div>
-                      {profile.bio && <p className="text-sm text-white/72 leading-7 max-w-[18rem]">{profile.bio}</p>}
+                      {profile.bio && <p className="text-[14px] text-white/66 leading-7 max-w-[18rem]">{profile.bio}</p>}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -482,12 +537,18 @@ export function DJProfilePreview({ profile, mode, slug }: DJProfilePreviewProps)
                           </div>
                         )}
                         <div className="min-w-0">
-                          {heroMeta.length > 0 && <div className="text-[11px] uppercase tracking-[0.28em] text-white/55 mb-2">{heroMeta.join(" · ")}</div>}
-                          <h1 className={`${isEditorialMono ? "text-xl" : "text-2xl"} font-bold leading-tight text-white text-balance`}>{profile.businessName || "שם העסק שלך"}</h1>
-                          {profile.tagline && <p className={`text-white/80 mt-1 ${isEditorialMono ? "text-xs" : "text-sm"}`}>{profile.tagline}</p>}
+                          {heroMeta.length > 0 && <div className="mb-3 text-[10px] uppercase tracking-[0.3em] text-white/48">{heroMeta.join(" · ")}</div>}
+                          <h1 className={`${isEditorialMono ? "text-xl" : "text-[32px] sm:text-[38px]"} font-semibold leading-[0.96] tracking-[-0.055em] text-white text-balance`}>
+                            {profile.businessName || "שם העסק שלך"}
+                          </h1>
+                          {profile.tagline && <p className={`mt-3 text-white/76 leading-7 ${isEditorialMono ? "text-xs" : "text-[15px] max-w-[26ch]"}`}>{profile.tagline}</p>}
                         </div>
                       </div>
-                      {isEditorialMono && profile.bio && <p className="max-w-[15rem] text-sm leading-7 text-white/76">{profile.bio}</p>}
+                      {profile.bio && (
+                        <p className={`${isEditorialMono ? "max-w-[15rem] text-sm leading-7 text-white/76" : "max-w-[32ch] text-[14px] leading-7 text-white/62"}`}>
+                          {profile.bio}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

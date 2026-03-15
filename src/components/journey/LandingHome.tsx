@@ -12,24 +12,24 @@ type LandingHomeProps = {
 const benefits = [
   {
     icon: <Sparkles className="h-5 w-5" />,
-    title: "חוויה ברורה ושקטה לזוג",
-    body: "לא טופס כבד, אלא מסלול קצר, אלגנטי ומדויק שמרגיש טבעי מהצעד הראשון.",
+    title: "בונים את הוייב לפני האירוע",
+    body: "כמה דקות קצרות שעוזרות לדייק את הכיוון המוזיקלי — בלי טפסים כבדים, בלי בלגן.",
   },
   {
     icon: <Disc3 className="h-5 w-5" />,
-    title: "קו מוזיקלי מדויק יותר",
-    body: "שירים, אווירה, בקשות ורגעים חשובים נאספים למקום אחד מסודר.",
+    title: "כל הבחירות במקום אחד",
+    body: "שירי חובה, סגנון, בקשות מיוחדות ורגעים חשובים — הכול זורם מסודר ל-DJ.",
   },
   {
     icon: <ShieldCheck className="h-5 w-5" />,
-    title: "אפשר להמשיך בכל שלב",
-    body: "עם מספר אירוע ומייל אפשר לחזור בדיוק לנקודה שבה עצרתם.",
+    title: "חוזרים מתי שרוצים",
+    body: "עם מספר אירוע ומייל אפשר לחזור בדיוק לאיפה שעצרתם.",
   },
 ];
 
 const trustPoints = [
   "פתיחת אירוע תוך פחות מדקה",
-  "חזרה פשוטה עם מספר אירוע",
+  "פחות בלגן, יותר דיוק",
   "כל ההעדפות במקום אחד",
 ];
 
@@ -59,15 +59,15 @@ export function LandingHome({ onStart, onResume }: LandingHomeProps) {
             >
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.025] px-3 py-1.5 text-[11px] font-medium text-secondary">
                 <Sparkles className="h-3.5 w-3.5 text-brand-blue" />
-                מערכת בריף מוזיקלי לאירועים
+                בריף מוזיקלי לאירועים
               </div>
 
               <h1 className="mt-6 max-w-[12ch] text-balance text-[38px] font-bold leading-[1.04] tracking-[-0.05em] sm:text-[56px]">
-                מתכננים את המוזיקה של האירוע בצורה מדויקת יותר
+                הופכים העדפות מוזיקליות להחלטות ברורות
               </h1>
 
               <p className="mt-6 max-w-[34rem] text-[15px] leading-7 text-secondary sm:text-[17px] sm:leading-8">
-                פותחים אירוע, בוחרים כיוון מוזיקלי, מסמנים שירים חשובים, אוספים בקשות, ונותנים לדיג׳יי תמונה מסודרת, רגועה ומדויקת של הערב שאתם רוצים לבנות.
+                פותחים אירוע, בוחרים כיוון מוזיקלי, מסמנים שירי חובה, אוספים בקשות ורגעים חשובים — ונותנים לדיג׳יי תמונה מדויקת ומסודרת של הערב שאתם רוצים.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -75,14 +75,14 @@ export function LandingHome({ onStart, onResume }: LandingHomeProps) {
                   onClick={onStart}
                   className="inline-flex items-center justify-center gap-2 rounded-[18px] bg-white px-6 py-4 text-sm font-bold text-black transition-transform hover:scale-[1.01] active:scale-[0.99]"
                 >
-                  פתחו אירוע
+                  נתחיל
                   <ArrowLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={onResume}
                   className="inline-flex items-center justify-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.03] px-6 py-4 text-sm font-semibold text-secondary transition-colors hover:border-white/20 hover:text-white"
                 >
-                  המשך אירוע קיים
+                  יש לי מספר אירוע
                 </button>
               </div>
 
@@ -110,7 +110,7 @@ export function LandingHome({ onStart, onResume }: LandingHomeProps) {
                 <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5 sm:p-6">
                   <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] font-medium text-secondary">
                     <Sparkles className="h-3.5 w-3.5 text-brand-blue" />
-                    מה מקבלים בתוך התהליך
+                    איך זה עובד
                   </div>
 
                   <div className="space-y-3.5">
