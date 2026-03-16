@@ -1,12 +1,15 @@
 "use client";
 
-import { Fragment, useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion } from "framer-motion";
-import { LogOut, Users, Activity, Shield, RefreshCw, Save, History, ChevronDown, ChevronUp, ChevronLeft } from "lucide-react";
+import { LogOut, Users, Activity, Shield, RefreshCw, Save, History, ChevronDown, ChevronUp, ChevronLeft, Download, BarChart3, Calendar } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { FEATURE_KEYS, PLAN_KEYS, ROLE_KEYS, type FeatureKey, type PlanKey, type RoleKey } from "@/lib/access";
+import { UserFilters, type UserFiltersState } from "@/components/hq/UserFilters";
+import { BulkActions, type BulkUpdateData } from "@/components/hq/BulkActions";
+import { DashboardStats } from "@/components/hq/Analytics/DashboardStats";
 
 interface ProfileRow {
   id: string;
@@ -58,7 +61,7 @@ interface AccessResult {
   } | null;
 }
 
-type HQTab = "users" | "health" | "audit";
+type HQTab = "users" | "analytics" | "events" | "health" | "audit";
 
 type ProfileDraft = {
   role: RoleKey;
@@ -105,6 +108,15 @@ export default function HQPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, ProfileDraft>>({});
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filters, setFilters] = useState<UserFiltersState>({
+    search: "",
+    role: "",
+    plan: "",
+    isActive: "",
+    dateFrom: "",
+    dateTo: "",
+  });
 
   useEffect(() => {
     if (!clerkEnabled) {
@@ -230,6 +242,116 @@ export default function HQPage() {
     }
   };
 
+  // Filter profiles based on search and filters
+  const filteredProfiles = useMemo(() => {
+    return profiles.filter((p) => {
+      // Search filter
+      if (filters.search) {
+        const search = filters.search.toLowerCase();
+        const matchesSearch =
+          p.business_name?.toLowerCase().includes(search) ||
+          p.email?.toLowerCase().includes(search) ||
+          p.dj_slug?.toLowerCase().includes(search) ||
+          p.user_id?.toLowerCase().includes(search);
+        if (!matchesSearch) return false;
+      }
+
+      // Role filter
+      if (filters.role && p.role !== filters.role) return false;
+
+      // Plan filter
+      if (filters.plan && p.plan !== filters.plan) return false;
+
+      // Active status filter
+      if (filters.isActive !== "") {
+        const isActive = filters.isActive === "true";
+        if (p.is_active !== isActive) return false;
+      }
+
+      // Date range filter
+      if (filters.dateFrom) {
+        const createdDate = new Date(p.created_at);
+        const fromDate = new Date(filters.dateFrom);
+        if (createdDate < fromDate) return false;
+      }
+      if (filters.dateTo) {
+        const createdDate = new Date(p.created_at);
+        const toDate = new Date(filters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (createdDate > toDate) return false;
+      }
+
+      return true;
+    });
+  }, [profiles, filters]);
+
+  // Bulk actions handlers
+  const handleSelectAll = () => {
+    setSelectedIds(new Set(filteredProfiles.map((p) => p.id)));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkUpdate = async (updates: BulkUpdateData) => {
+    if (selectedIds.size === 0) return;
+
+    setError(null);
+    try {
+      const res = await fetch("/api/hq/users/bulk", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profileIds: Array.from(selectedIds),
+          updates,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Bulk update failed");
+
+      await Promise.all([loadProfiles(), loadAudit()]);
+      setSelectedIds(new Set());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bulk update failed");
+      throw e;
+    }
+  };
+
+  // Export to CSV
+  const handleExportCSV = () => {
+    const headers = ["Business Name", "Email", "Slug", "Role", "Plan", "Active", "Created"];
+    const rows = filteredProfiles.map((p) => [
+      p.business_name || "",
+      p.email || "",
+      p.dj_slug || "",
+      p.role,
+      p.plan,
+      p.is_active ? "Yes" : "No",
+      new Date(p.created_at).toLocaleDateString("he-IL"),
+    ]);
+
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `compakt-users-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+  };
+
   if (!isAuthenticated || !role || role === "dj") {
     return (
       <div className="min-h-dvh gradient-hero flex items-center justify-center">
@@ -268,6 +390,26 @@ export default function HQPage() {
                 <span>משתמשים</span>
               </button>
               <button
+                onClick={() => setActiveTab("analytics")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "analytics"
+                  ? "bg-brand-blue text-white"
+                  : "text-secondary hover:text-foreground"
+                  }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>אנליטיקס</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("events")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "events"
+                  ? "bg-brand-blue text-white"
+                  : "text-secondary hover:text-foreground"
+                  }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>אירועים</span>
+              </button>
+              <button
                 onClick={() => setActiveTab("health")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "health"
                   ? "bg-brand-blue text-white"
@@ -275,7 +417,7 @@ export default function HQPage() {
                   }`}
               >
                 <Activity className="w-4 h-4" />
-                <span>בריאות DB</span>
+                <span>בריאות</span>
               </button>
               <button
                 onClick={() => setActiveTab("audit")}
@@ -310,11 +452,38 @@ export default function HQPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h2 className="text-lg font-bold mb-4">כל המשתמשים ({profiles.length})</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">ניהול משתמשים</h2>
+              <button
+                onClick={handleExportCSV}
+                className="btn-primary text-sm px-3 py-1.5 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                ייצוא CSV
+              </button>
+            </div>
+
+            <UserFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              totalCount={profiles.length}
+              filteredCount={filteredProfiles.length}
+            />
+
+            <BulkActions
+              selectedIds={selectedIds}
+              totalCount={filteredProfiles.length}
+              onSelectAll={handleSelectAll}
+              onDeselectAll={handleDeselectAll}
+              onBulkUpdate={handleBulkUpdate}
+              canManageRoles={access?.capabilities.canManageFeatureOverrides ?? false}
+            />
+
             <div className="glass-card overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-glass text-right">
+                    <th className="px-4 py-3 w-12"></th>
                     <th className="px-4 py-3 font-medium text-muted">שם עסק</th>
                     <th className="px-4 py-3 font-medium text-muted">Role</th>
                     <th className="px-4 py-3 font-medium text-muted">Plan</th>
@@ -324,9 +493,17 @@ export default function HQPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {profiles.map((p) => (
+                  {filteredProfiles.map((p) => (
                     <Fragment key={p.id}>
                       <tr key={p.id} className="border-b border-glass/50 hover:bg-white/5 transition-colors">
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(p.id)}
+                            onChange={() => toggleSelection(p.id)}
+                            className="w-4 h-4 rounded border-glass"
+                          />
+                        </td>
                         <td className="px-4 py-3">
                           <div className="font-medium">{p.business_name || "—"}</div>
                           <div className="text-[11px] text-muted font-mono">{p.dj_slug || "—"}</div>
@@ -429,15 +606,37 @@ export default function HQPage() {
                       )}
                     </Fragment>
                   ))}
-                  {profiles.length === 0 && (
+                  {filteredProfiles.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-muted">
-                        אין משתמשים רשומים
+                      <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                        {profiles.length === 0 ? "אין משתמשים רשומים" : "לא נמצאו תוצאות לסינון"}
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
+            </div>
+          </motion.div>
+        ) : activeTab === "analytics" ? (
+          <motion.div
+            key="analytics"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h2 className="text-lg font-bold mb-4">אנליטיקס ודשבורד</h2>
+            <DashboardStats />
+          </motion.div>
+        ) : activeTab === "events" ? (
+          <motion.div
+            key="events"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h2 className="text-lg font-bold mb-4">ניהול אירועי זוגות</h2>
+            <div className="glass-card p-8 text-center text-muted">
+              <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">טאב ניהול אירועים בפיתוח...</p>
+              <p className="text-xs mt-2">כאן יוצגו כל האירועים של הזוגות עם אפשרות צפייה, סינון וניהול</p>
             </div>
           </motion.div>
         ) : activeTab === "health" ? (
