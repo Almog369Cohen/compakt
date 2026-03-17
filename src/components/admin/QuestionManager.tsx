@@ -89,7 +89,7 @@ function mapQuestionToState(question: Question): EditorState {
       : [createOption("", ""), createOption("", "")],
     sliderMin: question.sliderMin ?? 1,
     sliderMax: question.sliderMax ?? 5,
-    sliderLabels: question.sliderLabels?.length ? question.sliderLabels : ["רגוע", "זורם", "מקפיץ", "אש", "פסטיבל"],
+    sliderLabels: question.sliderLabels?.length ? question.sliderLabels : ["calm", "flowing", "bouncy", "fire", "festival"],
     isActive: question.isActive,
   };
 }
@@ -136,6 +136,31 @@ export function QuestionManager() {
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [questionMutationError, setQuestionMutationError] = useState<string | null>(null);
 
+  const questionTypes = useMemo(() => [
+    { value: "single_select" as QuestionType, label: t("questions.types.single_select"), description: t("questions.types.single_select_desc") },
+    { value: "multi_select" as QuestionType, label: t("questions.types.multi_select"), description: t("questions.types.multi_select_desc") },
+    { value: "slider" as QuestionType, label: t("questions.types.slider"), description: t("questions.types.slider_desc") },
+    { value: "text" as QuestionType, label: t("questions.types.text"), description: t("questions.types.text_desc") },
+  ], [t]);
+
+  const eventTypes = useMemo(() => [
+    { value: "wedding" as EventType, label: t("questions.eventTypes.wedding") },
+    { value: "bar_mitzvah" as EventType, label: t("questions.eventTypes.bar_mitzvah") },
+    { value: "private" as EventType, label: t("questions.eventTypes.private") },
+    { value: "corporate" as EventType, label: t("questions.eventTypes.corporate") },
+  ], [t]);
+
+  const getQuestionTypeMeta = useMemo(() => (value: QuestionType) => {
+    if (value === "guest_calculator") {
+      return {
+        value,
+        label: t("questions.types.guest_calculator"),
+        description: t("questions.types.guest_calculator_desc"),
+      };
+    }
+    return questionTypes.find((type) => type.value === value) ?? questionTypes[0];
+  }, [t, questionTypes]);
+
   const filtered = useMemo(
     () =>
       questions
@@ -172,10 +197,10 @@ export function QuestionManager() {
     setQuestionMutationError(null);
     void addQuestion({
       ...mapStateToQuestion(mapQuestionToState(question)),
-      questionHe: `${question.questionHe} (עותק)`,
+      questionHe: `${question.questionHe}${t("questions.duplicateSuffix")}`,
     }).catch((error) => {
       setQuestionMutationError(
-        error instanceof Error ? error.message : "שכפול השאלה נכשל"
+        error instanceof Error ? error.message : t("questions.errors.duplicateFailed")
       );
     });
   };
@@ -187,12 +212,12 @@ export function QuestionManager() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] text-secondary">
               <HelpCircle className="w-3.5 h-3.5 text-brand-blue" />
-              שאלון לזוגות
+              {t("questions.title")}
             </div>
             <div>
-              <h2 className="text-xl font-bold">בנק השאלות של הזוגות</h2>
+              <h2 className="text-xl font-bold">{t("questions.subtitle")}</h2>
               <p className="text-sm text-secondary mt-1 max-w-3xl leading-6">
-                כאן בונים את השאלון שהזוג יקבל. כדי לעלות לאוויר בצורה חלקה, מומלץ להכין לפחות כמה שאלות ליבה שמכירות אותך עם הסגנון, הקהל והדגשים של האירוע.
+                {t("questions.description")}
               </p>
             </div>
           </div>
@@ -205,7 +230,7 @@ export function QuestionManager() {
             className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
           >
             <Plus className="w-4 h-4" />
-            הוסף שאלה
+            {t("questions.actions.addQuestion")}
           </button>
         </div>
       </div>
@@ -249,14 +274,14 @@ export function QuestionManager() {
                       className={`text-xs px-2 py-0.5 rounded-full ${question.isActive ? "bg-brand-green/10 text-brand-green" : "bg-accent-danger/10 text-accent-danger"
                         }`}
                     >
-                      {question.isActive ? "פעיל" : "מוסתר"}
+                      {question.isActive ? t("questions.status.active") : t("questions.status.hidden")}
                     </span>
                     <span className="text-xs text-muted px-2 py-0.5 rounded-full border border-glass">
                       {typeMeta.label}
                     </span>
                     {isPinnedGuestCalculator && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue">
-                        נעוץ
+                        {t("questions.status.pinned")}
                       </span>
                     )}
                   </div>
@@ -283,7 +308,7 @@ export function QuestionManager() {
                       ))}
                       {question.options.length > 4 && (
                         <span className="text-xs px-2 py-1 rounded-full border border-glass text-muted">
-                          +{question.options.length - 4} אפשרויות
+                          {t("questions.moreOptions", { count: String(question.options.length - 4) })}
                         </span>
                       )}
                     </div>
@@ -303,7 +328,7 @@ export function QuestionManager() {
                     type="button"
                     onClick={() => moveQuestion(question.id, "up")}
                     className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
-                    aria-label="הזז למעלה"
+                    aria-label={t("questions.actions.moveUp")}
                   >
                     <ArrowUp className="w-4 h-4" />
                   </button>
@@ -311,7 +336,7 @@ export function QuestionManager() {
                     type="button"
                     onClick={() => moveQuestion(question.id, "down")}
                     className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
-                    aria-label="הזז למטה"
+                    aria-label={t("questions.actions.moveDown")}
                   >
                     <ArrowDown className="w-4 h-4" />
                   </button>
@@ -323,12 +348,12 @@ export function QuestionManager() {
                         await updateQuestion(question.id, { isActive: !question.isActive });
                       } catch (error) {
                         setQuestionMutationError(
-                          error instanceof Error ? error.message : "עדכון השאלה נכשל"
+                          error instanceof Error ? error.message : t("questions.errors.updateFailed")
                         );
                       }
                     }}
                     className="p-1.5 rounded-lg text-muted hover:text-foreground transition-colors"
-                    aria-label={question.isActive ? "הסתר" : "הצג"}
+                    aria-label={question.isActive ? t("questions.actions.hide") : t("questions.actions.show")}
                   >
                     {question.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </button>
@@ -336,7 +361,7 @@ export function QuestionManager() {
                     type="button"
                     onClick={() => duplicateQuestion(question)}
                     className="p-1.5 rounded-lg text-muted hover:text-brand-blue transition-colors"
-                    aria-label="שכפל"
+                    aria-label={t("questions.actions.duplicate")}
                   >
                     <Copy className="w-4 h-4" />
                   </button>
@@ -347,7 +372,7 @@ export function QuestionManager() {
                       setEditorMode("edit");
                     }}
                     className="p-1.5 rounded-lg text-muted hover:text-brand-blue transition-colors"
-                    aria-label="ערוך"
+                    aria-label={t("questions.actions.edit")}
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
@@ -357,20 +382,20 @@ export function QuestionManager() {
                       if (isPinnedGuestCalculator) {
                         return;
                       }
-                      if (confirm("למחוק את השאלה?")) {
+                      if (confirm(t("questions.actions.deleteConfirm"))) {
                         setQuestionMutationError(null);
                         try {
                           await deleteQuestion(question.id);
                         } catch (error) {
                           setQuestionMutationError(
-                            error instanceof Error ? error.message : "מחיקת השאלה נכשלה"
+                            error instanceof Error ? error.message : t("questions.errors.deleteFailed")
                           );
                         }
                       }
                     }}
                     disabled={isPinnedGuestCalculator}
                     className={`p-1.5 rounded-lg transition-colors ${isPinnedGuestCalculator ? "text-muted/40 cursor-not-allowed" : "text-muted hover:text-accent-danger"}`}
-                    aria-label={isPinnedGuestCalculator ? "אי אפשר למחוק שאלה נעוצה" : "מחק"}
+                    aria-label={isPinnedGuestCalculator ? t("questions.actions.cannotDeletePinned") : t("questions.actions.delete")}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -382,9 +407,9 @@ export function QuestionManager() {
 
         {filtered.length === 0 && (
           <div className="glass-card p-8 text-center text-muted text-sm">
-            <p>אין עדיין שאלות לסוג האירוע הזה</p>
+            <p>{t("questions.empty.noQuestions")}</p>
             <p className="text-xs text-secondary mt-2">
-              התחל מ-5 שאלות בסיסיות על אווירה, קהל, קווים אדומים ורגעים חשובים כדי שיהיה לך שאלון מוכן לשליחה.
+              {t("questions.empty.noQuestionsDetail")}
             </p>
           </div>
         )}
@@ -406,13 +431,13 @@ export function QuestionManager() {
               if (editorMode === "edit" && editingQuestion) {
                 void updateQuestion(editingQuestion.id, payload).catch((error) => {
                   setQuestionMutationError(
-                    error instanceof Error ? error.message : "עדכון השאלה נכשל"
+                    error instanceof Error ? error.message : t("questions.errors.updateFailed")
                   );
                 });
               } else {
                 void addQuestion(payload as Omit<Question, "id" | "sortOrder">).catch((error) => {
                   setQuestionMutationError(
-                    error instanceof Error ? error.message : "יצירת השאלה נכשלה"
+                    error instanceof Error ? error.message : t("questions.errors.createFailed")
                   );
                 });
               }
