@@ -188,6 +188,57 @@
       "questionnaires": "Questionnaires",
       "events": "Events",
       "profile": "Profile"
+    },
+    "loading": {
+      "coupleEnvironment": "Loading your couples environment...",
+      "tasks": "Loading tasks...",
+      "events": "Loading events...",
+      "upcomingCouples": "Loading upcoming couples...",
+      "activity": "Loading activity..."
+    },
+    "empty": {
+      "allGood": "All Good",
+      "allGoodDetail": "Nothing urgent right now — everything's flowing.",
+      "loadEventsFailed": "Failed to load events",
+      "noEventsYet": "No events in schedule yet",
+      "noEventsYetDetail": "Create a new event to start managing your schedule.",
+      "loadCouplesFailed": "Failed to load upcoming couples",
+      "noUpcomingCouplesYet": "No upcoming couples yet",
+      "noUpcomingCouplesYetDetail": "Once couples with upcoming dates enter, they'll appear here.",
+      "loadActivityFailed": "Failed to load couple activity",
+      "noActivityYet": "No activity yet",
+      "noActivityYetDetail": "Once couples start entering, activity will appear here."
+    },
+    "eventCard": {
+      "venueNotSet": "Venue not set",
+      "missing": "Missing:",
+      "noDate": "No date",
+      "today": "Today",
+      "inDays": "in {{days}} days",
+      "ready": "Ready",
+      "needsCheck": "Needs check"
+    },
+    "coupleCard": {
+      "answers": "answers",
+      "songs": "songs",
+      "requests": "requests",
+      "completed": "Completed",
+      "inProgress": "In progress",
+      "venueNotSet": "Venue not set"
+    },
+    "readinessCard": {
+      "ready": "Ready",
+      "missing": "Missing"
+    },
+    "otherSections": {
+      "readinessAndSettings": "Readiness & Settings",
+      "readinessAndSettingsSubtitle": "What's missing to feel ready to work",
+      "upcomingEventsTitle": "Upcoming Events",
+      "upcomingEventsSubtitle": "Closest to your schedule",
+      "upcomingCouplesTitle": "Your Upcoming Couples",
+      "upcomingCouplesSubtitle": "Who needs quick attention before everyone",
+      "recentActivityTitle": "Recent Couple Activity",
+      "recentActivitySubtitle": "Who entered, continued, or finished recently"
     }
   },
   "profile": {

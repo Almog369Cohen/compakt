@@ -188,6 +188,57 @@
       "questionnaires": "שאלונים",
       "events": "אירועים",
       "profile": "פרופיל"
+    },
+    "loading": {
+      "coupleEnvironment": "טוען את סביבת הזוגות שלך...",
+      "tasks": "טוען משימות...",
+      "events": "טוען אירועים...",
+      "upcomingCouples": "טוען זוגות קרובים...",
+      "activity": "טוען פעילות..."
+    },
+    "empty": {
+      "allGood": "הכול בסדר",
+      "allGoodDetail": "אין משהו דחוף כרגע — הכול זורם.",
+      "loadEventsFailed": "לא הצלחנו לטעון אירועים",
+      "noEventsYet": "עוד אין אירועים בלו״ז",
+      "noEventsYetDetail": "צרו אירוע חדש כדי להתחיל לנהל את הלו״ז.",
+      "loadCouplesFailed": "לא הצלחנו לטעון זוגות קרובים",
+      "noUpcomingCouplesYet": "עוד אין זוגות קרובים",
+      "noUpcomingCouplesYetDetail": "ברגע שייכנסו זוגות עם תאריך קרוב, הם יופיעו כאן.",
+      "loadActivityFailed": "לא הצלחנו לטעון פעילות זוגות",
+      "noActivityYet": "עוד אין פעילות",
+      "noActivityYetDetail": "ברגע שזוגות יתחילו להיכנס, הפעילות תופיע כאן."
+    },
+    "eventCard": {
+      "venueNotSet": "מקום לא הוגדר",
+      "missing": "חסר:",
+      "noDate": "ללא תאריך",
+      "today": "היום",
+      "inDays": "עוד {{days}} ימים",
+      "ready": "מוכן",
+      "needsCheck": "צריך בדיקה"
+    },
+    "coupleCard": {
+      "answers": "תשובות",
+      "songs": "שירים",
+      "requests": "בקשות",
+      "completed": "הושלם",
+      "inProgress": "בתהליך",
+      "venueNotSet": "מקום לא הוגדר"
+    },
+    "readinessCard": {
+      "ready": "מוכן",
+      "missing": "חסר"
+    },
+    "otherSections": {
+      "readinessAndSettings": "מוכנות והגדרות",
+      "readinessAndSettingsSubtitle": "מה חסר כדי להרגיש מוכן לעבודה",
+      "upcomingEventsTitle": "אירועים קרובים",
+      "upcomingEventsSubtitle": "הקרובים ביותר ללוח הזמנים שלך",
+      "upcomingCouplesTitle": "הזוגות הקרובים שלך",
+      "upcomingCouplesSubtitle": "מי דורש היכרות מהירה לפני כולם",
+      "recentActivityTitle": "פעילות אחרונה של זוגות",
+      "recentActivitySubtitle": "מי נכנס, המשיך או סיים לאחרונה"
     }
   },
   "profile": {

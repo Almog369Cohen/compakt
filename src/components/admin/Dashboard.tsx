@@ -438,11 +438,11 @@ export function Dashboard() {
           )}
         >
           {!profileId ? (
-            <LoadingState label="טוען את סביבת הזוגות שלך..." />
+            <LoadingState label={t("dashboard.loading.coupleEnvironment")} />
           ) : couplesLoading && dashboardData.attentionItems.length === 0 ? (
-            <LoadingState label="טוען משימות..." />
+            <LoadingState label={t("dashboard.loading.tasks")} />
           ) : dashboardData.attentionItems.length === 0 ? (
-            <EmptyState icon={<CheckCircle2 className="w-5 h-5 text-brand-green" />} title="הכול בסדר" detail="אין משהו דחוף כרגע — הכול זורם." />
+            <EmptyState icon={<CheckCircle2 className="w-5 h-5 text-brand-green" />} title={t("dashboard.empty.allGood")} detail={t("dashboard.empty.allGoodDetail")} />
           ) : (
             <div className="space-y-3">
               {dashboardData.attentionItems.map((item) => (
@@ -470,7 +470,7 @@ export function Dashboard() {
           )}
         </SectionCard>
 
-        <SectionCard title="מוכנות והגדרות" subtitle="מה חסר כדי להרגיש מוכן לעבודה">
+        <SectionCard title={t("dashboard.otherSections.readinessAndSettings")} subtitle={t("dashboard.otherSections.readinessAndSettingsSubtitle")}>
           <div className="space-y-3">
             {dashboardData.readinessItems.map((item) => (
               <button
@@ -485,7 +485,7 @@ export function Dashboard() {
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-sm font-semibold ${item.done ? "border-accent-success/50 bg-accent-success/15 text-accent-success" : "border-dashboard-border bg-white/[0.05] text-muted"}`}>
                     {item.done && <CheckCircle2 className="w-3.5 h-3.5" />}
-                    {item.done ? "מוכן" : "חסר"}
+                    {item.done ? t("dashboard.readinessCard.ready") : t("dashboard.readinessCard.missing")}
                   </span>
                 </div>
               </button>
@@ -495,13 +495,13 @@ export function Dashboard() {
       </div>
 
       <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-5">
-        <SectionCard title="אירועים קרובים" subtitle="הקרובים ביותר ללוח הזמנים שלך">
+        <SectionCard title={t("dashboard.otherSections.upcomingEventsTitle")} subtitle={t("dashboard.otherSections.upcomingEventsSubtitle")}>
           {eventsLoading ? (
-            <LoadingState label="טוען אירועים..." />
+            <LoadingState label={t("dashboard.loading.events")} />
           ) : eventsError ? (
-            <EmptyState icon={<AlertTriangle className="w-5 h-5" style={{ color: "var(--accent-danger)" }} />} title="לא הצלחנו לטעון אירועים" detail={eventsError} />
+            <EmptyState icon={<AlertTriangle className="w-5 h-5" style={{ color: "var(--accent-danger)" }} />} title={t("dashboard.empty.loadEventsFailed")} detail={eventsError} />
           ) : dashboardData.upcomingEvents.length === 0 ? (
-            <EmptyState icon={<Calendar className="w-5 h-5 text-muted" />} title="עוד אין אירועים בלו״ז" detail="צרו אירוע חדש כדי להתחיל לנהל את הלו״ז." />
+            <EmptyState icon={<Calendar className="w-5 h-5 text-muted" />} title={t("dashboard.empty.noEventsYet")} detail={t("dashboard.empty.noEventsYetDetail")} />
           ) : (
             <div className="space-y-3">
               {dashboardData.upcomingEvents.slice(0, 4).map((event) => {
@@ -518,7 +518,7 @@ export function Dashboard() {
                         <p className="text-base font-semibold text-white">{event.name}</p>
                         <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-secondary">
                           <span className="inline-flex items-center gap-1.5"><Calendar className="w-4 h-4" />{formatDateLabel(event.date_time)}</span>
-                          <span className="inline-flex items-center gap-1.5"><MapPin className="w-4 h-4" />{event.venue || "מקום לא הוגדר"}</span>
+                          <span className="inline-flex items-center gap-1.5"><MapPin className="w-4 h-4" />{event.venue || t("dashboard.eventCard.venueNotSet")}</span>
                         </div>
                         {!readiness.ready && (
                           <p className="text-sm mt-2 text-accent-warning">
@@ -527,10 +527,10 @@ export function Dashboard() {
                         )}
                       </div>
                       <div className="text-left shrink-0">
-                        <p className="text-sm text-muted mb-2">{days === null ? "ללא תאריך" : days <= 0 ? "היום" : `עוד ${days} ימים`}</p>
+                        <p className="text-sm text-muted mb-2">{days === null ? t("dashboard.eventCard.noDate") : days <= 0 ? t("dashboard.eventCard.today") : t("dashboard.eventCard.inDays", { days: String(days) })}</p>
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-sm font-semibold ${readiness.ready ? "border-accent-success/50 bg-accent-success/15 text-accent-success" : "border-dashboard-border bg-white/[0.05] text-muted"}`}>
                           {readiness.ready && <CheckCircle2 className="w-3.5 h-3.5" />}
-                          {readiness.ready ? "מוכן" : "צריך בדיקה"}
+                          {readiness.ready ? t("dashboard.eventCard.ready") : t("dashboard.eventCard.needsCheck")}
                         </span>
                       </div>
                     </div>
