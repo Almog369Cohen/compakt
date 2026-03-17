@@ -8,6 +8,7 @@ import { QuestionFlow } from "@/components/stages/QuestionFlow";
 import { SongTinder } from "@/components/stages/SongTinder";
 import { DreamsRequests } from "@/components/stages/DreamsRequests";
 import { MusicBrief } from "@/components/stages/MusicBrief";
+import { GuestManager } from "@/components/couple/GuestManager";
 import { EmailGate } from "@/components/auth/EmailGate";
 import { DJSelectionGate } from "@/components/journey/DJSelectionGate";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -527,6 +528,7 @@ export function JourneyApp({
       case 2: return <SongTinder />;
       case 3: return <DreamsRequests />;
       case 4: return <MusicBrief />;
+      case 5: return <GuestManager eventToken={event.magicToken} />;
       default: return <EventSetup initialDjSlug={initialDjSlug} initialDjName={entryDjName} />;
     }
   };
@@ -611,7 +613,7 @@ export function JourneyApp({
         )}
       </AnimatePresence>
 
-      {event && currentStage > 0 && currentStage <= 4 && (
+      {event && currentStage > 0 && currentStage <= 5 && (
         <div className="fixed top-[calc(0.75rem+env(safe-area-inset-top,0px))] right-4 left-4 z-40 sm:top-4">
           <StageNav />
         </div>

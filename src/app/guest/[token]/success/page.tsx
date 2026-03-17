@@ -18,28 +18,66 @@ export default function GuestSuccessPage() {
   useEffect(() => {
     if (!token) return;
 
-    fetch("/api/guest/playlists/fetch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inviteToken: token }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          setError(data.error);
-        } else {
-          setResult({
-            playlistsProcessed: data.playlistsProcessed || 0,
-            tracksProcessed: data.tracksProcessed || 0,
+    const fetchData = async () => {
+      try {
+        // Check if user chose top-tracks
+        const choice = sessionStorage.getItem(`guest_choice_${token}`);
+
+        if (choice === 'top-tracks') {
+          // Get invitation ID first
+          const inviteRes = await fetch(`/api/guest/invite/${token}`);
+          const inviteData = await inviteRes.json();
+
+          if (inviteData.error) {
+            setError(inviteData.error);
+            setFetching(false);
+            return;
+          }
+
+          // Fetch top tracks
+          const topTracksRes = await fetch("/api/guest/top-tracks/fetch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ invitationId: inviteData.invitation.id }),
           });
+
+          const topTracksData = await topTracksRes.json();
+
+          if (topTracksData.error) {
+            setError(topTracksData.error);
+          } else {
+            setResult({
+              playlistsProcessed: topTracksData.playlistCount || 1,
+              tracksProcessed: topTracksData.trackCount || 0,
+            });
+          }
+        } else {
+          // Fetch playlists (original flow)
+          const playlistsRes = await fetch("/api/guest/playlists/fetch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ inviteToken: token }),
+          });
+
+          const playlistsData = await playlistsRes.json();
+
+          if (playlistsData.error) {
+            setError(playlistsData.error);
+          } else {
+            setResult({
+              playlistsProcessed: playlistsData.playlistsProcessed || 0,
+              tracksProcessed: playlistsData.tracksProcessed || 0,
+            });
+          }
         }
-      })
-      .catch(() => {
-        setError("שגיאה בשליפת הפלייליסטים");
-      })
-      .finally(() => {
+      } catch (err) {
+        setError("שגיאה בשליפת הנתונים");
+      } finally {
         setFetching(false);
-      });
+      }
+    };
+
+    fetchData();
   }, [token]);
 
   if (fetching) {

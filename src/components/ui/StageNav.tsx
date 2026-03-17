@@ -1,12 +1,13 @@
 "use client";
 
 import { useEventStore } from "@/stores/eventStore";
-import { Check, MessageSquare, Music, ListChecks, FileCheck } from "lucide-react";
+import { Check, MessageSquare, Music, ListChecks, FileCheck, Users } from "lucide-react";
 
 const stages = [
   { id: 1, label: "שאלות", icon: MessageSquare, description: "מענה על שאלות" },
   { id: 2, label: "שירים", icon: Music, description: "בחירת שירים" },
   { id: 3, label: "בקשות", icon: ListChecks, description: "בקשות מיוחדות" },
+  { id: 5, label: "אורחים", icon: Users, description: "שיתוף מוזיקה" },
   { id: 4, label: "סיכום", icon: FileCheck, description: "סיכום סופי" },
 ];
 
