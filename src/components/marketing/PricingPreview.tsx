@@ -18,7 +18,7 @@ export function PricingPreview() {
           >
             התחילו בחינם, שדרגו כשאתם מוכנים
           </motion.h2>
-          
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -91,7 +91,7 @@ export function PricingPreview() {
                 <span className="text-5xl font-bold">₪99</span>
                 <span className="text-white/80">/חודש</span>
               </div>
-              <p className="text-white/90">לדיג'יים מקצועיים</p>
+              <p className="text-white/90">לדיג&apos;יים מקצועיים</p>
             </div>
 
             <ul className="space-y-4 mb-8">

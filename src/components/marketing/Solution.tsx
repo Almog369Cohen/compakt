@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Send, Music2, FileCheck, Heart, X, Star, HelpCircle } from "lucide-react";
+import { Send, Music2, FileCheck } from "lucide-react";
 
 const steps = [
   {

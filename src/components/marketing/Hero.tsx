@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, Heart, X, Star, HelpCircle, ArrowRight, Users, Music2, Sparkles, Music, Volume2, SkipBack, Pause, SkipForward } from "lucide-react";
+import { ArrowLeft, Play, Music, Volume2, SkipBack, Pause, SkipForward } from "lucide-react";
 
 export function Hero() {
   return (

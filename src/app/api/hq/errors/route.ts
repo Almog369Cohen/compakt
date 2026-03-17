@@ -66,11 +66,11 @@ export async function GET(request: NextRequest) {
 
     const errorStats = {
       total: stats?.length || 0,
-      critical: stats?.filter((e: any) => e.severity === 'critical' && !e.resolved).length || 0,
-      high: stats?.filter((e: any) => e.severity === 'high' && !e.resolved).length || 0,
-      medium: stats?.filter((e: any) => e.severity === 'medium' && !e.resolved).length || 0,
-      low: stats?.filter((e: any) => e.severity === 'low' && !e.resolved).length || 0,
-      resolved: stats?.filter((e: any) => e.resolved).length || 0,
+      critical: stats?.filter((e: { severity: string; resolved: boolean }) => e.severity === 'critical' && !e.resolved).length || 0,
+      high: stats?.filter((e: { severity: string; resolved: boolean }) => e.severity === 'high' && !e.resolved).length || 0,
+      medium: stats?.filter((e: { severity: string; resolved: boolean }) => e.severity === 'medium' && !e.resolved).length || 0,
+      low: stats?.filter((e: { severity: string; resolved: boolean }) => e.severity === 'low' && !e.resolved).length || 0,
+      resolved: stats?.filter((e: { resolved: boolean }) => e.resolved).length || 0,
     };
 
     return NextResponse.json({

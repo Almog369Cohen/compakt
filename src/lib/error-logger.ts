@@ -8,7 +8,7 @@ type ErrorSeverity = 'critical' | 'high' | 'medium' | 'low';
 interface LogErrorOptions {
   error: Error | string;
   severity?: ErrorSeverity;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   userId?: string;
 }
 
@@ -21,7 +21,7 @@ export async function logError({
     const errorMessage = error instanceof Error ? error.message : error;
     const errorStack = error instanceof Error ? error.stack : undefined;
     const errorType = error instanceof Error ? error.name : 'Error';
-    
+
     const payload = {
       error_message: errorMessage,
       error_stack: errorStack,
@@ -34,7 +34,7 @@ export async function logError({
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
       },
     };
-    
+
     // Send to our API
     await fetch('/api/errors/log', {
       method: 'POST',
@@ -43,7 +43,7 @@ export async function logError({
       },
       body: JSON.stringify(payload),
     });
-    
+
     // Also log to console in development
     if (process.env.NODE_ENV === 'development') {
       console.error('[Error Logger]', {
@@ -62,28 +62,28 @@ export async function logError({
 /**
  * Log critical error (blocks core functionality)
  */
-export function logCritical(error: Error | string, context?: Record<string, any>) {
+export function logCritical(error: Error | string, context?: Record<string, unknown>) {
   return logError({ error, severity: 'critical', context });
 }
 
 /**
  * Log high severity error (important but has workaround)
  */
-export function logHigh(error: Error | string, context?: Record<string, any>) {
+export function logHigh(error: Error | string, context?: Record<string, unknown>) {
   return logError({ error, severity: 'high', context });
 }
 
 /**
  * Log medium severity error (UX issue)
  */
-export function logMedium(error: Error | string, context?: Record<string, any>) {
+export function logMedium(error: Error | string, context?: Record<string, unknown>) {
   return logError({ error, severity: 'medium', context });
 }
 
 /**
  * Log low severity error (cosmetic)
  */
-export function logLow(error: Error | string, context?: Record<string, any>) {
+export function logLow(error: Error | string, context?: Record<string, unknown>) {
   return logError({ error, severity: 'low', context });
 }
 
@@ -92,7 +92,7 @@ export function logLow(error: Error | string, context?: Record<string, any>) {
  */
 export function setupGlobalErrorHandler(): void {
   if (typeof window === 'undefined') return;
-  
+
   // Catch unhandled errors
   window.addEventListener('error', (event) => {
     logError({
@@ -105,7 +105,7 @@ export function setupGlobalErrorHandler(): void {
       },
     });
   });
-  
+
   // Catch unhandled promise rejections
   window.addEventListener('unhandledrejection', (event) => {
     logError({
