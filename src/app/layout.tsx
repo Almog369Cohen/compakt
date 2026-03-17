@@ -37,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="he" dir="rtl" data-theme="night" className={rubik.variable}>
-      <body className="font-sans antialiased min-h-dvh">
+      <body className="font-sans antialiased min-h-dvh" suppressHydrationWarning>
         <LocaleProvider>
           <AppRuntimeGuard>{children}</AppRuntimeGuard>
         </LocaleProvider>

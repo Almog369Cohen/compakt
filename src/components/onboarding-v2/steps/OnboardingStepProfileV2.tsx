@@ -88,7 +88,8 @@ export function OnboardingStepProfileV2({ onComplete, onSkip, isTrialUser }: Onb
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 placeholder="DJ שמח"
-                className="input-field"
+                className="w-full px-4 py-3 rounded-xl bg-white/70 backdrop-blur-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#059cc0]/50 focus:border-[#059cc0] transition-all duration-200"
+                dir="auto"
               />
             </div>
 
@@ -103,7 +104,8 @@ export function OnboardingStepProfileV2({ onComplete, onSkip, isTrialUser }: Onb
                   value={djSlug}
                   onChange={(e) => setDjSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                   placeholder="dj-sameach"
-                  className="input-field flex-1"
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/70 backdrop-blur-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#059cc0]/50 focus:border-[#059cc0] transition-all duration-200"
+                  dir="ltr"
                 />
               </div>
               <p className="text-xs text-muted mt-1">רק אותיות באנגלית, מספרים ומקפים</p>

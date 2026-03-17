@@ -23,6 +23,7 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
   };
 
   const premiumPlan = PLANS.find((p) => p.key === "premium");
+  const proPlan = PLANS.find((p) => p.key === "pro");
   const starterPlan = PLANS.find((p) => p.key === "starter");
 
   return (
@@ -41,7 +42,7 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
           {/* Premium Trial Card */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -108,6 +109,65 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
             </button>
           </motion.div>
 
+          {/* Pro Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
+            <button
+              onClick={() => handleSelect("pro")}
+              className={`w-full text-right transition-all ${selectedPlan === "pro"
+                  ? "ring-2 ring-brand-blue"
+                  : "hover:ring-1 hover:ring-white/20"
+                }`}
+            >
+              <div className="glass-card p-6 relative">
+                {/* Selected Indicator */}
+                {selectedPlan === "pro" && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-4 right-4"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-brand-blue flex items-center justify-center">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                  </motion.div>
+                )}
+
+                <div className="mb-4">
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <span className="text-3xl font-bold">Pro</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-brand-blue">{proPlan?.currency}{proPlan?.price}</span>
+                    <span className="text-sm text-secondary">/{proPlan?.interval === "month" ? "חודש" : "שנה"}</span>
+                  </div>
+                  <div className="text-sm text-secondary mt-1">
+                    לעסקים בצמיחה
+                  </div>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  {proPlan?.features.map((feature, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <Check className="w-5 h-5 text-brand-green mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-4 border-t border-white/10">
+                  <div className="flex items-center gap-2 text-secondary text-sm">
+                    <Sparkles className="w-4 h-4" />
+                    <span>מאזן מושלם בין ערך למחיר</span>
+                  </div>
+                </div>
+              </div>
+            </button>
+          </motion.div>
+
           {/* Starter Free Card */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -167,7 +227,7 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
           </motion.div>
         </div>
 
-        {/* Warning for Starter */}
+        {/* Info for selected plan */}
         {selectedPlan === "starter" && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -179,7 +239,7 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
               <div>
                 <div className="font-medium mb-1">טיפ: רוב ה-DJs מתחילים ב-Premium Trial</div>
                 <div className="text-sm text-secondary">
-                  עם ה-trial תוכל לנסות את כל הפיצ&apos;רים ללא הגבלה ל-14 יום, ורק אז להחליט אם לשדרג.
+                  עם ה-trial תוכל לנסות את כל הפיצ&apos;רים ללא הגבלה ל-30 יום, ורק אז להחליט אם לשדרג.
                   ללא חיוב בתקופת הניסיון • ביטול בכל עת.
                 </div>
               </div>
@@ -203,6 +263,11 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
                 <Sparkles className="w-5 h-5" />
                 התחל את ה-Trial
               </>
+            ) : selectedPlan === "pro" ? (
+              <>
+                <Zap className="w-5 h-5" />
+                התחל עם Pro
+              </>
             ) : (
               <>
                 <Zap className="w-5 h-5" />
@@ -214,7 +279,9 @@ export function PlanSelector({ onSelectPlan, defaultPlan = "premium" }: PlanSele
           <p className="text-xs text-muted mt-4">
             {selectedPlan === "premium"
               ? "ללא כרטיס אשראי • ביטול בכל עת"
-              : "אפשר לשדרג בכל שלב • ללא התחייבות"
+              : selectedPlan === "pro"
+                ? "התחייבות חודשית • ביטול בכל עת"
+                : "אפשר לשדרג בכל שלב • ללא התחייבות"
             }
           </p>
         </motion.div>

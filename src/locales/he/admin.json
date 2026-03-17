@@ -735,7 +735,56 @@
     "empty": "אין שדרוגים עדיין"
   },
   "analytics": {
-    "title": "אנליטיקס",
-    "comingSoon": "בקרוב"
+    "title": "אנליטיקות",
+    "refresh": "רענון",
+    "stages": {
+      "0": "פרטי אירוע",
+      "1": "שאלות",
+      "2": "שירים",
+      "3": "בקשות מיוחדות",
+      "4": "סיכום"
+    },
+    "funnel": {
+      "title": "משפך המרה",
+      "link_open": "פתחו לינק",
+      "contact_verified": "אימות גישה",
+      "session_start": "התחלת שאלון",
+      "stage_enter_1": "שאלות",
+      "stage_enter_2": "שירים",
+      "stage_enter_3": "בקשות",
+      "stage_enter_4": "סיכום",
+      "session_complete": "סיום מלא"
+    },
+    "kpi": {
+      "couples": "זוגות",
+      "completed": "השלימו",
+      "completionRate": "% השלמה",
+      "totalEvents": "אירועים כוללים"
+    },
+    "breakpoints": {
+      "title": "נקודות שבירה",
+      "entered": "{{count}} נכנסו",
+      "completed": "{{count}} סיימו",
+      "dropRate": "{{rate}}% נשירה"
+    },
+    "duration": {
+      "title": "זמן ממוצע לשלב",
+      "seconds": "{{count}} שניות",
+      "minutes": "{{count}} דקות",
+      "samples": "{{count}} מדגמים"
+    },
+    "insights": {
+      "title": "תובנות והצעות לשיפור",
+      "lowCompletion": "שיעור השלמה נמוך — בדקו אם יש יותר מדי שאלות או שירים",
+      "breakpoint": "נקודת שבירה: {{rate}}% נושרים ב\"{{stage}}\" — שקלו לקצר או לפשט",
+      "slowStage": "\"{{stage}}\" לוקח בממוצע {{duration}} — ארוך מדי?",
+      "noCompletions": "אף זוג לא סיים את השאלון — בדקו שהשלבים עובדים כמצופה",
+      "lowVerification": "רק {{rate}}% משלימים אימות אחרי פתיחת לינק — שקלו לפשט את שלב הכניסה",
+      "allGood": "הכל נראה תקין! המשיכו לעקוב אחרי הנתונים",
+      "noData": "אין נתונים עדיין — שלחו קישורי שאלון לזוגות כדי להתחיל לעקוב"
+    },
+    "errors": {
+      "loadFailed": "שגיאה בטעינת נתונים"
+    }
   }
 }

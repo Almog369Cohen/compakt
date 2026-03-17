@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MusicSwipeDemo } from "./demos/MusicSwipeDemo";
+import { Heart, Star, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
 export function ProductShowcase() {
@@ -39,35 +39,71 @@ export function ProductShowcase() {
           </motion.p>
         </div>
 
+        {/* Sexy Mini Demos - 3 in a row */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.2 }}
-          className="max-w-2xl mx-auto"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 max-w-6xl mx-auto"
         >
-          <MusicSwipeDemo />
-        </motion.div>
+          {/* Loved Demo */}
+          <motion.div
+            whileHover={{ scale: 1.05, y: -5 }}
+            className="group relative"
+          >
+            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gradient-to-br from-pink-500/20 to-rose-500/20 backdrop-blur-sm border border-pink-500/30 hover:border-pink-400/50 transition-all duration-500">
+              {/* Glass effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 to-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* Features */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-          className="mt-16 grid md:grid-cols-3 gap-6 max-w-4xl mx-auto"
-        >
-          {[
-            { emoji: "❤️", title: t("showcase.loved"), desc: t("showcase.lovedDesc") },
-            { emoji: "⭐", title: t("showcase.mustPlay"), desc: t("showcase.mustPlayDesc") },
-            { emoji: "✖️", title: t("showcase.skip"), desc: t("showcase.skipDesc") },
-          ].map((item, i) => (
-            <div key={i} className="p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 text-center">
-              <div className="text-4xl mb-3">{item.emoji}</div>
-              <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
-              <p className="text-sm text-white/70">{item.desc}</p>
+              {/* Content */}
+              <div className="relative h-full flex flex-col items-center justify-center p-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mb-4 shadow-lg shadow-pink-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <Heart className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2 bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">{t("showcase.loved")}</h3>
+                <p className="text-sm text-white/80 text-center">{t("showcase.lovedDesc")}</p>
+              </div>
             </div>
-          ))}
+          </motion.div>
+
+          {/* Must Play Demo */}
+          <motion.div
+            whileHover={{ scale: 1.05, y: -5 }}
+            className="group relative"
+            transition={{ delay: 0.1 }}
+          >
+            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gradient-to-br from-amber-500/20 to-yellow-500/20 backdrop-blur-sm border border-amber-500/30 hover:border-amber-400/50 transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+              <div className="relative h-full flex flex-col items-center justify-center p-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-yellow-500 flex items-center justify-center mb-4 shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <Star className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2 bg-gradient-to-r from-amber-400 to-yellow-400 bg-clip-text text-transparent">{t("showcase.mustPlay")}</h3>
+                <p className="text-sm text-white/80 text-center">{t("showcase.mustPlayDesc")}</p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Skip Demo */}
+          <motion.div
+            whileHover={{ scale: 1.05, y: -5 }}
+            className="group relative"
+            transition={{ delay: 0.2 }}
+          >
+            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gradient-to-br from-gray-500/20 to-slate-500/20 backdrop-blur-sm border border-gray-500/30 hover:border-gray-400/50 transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-500/10 to-slate-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+              <div className="relative h-full flex flex-col items-center justify-center p-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-500 to-slate-500 flex items-center justify-center mb-4 shadow-lg shadow-gray-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <X className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2 bg-gradient-to-r from-gray-400 to-slate-400 bg-clip-text text-transparent">{t("showcase.skip")}</h3>
+                <p className="text-sm text-white/80 text-center">{t("showcase.skipDesc")}</p>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>

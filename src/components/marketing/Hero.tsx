@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Play, Music, Volume2, SkipBack, Pause, SkipForward } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play } from "lucide-react";
 import { useTranslation, useLocaleStore } from "@/lib/i18n";
 
 export function Hero() {
@@ -11,201 +11,111 @@ export function Hero() {
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
 
   return (
-    <section className="relative pt-32 pb-20 px-6 overflow-hidden bg-white">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-white pointer-events-none" />
+    <section className="relative pt-28 pb-16 px-6 overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20">
+      {/* Animated gradient mesh background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
+        <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
+      </div>
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
 
-      <div className="relative max-w-7xl mx-auto">
-        <div className="text-center max-w-4xl mx-auto">
-          {/* Badge */}
+      <div className="relative max-w-6xl mx-auto">
+        <div className="text-center max-w-3xl mx-auto">
+          {/* Modern Badge */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-50 to-green-50 border border-[#e5e7eb] mb-8"
+            initial={{ opacity: 0, y: 12, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#059cc0]/10 via-[#03b28c]/10 to-[#059cc0]/10 backdrop-blur-sm border border-[#059cc0]/20 mb-6 shadow-lg shadow-[#059cc0]/5"
           >
-            <span className="w-2 h-2 rounded-full bg-gradient-to-r from-[#059cc0] to-[#03b28c] animate-pulse" />
-            <span className="text-sm font-medium text-[#4b5563]">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#03b28c] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-gradient-to-r from-[#059cc0] to-[#03b28c]" />
+            </span>
+            <span className="text-xs font-semibold bg-gradient-to-r from-[#059cc0] to-[#03b28c] bg-clip-text text-transparent">
               {t("hero.badge")}
             </span>
           </motion.div>
 
-          {/* Main headline */}
+          {/* Main headline with enhanced typography */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-5xl md:text-7xl font-bold text-[#1f1f21] mb-6 leading-[1.1] tracking-tight"
+            transition={{ delay: 0.15, duration: 0.6 }}
+            className="text-5xl md:text-7xl font-bold mb-6 leading-[1.05] tracking-tight"
           >
-            {t("hero.titleLine1")}
+            <span className="inline-block bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
+              {t("hero.titleLine1")}
+            </span>
             <br />
-            <span className="bg-gradient-to-r from-[#059cc0] to-[#03b28c] bg-clip-text text-transparent">
-              {t("hero.titleLine2")}
+            <span className="inline-block relative">
+              <span className="absolute inset-0 bg-gradient-to-r from-[#059cc0] via-[#03b28c] to-[#059cc0] bg-clip-text text-transparent blur-sm opacity-50" aria-hidden="true">
+                {t("hero.titleLine2")}
+              </span>
+              <span className="relative bg-gradient-to-r from-[#059cc0] via-[#03b28c] to-[#059cc0] bg-clip-text text-transparent animate-gradient">
+                {t("hero.titleLine2")}
+              </span>
             </span>
           </motion.h1>
 
-          {/* Subheadline */}
+          {/* Subheadline with modern styling */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-xl md:text-2xl text-[#4b5563] mb-10 leading-relaxed max-w-3xl mx-auto"
+            transition={{ delay: 0.2 }}
+            className="text-lg md:text-xl text-slate-600 mb-10 leading-relaxed max-w-2xl mx-auto font-medium"
           >
             {t("hero.subtitle")}
-            <br />
-            {t("hero.subtitleLine2")}
           </motion.p>
 
           {/* CTAs */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            transition={{ delay: 0.25 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3"
           >
             <Link
               href="/admin"
-              className="group px-8 py-4 rounded-xl bg-gradient-to-r from-[#059cc0] to-[#03b28c] text-white font-semibold text-lg hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
+              className="group relative px-8 py-4 rounded-2xl bg-gradient-to-r from-[#059cc0] to-[#03b28c] text-white font-semibold text-base shadow-lg shadow-[#059cc0]/25 hover:shadow-xl hover:shadow-[#059cc0]/40 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 overflow-hidden"
             >
-              {t("hero.ctaPrimary")}
-              <Arrow className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span className="absolute inset-0 bg-gradient-to-r from-[#03b28c] to-[#059cc0] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <span className="relative">{t("hero.ctaPrimary")}</span>
+              <Arrow className="relative w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
 
             <Link
               href="/how-it-works"
-              className="px-8 py-4 rounded-xl bg-white border-2 border-[#e5e7eb] text-[#1f1f21] font-semibold text-lg hover:border-[#059cc0] hover:text-[#059cc0] transition-all flex items-center gap-2"
+              className="group px-8 py-4 rounded-2xl bg-white/80 backdrop-blur-sm border border-slate-200 text-slate-900 font-semibold text-base hover:border-[#059cc0]/50 hover:bg-white hover:shadow-lg transition-all duration-300 flex items-center gap-2"
             >
-              <Play className="w-5 h-5" />
-              {t("hero.ctaSecondary")}
+              <Play className="w-4 h-4 text-[#059cc0]" />
+              <span>{t("hero.ctaSecondary")}</span>
             </Link>
           </motion.div>
 
-          {/* Social proof */}
+          {/* Enhanced social proof */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="mt-16 flex items-center justify-center gap-8 text-sm text-[#4b5563]"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mt-12 flex items-center justify-center gap-3"
           >
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="w-8 h-8 rounded-full bg-gradient-to-br from-[#059cc0] to-[#03b28c] border-2 border-white"
-                  />
-                ))}
-              </div>
-              <span>{t("hero.socialProof")}</span>
+            <div className="flex -space-x-3">
+              {[1, 2, 3, 4].map((i) => (
+                <motion.div
+                  key={i}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.5 + i * 0.05, type: "spring" }}
+                  className="w-9 h-9 rounded-full bg-gradient-to-br from-[#059cc0] to-[#03b28c] border-2 border-white shadow-md"
+                />
+              ))}
             </div>
+            <span className="text-sm font-medium text-slate-600">{t("hero.socialProof")}</span>
           </motion.div>
         </div>
-
-        {/* Product preview - Music swipe demo */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.6 }}
-          className="mt-20 max-w-5xl mx-auto"
-        >
-          <div className="relative">
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#059cc0]/20 to-[#03b28c]/20 blur-3xl" />
-
-            {/* Browser mockup */}
-            <div className="relative rounded-2xl overflow-hidden border-2 border-gray-200 shadow-2xl bg-white">
-              {/* Browser chrome */}
-              <div className="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center gap-2">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-400" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                  <div className="w-3 h-3 rounded-full bg-green-400" />
-                </div>
-                <div className="flex-1 mx-4 px-3 py-1 bg-white rounded-md text-xs text-gray-400">
-                  compakt.app/dj/almog-cohen
-                </div>
-              </div>
-
-              {/* Content - Music player interface */}
-              <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 md:p-12">
-                <div className="max-w-sm mx-auto">
-                  {/* Music Player Card */}
-                  <div className="relative aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 mb-6">
-                    {/* Album Art */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#059cc0] to-[#03b28c] opacity-30">
-                      <div className="absolute inset-4 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 opacity-80 flex items-center justify-center">
-                        <Music className="w-20 h-20 text-white/30" />
-                      </div>
-                    </div>
-
-                    {/* Player Controls Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40">
-                      <div className="relative h-full flex flex-col justify-between p-6 text-white">
-                        {/* Top Section */}
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="text-xs text-white/60 uppercase tracking-wider">{t("hero.playerNowPlaying")}</p>
-                            <p className="text-sm text-white/80">{t("hero.playerFromPlaylist")}</p>
-                          </div>
-                          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                            <Volume2 className="w-4 h-4 text-white" />
-                          </div>
-                        </div>
-
-                        {/* Center - Song Info */}
-                        <div className="text-center">
-                          <h3 className="text-2xl font-bold mb-1">Uptown Funk</h3>
-                          <p className="text-lg text-white/80">Mark Ronson ft. Bruno Mars</p>
-                          <div className="mt-2 inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-sm">
-                            {t("hero.playerGenre")}
-                          </div>
-                        </div>
-
-                        {/* Bottom - Player Controls */}
-                        <div>
-                          {/* Progress Bar */}
-                          <div className="mb-4">
-                            <div className="flex justify-between text-xs text-white/60 mb-1">
-                              <span>1:23</span>
-                              <span>3:45</span>
-                            </div>
-                            <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
-                              <div className="w-1/3 h-full bg-gradient-to-r from-[#059cc0] to-[#03b28c] rounded-full"></div>
-                            </div>
-                          </div>
-
-                          {/* Control Buttons */}
-                          <div className="flex items-center justify-center gap-4">
-                            <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                              <SkipBack className="w-5 h-5 text-white" />
-                            </button>
-                            <button className="w-12 h-12 rounded-full bg-white flex items-center justify-center">
-                              <Pause className="w-6 h-6 text-gray-900" />
-                            </button>
-                            <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                              <SkipForward className="w-5 h-5 text-white" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Call to Action */}
-                  <div className="text-center">
-                    <p className="text-white/70 text-sm mb-4">
-                      {t("hero.playerCta")}
-                    </p>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm">
-                      <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                      <span className="text-white text-sm">{t("hero.playerActive")}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </section>
   );

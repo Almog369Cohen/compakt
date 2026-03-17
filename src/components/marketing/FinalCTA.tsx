@@ -11,51 +11,77 @@ export function FinalCTA() {
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
 
   return (
-    <section className="py-24 px-6 bg-gradient-to-br from-[#059cc0] to-[#03b28c] relative overflow-hidden">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-          backgroundSize: '32px 32px'
-        }} />
+    <section className="relative py-24 px-6 bg-gradient-to-br from-[#059cc0] via-[#03b28c] to-[#059cc0] overflow-hidden">
+      {/* Animated gradient mesh */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/30 rounded-full mix-blend-overlay filter blur-3xl animate-blob" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-400/30 rounded-full mix-blend-overlay filter blur-3xl animate-blob animation-delay-2000" />
+        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-cyan-400/30 rounded-full mix-blend-overlay filter blur-3xl animate-blob animation-delay-4000" />
       </div>
+
+      {/* Subtle pattern overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:24px_24px]" />
 
       <div className="relative max-w-4xl mx-auto text-center">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <motion.h2
+            className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight"
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+          >
             {t("cta.title")}
-          </h2>
+          </motion.h2>
 
-          <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">
-            {t("cta.subtitleLine1")}
-            <br />
-            {t("cta.subtitleLine2")}
-          </p>
+          <motion.p
+            className="text-lg md:text-xl text-white/90 mb-10 leading-relaxed max-w-2xl mx-auto font-medium"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
+            {t("cta.subtitleLine1")} {t("cta.subtitleLine2")}
+          </motion.p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <motion.div
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+          >
             <Link
               href="/admin"
-              className="group px-8 py-4 rounded-xl bg-white text-[#059cc0] font-semibold text-lg hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-2"
+              className="group relative px-10 py-5 rounded-2xl bg-white text-[#059cc0] font-bold text-lg shadow-2xl shadow-black/20 hover:shadow-3xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 overflow-hidden"
             >
-              {t("cta.ctaPrimary")}
-              <Arrow className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span className="absolute inset-0 bg-gradient-to-r from-slate-50 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <span className="relative">{t("cta.ctaPrimary")}</span>
+              <Arrow className="relative w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
 
             <Link
               href="/how-it-works"
-              className="px-8 py-4 rounded-xl bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white font-semibold text-lg hover:bg-white/20 transition-all"
+              className="group px-10 py-5 rounded-2xl bg-white/10 backdrop-blur-xl border-2 border-white/30 text-white font-semibold text-lg hover:bg-white/20 hover:border-white/50 transition-all duration-300 flex items-center gap-2"
             >
               {t("cta.ctaSecondary")}
             </Link>
-          </div>
+          </motion.div>
 
-          <p className="mt-8 text-white/70 text-sm">
+          <motion.p
+            className="mt-8 text-white/70 text-sm font-medium"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.5 }}
+          >
             {t("cta.socialProof")}
-          </p>
+          </motion.p>
         </motion.div>
       </div>
     </section>

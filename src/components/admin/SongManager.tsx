@@ -98,6 +98,7 @@ export function SongManager() {
     [songCategoryLabels]
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const languages = useMemo(() => [
     { value: "hebrew", label: t("songs.languages.hebrew") },
     { value: "english", label: t("songs.languages.english") },

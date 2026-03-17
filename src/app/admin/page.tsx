@@ -18,6 +18,7 @@ import { ProfileSettings } from "@/components/admin/ProfileSettings";
 import { CoupleLinks } from "@/components/admin/CoupleLinks";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import { EventsManager } from "@/components/admin/EventsManager";
+import { GuestStats } from "@/components/admin/GuestStats";
 import { useProfileStore } from "@/stores/profileStore";
 import { supabase } from "@/lib/supabase";
 import type { FeatureKey } from "@/lib/access";
@@ -25,7 +26,7 @@ import { HydrationGuard } from "@/components/ui/HydrationGuard";
 import { OnboardingFlowV2 } from "@/components/onboarding-v2/OnboardingFlowV2";
 import { useOnboardingStoreV2 } from "@/stores/onboardingStoreV2";
 
-type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "couples" | "events" | "analytics";
+type AdminTab = "dashboard" | "songs" | "questions" | "upsells" | "profile" | "couples" | "events" | "analytics" | "guest-stats";
 
 type AdminAccess = {
   role: string;
@@ -37,6 +38,7 @@ const tabDefs: Array<{ id: AdminTab; labelKey: string; icon: React.ReactNode; la
   { id: "dashboard", labelKey: "tabs.dashboard", icon: <BarChart3 className="w-4 h-4" /> },
   { id: "couples", labelKey: "tabs.couples", icon: <Link className="w-4 h-4" />, launchReady: true },
   { id: "events", labelKey: "tabs.events", icon: <CalendarDays className="w-4 h-4" />, launchReady: true },
+  { id: "guest-stats", labelKey: "tabs.guestStats", icon: <User className="w-4 h-4" />, launchReady: true },
   { id: "profile", labelKey: "tabs.profile", icon: <User className="w-4 h-4" /> },
   { id: "songs", labelKey: "tabs.songs", icon: <Music className="w-4 h-4" /> },
   { id: "questions", labelKey: "tabs.questions", icon: <HelpCircle className="w-4 h-4" /> },
@@ -858,6 +860,26 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
               exit={{ opacity: 0, y: -10 }}
             >
               <AnalyticsDashboard />
+            </motion.div>
+          )}
+          {activeTab === "profile" && (
+            <motion.div
+              key="profile"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <ProfileSettings />
+            </motion.div>
+          )}
+          {activeTab === "guest-stats" && (
+            <motion.div
+              key="guest-stats"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <GuestStats />
             </motion.div>
           )}
         </AnimatePresence>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useProfileStore } from "@/stores/profileStore";
+import { useTranslation } from "@/lib/i18n";
 import {
   BarChart3,
   Users,
@@ -45,35 +46,19 @@ interface Stats {
   avgStageDuration: StageDuration[];
 }
 
-const STAGE_NAMES: Record<string, string> = {
-  "0": "פרטי אירוע",
-  "1": "שאלות",
-  "2": "שירים",
-  "3": "בקשות מיוחדות",
-  "4": "סיכום",
-};
 
-const FUNNEL_NAMES: Record<string, string> = {
-  link_open: "פתחו לינק",
-  contact_verified: "אימות גישה",
-  session_start: "התחלת שאלון",
-  stage_enter_1: "שאלות",
-  stage_enter_2: "שירים",
-  stage_enter_3: "בקשות",
-  stage_enter_4: "סיכום",
-  session_complete: "סיום מלא",
-};
 
-function formatDuration(ms: number): string {
-  if (ms < 60000) return `${Math.round(ms / 1000)} שניות`;
-  return `${Math.round(ms / 60000)} דקות`;
-}
 
-function getInsights(stats: Stats): string[] {
+function getInsights(
+  stats: Stats,
+  t: (key: string, params?: Record<string, string>) => string,
+  STAGE_NAMES: Record<string, string>,
+  formatDuration: (ms: number) => string
+): string[] {
   const insights: string[] = [];
 
   if (stats.completionRate < 30 && stats.uniqueSessions > 5) {
-    insights.push("שיעור השלמה נמוך — בדקו אם יש יותר מדי שאלות או שירים");
+    insights.push(t("analytics.insights.lowCompletion"));
   }
 
   const worstBreakpoint = stats.breakpoints.reduce(
@@ -84,7 +69,7 @@ function getInsights(stats: Stats): string[] {
   if (worstBreakpoint && worstBreakpoint.dropRate > 40) {
     const stageName = STAGE_NAMES[worstBreakpoint.stage] || `שלב ${worstBreakpoint.stage}`;
     insights.push(
-      `נקודת שבירה: ${worstBreakpoint.dropRate}% נושרים ב"${stageName}" — שקלו לקצר או לפשט`
+      t("analytics.insights.breakpoint", { rate: String(worstBreakpoint.dropRate), stage: stageName })
     );
   }
 
@@ -96,12 +81,12 @@ function getInsights(stats: Stats): string[] {
   if (slowStage && slowStage.avgMs > 5 * 60 * 1000) {
     const stageName = STAGE_NAMES[slowStage.stage] || `שלב ${slowStage.stage}`;
     insights.push(
-      `"${stageName}" לוקח בממוצע ${formatDuration(slowStage.avgMs)} — ארוך מדי?`
+      t("analytics.insights.slowStage", { stage: stageName, duration: formatDuration(slowStage.avgMs) })
     );
   }
 
   if (stats.uniqueSessions > 0 && stats.completedSessions === 0) {
-    insights.push("אף זוג לא סיים את השאלון — בדקו שהשלבים עובדים כמצופה");
+    insights.push(t("analytics.insights.noCompletions"));
   }
 
   const phoneStep = stats.funnel.find((f) => f.step === "contact_verified");
@@ -109,23 +94,48 @@ function getInsights(stats: Stats): string[] {
   if (linkStep && phoneStep && linkStep.count > 0) {
     const phoneRate = Math.round((phoneStep.count / linkStep.count) * 100);
     if (phoneRate < 50) {
-      insights.push(`רק ${phoneRate}% משלימים אימות אחרי פתיחת לינק — שקלו לפשט את שלב הכניסה`);
+      insights.push(t("analytics.insights.lowVerification", { rate: String(phoneRate) }));
     }
   }
 
   if (insights.length === 0 && stats.uniqueSessions > 0) {
-    insights.push("הכל נראה תקין! המשיכו לעקוב אחרי הנתונים");
+    insights.push(t("analytics.insights.allGood"));
   }
 
   if (stats.uniqueSessions === 0) {
-    insights.push("אין נתונים עדיין — שלחו קישורי שאלון לזוגות כדי להתחיל לעקוב");
+    insights.push(t("analytics.insights.noData"));
   }
 
   return insights;
 }
 
 export function AnalyticsDashboard() {
+  const { t } = useTranslation("admin");
   const profileId = useProfileStore((s) => s.profileId);
+
+  const STAGE_NAMES = useMemo(() => ({
+    "0": t("analytics.stages.0"),
+    "1": t("analytics.stages.1"),
+    "2": t("analytics.stages.2"),
+    "3": t("analytics.stages.3"),
+    "4": t("analytics.stages.4"),
+  }), [t]);
+
+  const FUNNEL_NAMES = useMemo(() => ({
+    link_open: t("analytics.funnel.link_open"),
+    contact_verified: t("analytics.funnel.contact_verified"),
+    session_start: t("analytics.funnel.session_start"),
+    stage_enter_1: t("analytics.funnel.stage_enter_1"),
+    stage_enter_2: t("analytics.funnel.stage_enter_2"),
+    stage_enter_3: t("analytics.funnel.stage_enter_3"),
+    stage_enter_4: t("analytics.funnel.stage_enter_4"),
+    session_complete: t("analytics.funnel.session_complete"),
+  }), [t]);
+
+  const formatDuration = useCallback((ms: number): string => {
+    if (ms < 60000) return t("analytics.duration.seconds", { count: String(Math.round(ms / 1000)) });
+    return t("analytics.duration.minutes", { count: String(Math.round(ms / 60000)) });
+  }, [t]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,11 +150,11 @@ export function AnalyticsDashboard() {
       if (!res.ok) throw new Error(data.error);
       setStats(data.stats);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "שגיאה בטעינת נתונים");
+      setError(e instanceof Error ? e.message : t("analytics.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [profileId]);
+  }, [profileId, t]);
 
   useEffect(() => {
     loadStats();
@@ -168,7 +178,7 @@ export function AnalyticsDashboard() {
 
   if (!stats) return null;
 
-  const insights = getInsights(stats);
+  const insights = getInsights(stats, t, STAGE_NAMES, formatDuration);
   const maxFunnel = Math.max(...stats.funnel.map((f) => f.count), 1);
 
   return (
@@ -177,7 +187,7 @@ export function AnalyticsDashboard() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-brand-blue" />
-          אנליטיקות
+          {t("analytics.title")}
         </h2>
         <button
           onClick={loadStats}
@@ -185,7 +195,7 @@ export function AnalyticsDashboard() {
           className="text-xs text-muted hover:text-brand-blue transition-colors flex items-center gap-1"
         >
           <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-          רענון
+          {t("analytics.refresh")}
         </button>
       </div>
 
@@ -193,25 +203,25 @@ export function AnalyticsDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPICard
           icon={<Users className="w-4 h-4" />}
-          label="זוגות"
+          label={t("analytics.kpi.couples")}
           value={stats.uniqueSessions}
           color="#059cc0"
         />
         <KPICard
           icon={<CheckCircle className="w-4 h-4" />}
-          label="השלימו"
+          label={t("analytics.kpi.completed")}
           value={stats.completedSessions}
           color="#03b28c"
         />
         <KPICard
           icon={<TrendingUp className="w-4 h-4" />}
-          label="% השלמה"
+          label={t("analytics.kpi.completionRate")}
           value={`${stats.completionRate}%`}
           color="#8b5cf6"
         />
         <KPICard
           icon={<BarChart3 className="w-4 h-4" />}
-          label="אירועים כוללים"
+          label={t("analytics.kpi.totalEvents")}
           value={stats.totalEvents}
           color="#f59e0b"
         />
@@ -221,7 +231,7 @@ export function AnalyticsDashboard() {
       <div className="glass-card p-4">
         <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
           <ArrowDown className="w-4 h-4 text-brand-blue" />
-          משפך המרה
+          {t("analytics.funnel.title")}
         </h3>
         <div className="space-y-2">
           {stats.funnel.map((step, i) => {
@@ -234,7 +244,7 @@ export function AnalyticsDashboard() {
             return (
               <div key={step.step} className="flex items-center gap-3">
                 <span className="text-xs text-muted w-24 text-left truncate">
-                  {FUNNEL_NAMES[step.step] || step.step}
+                  {FUNNEL_NAMES[step.step as keyof typeof FUNNEL_NAMES] || step.step}
                 </span>
                 <div className="flex-1 h-6 bg-glass/30 rounded-lg overflow-hidden relative">
                   <div
@@ -265,15 +275,15 @@ export function AnalyticsDashboard() {
         <div className="glass-card p-4">
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            נקודות שבירה
+            {t("analytics.breakpoints.title")}
           </h3>
           <div className="space-y-2">
             {stats.breakpoints.map((bp) => (
               <div key={bp.stage} className="flex items-center justify-between text-sm">
-                <span>{STAGE_NAMES[bp.stage] || `שלב ${bp.stage}`}</span>
+                <span>{STAGE_NAMES[bp.stage as keyof typeof STAGE_NAMES] || `שלב ${bp.stage}`}</span>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted">{bp.entered} נכנסו</span>
-                  <span className="text-xs text-muted">{bp.completed} סיימו</span>
+                  <span className="text-xs text-muted">{t("analytics.breakpoints.entered", { count: String(bp.entered) })}</span>
+                  <span className="text-xs text-muted">{t("analytics.breakpoints.completed", { count: String(bp.completed) })}</span>
                   <span
                     className="text-xs font-bold px-2 py-0.5 rounded-full"
                     style={{
@@ -281,7 +291,7 @@ export function AnalyticsDashboard() {
                       color: bp.dropRate > 40 ? "#ef4444" : "#03b28c",
                     }}
                   >
-                    {bp.dropRate}% נשירה
+                    {t("analytics.breakpoints.dropRate", { rate: String(bp.dropRate) })}
                   </span>
                 </div>
               </div>
@@ -295,18 +305,18 @@ export function AnalyticsDashboard() {
         <div className="glass-card p-4">
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
             <Clock className="w-4 h-4 text-brand-blue" />
-            זמן ממוצע לשלב
+            {t("analytics.duration.title")}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {stats.avgStageDuration.map((sd) => (
               <div key={sd.stage} className="glass-card p-3 text-center">
                 <p className="text-xs text-muted mb-1">
-                  {STAGE_NAMES[sd.stage] || `שלב ${sd.stage}`}
+                  {STAGE_NAMES[sd.stage as keyof typeof STAGE_NAMES] || `שלב ${sd.stage}`}
                 </p>
                 <p className="text-lg font-bold text-brand-blue">
                   {formatDuration(sd.avgMs)}
                 </p>
-                <p className="text-xs text-muted">{sd.count} מדגמים</p>
+                <p className="text-xs text-muted">{t("analytics.duration.samples", { count: String(sd.count) })}</p>
               </div>
             ))}
           </div>
@@ -317,7 +327,7 @@ export function AnalyticsDashboard() {
       <div className="glass-card p-4">
         <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
           <Lightbulb className="w-4 h-4 text-amber-400" />
-          תובנות והצעות לשיפור
+          {t("analytics.insights.title")}
         </h3>
         <ul className="space-y-2">
           {insights.map((insight, i) => (

@@ -1,13 +1,13 @@
 {
   "hero": {
-    "badge": "The new way to manage DJ events",
+    "badge": "The tool for professional DJs",
     "titleLine1": "The new way",
     "titleLine2": "DJs prepare events",
-    "subtitle": "Instead of endless WhatsApp messages,",
-    "subtitleLine2": "send couples a smart questionnaire and get an organized music brief.",
-    "ctaPrimary": "Open a DJ Account",
+    "subtitle": "Smart questionnaire. Organized music brief. No WhatsApp.",
+    "subtitleLine2": "",
+    "ctaPrimary": "Start Free",
     "ctaSecondary": "See How It Works",
-    "socialProof": "Hundreds of DJs already use Compakt",
+    "socialProof": "250+ DJs manage events with Compakt",
     "playerNowPlaying": "Now Playing",
     "playerFromPlaylist": "From your playlist",
     "playerGenre": "Pop",
@@ -15,44 +15,44 @@
     "playerActive": "Player active"
   },
   "problem": {
-    "badge": "Tired of the chaos?",
-    "title": "Problems every DJ knows",
-    "subtitle": "Managing events through WhatsApp is a headache. It's time for a better way.",
+    "badge": "The Problem",
+    "title": "Your tools are broken",
+    "subtitle": "Managing events through WhatsApp doesn't work. Time to upgrade.",
     "items": {
       "whatsapp": {
-        "title": "Dozens of WhatsApp messages",
-        "description": "Communication scattered across multiple chats and groups"
+        "title": "Endless WhatsApp",
+        "description": "Communication scattered across chats and groups"
       },
       "unclearRequests": {
-        "title": "Unclear requests",
-        "description": "\"Romantic songs\" or \"something energetic\" — what does that mean?"
+        "title": "Vague requests",
+        "description": "\"Something energetic\" — that's not a brief"
       },
       "scatteredSongs": {
-        "title": "Scattered song lists",
-        "description": "Lists in Notes, Excel, Spotify — no structure"
+        "title": "Songs everywhere",
+        "description": "Notes, Excel, Spotify — all scattered"
       },
       "lastMinute": {
         "title": "Last-minute surprises",
-        "description": "\"Oh, we forgot to tell you that...\" right before the event"
+        "description": "\"We forgot to tell you...\" before the event"
       }
     }
   },
   "solution": {
     "badge": "The Solution",
-    "title": "3 Simple Steps",
-    "subtitle": "From sending to the ready brief — everything happens automatically",
+    "title": "How it works",
+    "subtitle": "From sending to the ready brief — fully automatic",
     "steps": {
       "step1": {
-        "title": "Send couples a personal link",
-        "description": "Every DJ gets a unique profile page with a shareable link"
+        "title": "Send a link to the couple",
+        "description": "Unique profile page with a shareable link"
       },
       "step2": {
-        "title": "Couples pick music & fill in details",
-        "description": "Swipe-based song selection + a personalized questionnaire"
+        "title": "Couple picks music",
+        "description": "Swipe on songs + custom music questionnaire"
       },
       "step3": {
-        "title": "Get an organized, work-ready brief",
-        "description": "All the info in one place, organized and accessible"
+        "title": "Work-ready brief",
+        "description": "All info organized and ready in one place"
       }
     }
   },
@@ -68,30 +68,30 @@
   },
   "features": {
     "badge": "Why Compakt?",
-    "title": "The platform that changes the way you work",
-    "subtitle": "Everything you need in one place — be more professional, save time",
+    "title": "Everything in one place",
+    "subtitle": "Communication, music, briefs and analytics — one platform",
     "items": {
       "lessMess": {
-        "title": "Less mess",
-        "description": "All communication with the couple in one place. No more endless WhatsApp."
+        "title": "Centralized communication",
+        "description": "All communication with the couple in one place. No more WhatsApp."
       },
       "moreProfessional": {
-        "title": "More professional",
-        "description": "An impressive profile that showcases you at your best to new couples."
+        "title": "Professional profile",
+        "description": "Unique DJ profile page with portfolio and reviews."
       },
       "coupleExperience": {
-        "title": "Amazing couple experience",
-        "description": "Swipe-based song selection — couples choose music in a fun, intuitive way."
+        "title": "Music selection experience",
+        "description": "Couples pick songs by swiping — fast, fun, and intuitive."
       },
       "fullControl": {
         "title": "Full control",
-        "description": "Manage all events, track progress, and keep all info in one place."
+        "description": "Central dashboard for all events, briefs, and progress tracking."
       }
     }
   },
   "pricing": {
-    "title": "Start free, upgrade when you're ready",
-    "subtitle": "Choose the plan that fits you",
+    "title": "Simple pricing, no surprises",
+    "subtitle": "Start free, upgrade when you're ready",
     "perMonth": "/month",
     "popularBadge": "Most Popular",
     "startFree": "Start Free",
@@ -130,11 +130,11 @@
     }
   },
   "cta": {
-    "title": "Ready to get started?",
-    "subtitleLine1": "Start with your first couple — for free.",
+    "title": "Your next brief starts here",
+    "subtitleLine1": "Start free — 30 seconds.",
     "subtitleLine2": "No credit card required.",
-    "ctaPrimary": "Open a DJ Account",
+    "ctaPrimary": "Start Free",
     "ctaSecondary": "See How It Works",
-    "socialProof": "Join hundreds of DJs already using Compakt"
+    "socialProof": "250+ DJs already use Compakt"
   }
 }
