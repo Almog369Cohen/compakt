@@ -119,6 +119,75 @@
       "activeSongs": "שירים פעילים",
       "eventsThisWeek": "אירועים בשבוע הקרוב",
       "noUpcomingEvents": "עדיין אין אירועים קרובים"
+    },
+    "attention": {
+      "resumeCouple": "זוגות באמצע הדרך — שווה לעקוב",
+      "resumeCoupleDetail": "כרגע ב-",
+      "missingContact": "יש זוגות בלי פרטי קשר",
+      "missingContactDetail": "ללא מייל או מספר טלפון מזוהה",
+      "missingEventSetup": "אירועים קרובים שחסרים פרטים",
+      "missingEventSetupDetail": "חסר:",
+      "profileReadiness": "הפרופיל עוד לא שלם",
+      "profileReadinessDetail": "עוד {{percent}}% להשלמה — שווה להשקיע",
+      "setupReadiness": "עוד חסר משהו לפני קבלת זוגות",
+      "setupReadinessDetail": "{{songs}} שירים, {{questions}} שאלות",
+      "openQuestionnaires": "פתח שאלונים",
+      "checkQuestionnaires": "בדוק שאלונים",
+      "openEvents": "פתח אירועים",
+      "complete": "השלימו"
+    },
+    "summary": {
+      "itemsWaiting": "{{count}} דברים מחכים לטיפול",
+      "eventsNextWeek": "{{count}} אירועים בשבוע הקרוב",
+      "questionnairesInProgress": "{{count}} שאלונים בתהליך",
+      "allQuiet": "הכול שקט כרגע — זמן טוב לסדר אירועים, פרופיל וספריית שירים."
+    },
+    "launchChecklist": {
+      "title": "צ׳ק ליסט השקה מהיר",
+      "subtitle": "המסלול הקצר ביותר ל-DJ חדש לפני שליחה ללקוחות",
+      "completeProfile": "להשלים פרופיל DJ",
+      "profileReady": "הפרופיל כבר נראה מוכן לפרסום",
+      "profileIncomplete": "השלם שם עסק, טקסט היכרות ודרך יצירת קשר",
+      "prepareQuestionnaire": "להכין שאלון",
+      "questionsReady": "{{count}} שאלות פעילות מוכנות",
+      "questionsNeeded": "הוסף לפחות 5 שאלות פעילות לפני שליחה לזוגות",
+      "buildSongLibrary": "לבנות ספריית שירים",
+      "songsReady": "{{count}} שירים פעילים זמינים לזוגות",
+      "songsNeeded": "הוסף שירים בסיסיים כדי שהזוגות יתחילו לסמן העדפות",
+      "sendFirstQuestionnaire": "לשלוח שאלון לזוג ראשון",
+      "couplesReceived": "{{count}} זוגות כבר קיבלו שאלון",
+      "createFirstLink": "צור קישור לשאלון הזוגות ושלח אותו ללקוח הראשון",
+      "ready": "מוכן",
+      "complete": "השלם"
+    },
+    "sections": {
+      "controlCenter": "מרכז הבקרה שלך",
+      "dashboard": "מרכז הבקרה",
+      "needsAttention": "דורש טיפול עכשיו",
+      "needsAttentionSubtitle": "רק מה שבאמת צריך ממך פעולה",
+      "refresh": "רענן",
+      "noAttentionItems": "אין דברים דחופים כרגע",
+      "noAttentionItemsDetail": "כל השאלונים והאירועים מסודרים. זמן טוב להוסיף שירים או לשפר את הפרופיל.",
+      "upcomingEvents": "אירועים קרובים",
+      "upcomingEventsSubtitle": "7 ימים קדימה",
+      "noUpcomingEvents": "אין אירועים בשבוע הקרוב",
+      "noUpcomingEventsDetail": "כשתוסיף אירועים עם תאריכים, הם יופיעו כאן.",
+      "viewAllEvents": "ראה את כל האירועים"
+    },
+    "metrics": {
+      "questionnairesInProgress": "שאלונים בתהליך",
+      "requireFollowup": "דורשים מעקב",
+      "completedFull": "השלימו מלא",
+      "couplesFinished": "זוגות שסיימו",
+      "upcomingEvents": "אירועים קרובים",
+      "sevenDaysAhead": "7 ימים קדימה",
+      "systemReadiness": "מוכנות מערכת",
+      "profileSongsQuestions": "פרופיל, שירים ושאלון"
+    },
+    "quickActions": {
+      "questionnaires": "שאלונים",
+      "events": "אירועים",
+      "profile": "פרופיל"
     }
   },
   "profile": {

@@ -244,10 +244,10 @@ export function Dashboard() {
       const couple = resumedCouples[0];
       attentionItems.push({
         id: "resume-couple",
-        title: "זוגות באמצע הדרך — שווה לעקוב",
-        detail: `${getCoupleNames(couple, t)} כרגע ב-${t(`dashboard.stages.${couple.current_stage}`) || t("dashboard.stages.1")}`,
+        title: t("dashboard.attention.resumeCouple"),
+        detail: `${getCoupleNames(couple, t)} ${t("dashboard.attention.resumeCoupleDetail")}${t(`dashboard.stages.${couple.current_stage}`) || t("dashboard.stages.1")}`,
         tone: "warn",
-        cta: "פתח שאלונים",
+        cta: t("dashboard.attention.openQuestionnaires"),
         tab: "couples",
       });
     }
@@ -256,10 +256,10 @@ export function Dashboard() {
       const couple = missingContact[0];
       attentionItems.push({
         id: "missing-contact",
-        title: "יש זוגות בלי פרטי קשר",
-        detail: `${getCoupleNames(couple, t)} ללא מייל או מספר טלפון מזוהה`,
+        title: t("dashboard.attention.missingContact"),
+        detail: `${getCoupleNames(couple, t)} ${t("dashboard.attention.missingContactDetail")}`,
         tone: "danger",
-        cta: "בדוק שאלונים",
+        cta: t("dashboard.attention.checkQuestionnaires"),
         tab: "couples",
       });
     }
@@ -269,10 +269,10 @@ export function Dashboard() {
       const readiness = getEventReadiness(upcoming, t);
       attentionItems.push({
         id: "missing-event-setup",
-        title: "אירועים קרובים שחסרים פרטים",
-        detail: `${upcoming.name} חסר: ${readiness.missing.join(", ")}`,
+        title: t("dashboard.attention.missingEventSetup"),
+        detail: `${upcoming.name} ${t("dashboard.attention.missingEventSetupDetail")} ${readiness.missing.join(", ")}`,
         tone: "warn",
-        cta: "פתח אירועים",
+        cta: t("dashboard.attention.openEvents"),
         tab: "events",
       });
     }
@@ -280,10 +280,10 @@ export function Dashboard() {
     if (profileReadiness.score < 80) {
       attentionItems.push({
         id: "profile-readiness",
-        title: "הפרופיל עוד לא שלם",
-        detail: `עוד ${100 - profileReadiness.score}% להשלמה — שווה להשקיע`,
+        title: t("dashboard.attention.profileReadiness"),
+        detail: t("dashboard.attention.profileReadinessDetail", { percent: String(100 - profileReadiness.score) }),
         tone: "info",
-        cta: "השלימו",
+        cta: t("dashboard.attention.complete"),
         tab: "profile",
       });
     }
@@ -291,10 +291,10 @@ export function Dashboard() {
     if (activeSongs < 10 || activeQuestions < 5) {
       attentionItems.push({
         id: "setup-readiness",
-        title: "עוד חסר משהו לפני קבלת זוגות",
-        detail: `${activeSongs} שירים, ${activeQuestions} שאלות`,
+        title: t("dashboard.attention.setupReadiness"),
+        detail: t("dashboard.attention.setupReadinessDetail", { songs: String(activeSongs), questions: String(activeQuestions) }),
         tone: "info",
-        cta: "השלימו",
+        cta: t("dashboard.attention.complete"),
         tab: activeSongs < 10 ? "songs" : "questions",
       });
     }
@@ -315,48 +315,48 @@ export function Dashboard() {
   const summaryLine = useMemo(() => {
     const pieces: string[] = [];
     if (dashboardData.attentionItems.length > 0) {
-      pieces.push(`${dashboardData.attentionItems.length} דברים מחכים לטיפול`);
+      pieces.push(t("dashboard.summary.itemsWaiting", { count: String(dashboardData.attentionItems.length) }));
     }
     if (dashboardData.nextWeekEvents.length > 0) {
-      pieces.push(`${dashboardData.nextWeekEvents.length} אירועים בשבוע הקרוב`);
+      pieces.push(t("dashboard.summary.eventsNextWeek", { count: String(dashboardData.nextWeekEvents.length) }));
     }
     if (dashboardData.incompleteCouples.length > 0) {
-      pieces.push(`${dashboardData.incompleteCouples.length} שאלונים בתהליך`);
+      pieces.push(t("dashboard.summary.questionnairesInProgress", { count: String(dashboardData.incompleteCouples.length) }));
     }
     if (pieces.length === 0) {
-      return "הכול שקט כרגע — זמן טוב לסדר אירועים, פרופיל וספריית שירים.";
+      return t("dashboard.summary.allQuiet");
     }
     return pieces.join(" · ");
-  }, [dashboardData.attentionItems.length, dashboardData.incompleteCouples.length, dashboardData.nextWeekEvents.length]);
+  }, [dashboardData.attentionItems.length, dashboardData.incompleteCouples.length, dashboardData.nextWeekEvents.length, t]);
 
   const launchChecklist = useMemo(
     () => [
       {
-        label: "להשלים פרופיל DJ",
+        label: t("dashboard.launchChecklist.completeProfile"),
         done: profileReadiness.score >= 80,
-        detail: profileReadiness.score >= 80 ? "הפרופיל כבר נראה מוכן לפרסום" : "השלם שם עסק, טקסט היכרות ודרך יצירת קשר",
+        detail: profileReadiness.score >= 80 ? t("dashboard.launchChecklist.profileReady") : t("dashboard.launchChecklist.profileIncomplete"),
         tab: "profile" as const,
       },
       {
-        label: "להכין שאלון",
+        label: t("dashboard.launchChecklist.prepareQuestionnaire"),
         done: activeQuestions >= 5,
-        detail: activeQuestions >= 5 ? `${activeQuestions} שאלות פעילות מוכנות` : "הוסף לפחות 5 שאלות פעילות לפני שליחה לזוגות",
+        detail: activeQuestions >= 5 ? t("dashboard.launchChecklist.questionsReady", { count: String(activeQuestions) }) : t("dashboard.launchChecklist.questionsNeeded"),
         tab: "questions" as const,
       },
       {
-        label: "לבנות ספריית שירים",
+        label: t("dashboard.launchChecklist.buildSongLibrary"),
         done: activeSongs >= 10,
-        detail: activeSongs >= 10 ? `${activeSongs} שירים פעילים זמינים לזוגות` : "הוסף שירים בסיסיים כדי שהזוגות יתחילו לסמן העדפות",
+        detail: activeSongs >= 10 ? t("dashboard.launchChecklist.songsReady", { count: String(activeSongs) }) : t("dashboard.launchChecklist.songsNeeded"),
         tab: "songs" as const,
       },
       {
-        label: "לשלוח שאלון לזוג ראשון",
+        label: t("dashboard.launchChecklist.sendFirstQuestionnaire"),
         done: coupleEvents.length > 0,
-        detail: coupleEvents.length > 0 ? `${coupleEvents.length} זוגות כבר קיבלו שאלון` : "צור קישור לשאלון הזוגות ושלח אותו ללקוח הראשון",
+        detail: coupleEvents.length > 0 ? t("dashboard.launchChecklist.couplesReceived", { count: String(coupleEvents.length) }) : t("dashboard.launchChecklist.createFirstLink"),
         tab: "couples" as const,
       },
     ],
-    [activeQuestions, activeSongs, coupleEvents.length, profileReadiness.score]
+    [profileReadiness.score, activeQuestions, activeSongs, coupleEvents.length, t]
   );
 
   useEffect(() => {
@@ -382,29 +382,29 @@ export function Dashboard() {
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-dashboard-border bg-white/[0.04] px-3.5 py-1.5 text-xs font-medium text-muted">
               <BarChart3 className="w-4 h-4 text-brand-blue" />
-              מרכז הבקרה שלך
+              {t("dashboard.sections.controlCenter")}
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">מרכז הבקרה</h1>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{t("dashboard.sections.dashboard")}</h1>
               <p className="text-base text-secondary mt-2 leading-relaxed max-w-2xl">{summaryLine}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <QuickActionButton label="שאלונים" onClick={() => dispatchAdminTabChange("couples")} />
-            <QuickActionButton label="אירועים" onClick={() => dispatchAdminTabChange("events")} />
-            <QuickActionButton label="פרופיל" onClick={() => dispatchAdminTabChange("profile")} />
+            <QuickActionButton label={t("dashboard.quickActions.questionnaires")} onClick={() => dispatchAdminTabChange("couples")} />
+            <QuickActionButton label={t("dashboard.quickActions.events")} onClick={() => dispatchAdminTabChange("events")} />
+            <QuickActionButton label={t("dashboard.quickActions.profile")} onClick={() => dispatchAdminTabChange("profile")} />
           </div>
         </div>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <MetricCard label="שאלונים בתהליך" value={dashboardData.incompleteCouples.length} sublabel="דורשים מעקב" tone="brand" />
-        <MetricCard label="השלימו מלא" value={dashboardData.completedCouples.length} sublabel="זוגות שסיימו" tone="success" />
-        <MetricCard label="אירועים קרובים" value={dashboardData.nextWeekEvents.length} sublabel="7 ימים קדימה" tone="warn" />
-        <MetricCard label="מוכנות מערכת" value={`${Math.round((profileReadiness.score + Math.min(activeSongs * 5, 100) + Math.min(activeQuestions * 10, 100)) / 3)}%`} sublabel="פרופיל, שירים ושאלון" tone="neutral" />
+        <MetricCard label={t("dashboard.metrics.questionnairesInProgress")} value={dashboardData.incompleteCouples.length} sublabel={t("dashboard.metrics.requireFollowup")} tone="brand" />
+        <MetricCard label={t("dashboard.metrics.completedFull")} value={dashboardData.completedCouples.length} sublabel={t("dashboard.metrics.couplesFinished")} tone="success" />
+        <MetricCard label={t("dashboard.metrics.upcomingEvents")} value={dashboardData.nextWeekEvents.length} sublabel={t("dashboard.metrics.sevenDaysAhead")} tone="warn" />
+        <MetricCard label={t("dashboard.metrics.systemReadiness")} value={`${Math.round((profileReadiness.score + Math.min(activeSongs * 5, 100) + Math.min(activeQuestions * 10, 100)) / 3)}%`} sublabel={t("dashboard.metrics.profileSongsQuestions")} tone="neutral" />
       </div>
 
-      <SectionCard title="צ׳ק ליסט השקה מהיר" subtitle="המסלול הקצר ביותר ל-DJ חדש לפני שליחה ללקוחות">
+      <SectionCard title={t("dashboard.launchChecklist.title")} subtitle={t("dashboard.launchChecklist.subtitle")}>
         <div className="grid md:grid-cols-2 gap-4">
           {launchChecklist.map((item) => (
             <button
@@ -419,7 +419,7 @@ export function Dashboard() {
                 </div>
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-sm font-semibold shrink-0 ${item.done ? "border-accent-success/50 bg-accent-success/15 text-accent-success" : "border-dashboard-border bg-white/[0.05] text-muted"}`}>
                   {item.done && <CheckCircle2 className="w-3.5 h-3.5" />}
-                  {item.done ? "מוכן" : "השלם"}
+                  {item.done ? t("dashboard.launchChecklist.ready") : t("dashboard.launchChecklist.complete")}
                 </span>
               </div>
             </button>
@@ -429,10 +429,10 @@ export function Dashboard() {
 
       <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-5">
         <SectionCard
-          title="דורש טיפול עכשיו"
-          subtitle="רק מה שבאמת צריך ממך פעולה"
+          title={t("dashboard.sections.needsAttention")}
+          subtitle={t("dashboard.sections.needsAttentionSubtitle")}
           action={(
-            <button onClick={loadCoupleEvents} className="p-2 rounded-xl text-muted hover:text-foreground transition-colors" aria-label="רענן">
+            <button onClick={loadCoupleEvents} className="p-2 rounded-xl text-muted hover:text-foreground transition-colors" aria-label={t("dashboard.sections.refresh")}>
               <RefreshCw className={`w-4 h-4 ${couplesLoading ? "animate-spin" : ""}`} />
             </button>
           )}

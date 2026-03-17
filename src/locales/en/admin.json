@@ -119,6 +119,75 @@
       "activeSongs": "active songs",
       "eventsThisWeek": "events this week",
       "noUpcomingEvents": "No upcoming events yet"
+    },
+    "attention": {
+      "resumeCouple": "Couples in progress — worth following up",
+      "resumeCoupleDetail": "Currently at",
+      "missingContact": "Couples without contact details",
+      "missingContactDetail": "No email or phone number identified",
+      "missingEventSetup": "Upcoming events missing details",
+      "missingEventSetupDetail": "Missing:",
+      "profileReadiness": "Profile not complete yet",
+      "profileReadinessDetail": "{{percent}}% more to complete — worth the effort",
+      "setupReadiness": "Still missing something before accepting couples",
+      "setupReadinessDetail": "{{songs}} songs, {{questions}} questions",
+      "openQuestionnaires": "Open Questionnaires",
+      "checkQuestionnaires": "Check Questionnaires",
+      "openEvents": "Open Events",
+      "complete": "Complete"
+    },
+    "summary": {
+      "itemsWaiting": "{{count}} items waiting for attention",
+      "eventsNextWeek": "{{count}} events next week",
+      "questionnairesInProgress": "{{count}} questionnaires in progress",
+      "allQuiet": "All quiet right now — good time to organize events, profile, and song library."
+    },
+    "launchChecklist": {
+      "title": "Quick Launch Checklist",
+      "subtitle": "The shortest path for a new DJ before sending to clients",
+      "completeProfile": "Complete DJ Profile",
+      "profileReady": "Profile looks ready to publish",
+      "profileIncomplete": "Complete business name, bio, and contact method",
+      "prepareQuestionnaire": "Prepare Questionnaire",
+      "questionsReady": "{{count}} active questions ready",
+      "questionsNeeded": "Add at least 5 active questions before sending to couples",
+      "buildSongLibrary": "Build Song Library",
+      "songsReady": "{{count}} active songs available to couples",
+      "songsNeeded": "Add basic songs so couples can start marking preferences",
+      "sendFirstQuestionnaire": "Send Questionnaire to First Couple",
+      "couplesReceived": "{{count}} couples already received questionnaire",
+      "createFirstLink": "Create couple questionnaire link and send to first client",
+      "ready": "Ready",
+      "complete": "Complete"
+    },
+    "sections": {
+      "controlCenter": "Your Control Center",
+      "dashboard": "Dashboard",
+      "needsAttention": "Needs Attention Now",
+      "needsAttentionSubtitle": "Only what really needs your action",
+      "refresh": "Refresh",
+      "noAttentionItems": "No urgent items right now",
+      "noAttentionItemsDetail": "All questionnaires and events are organized. Good time to add songs or improve profile.",
+      "upcomingEvents": "Upcoming Events",
+      "upcomingEventsSubtitle": "7 days ahead",
+      "noUpcomingEvents": "No events next week",
+      "noUpcomingEventsDetail": "When you add events with dates, they'll appear here.",
+      "viewAllEvents": "View All Events"
+    },
+    "metrics": {
+      "questionnairesInProgress": "Questionnaires in Progress",
+      "requireFollowup": "Require followup",
+      "completedFull": "Completed Full",
+      "couplesFinished": "Couples finished",
+      "upcomingEvents": "Upcoming Events",
+      "sevenDaysAhead": "7 days ahead",
+      "systemReadiness": "System Readiness",
+      "profileSongsQuestions": "Profile, songs & questions"
+    },
+    "quickActions": {
+      "questionnaires": "Questionnaires",
+      "events": "Events",
+      "profile": "Profile"
     }
   },
   "profile": {
