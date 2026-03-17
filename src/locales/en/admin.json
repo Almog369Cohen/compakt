@@ -325,5 +325,92 @@
       "slugRequired": "Slug is required to publish DJ page",
       "saveFailed": "Save failed"
     }
+  },
+  "songs": {
+    "title": "Song Library",
+    "subtitle": "Couple Song Library ({{count}})",
+    "description": "Build the song catalog that couples can love, reject, or mark as must-play. To go live, start with a clear baseline list before sending your first questionnaire.",
+    "actions": {
+      "preview": "Preview",
+      "spotifyImport": "Spotify",
+      "spotifyImportDisabled": "Spotify feature available in Premium plan and above or via HQ override",
+      "csvTemplate": "CSV Template",
+      "csvImport": "Import CSV",
+      "addSong": "Add Song"
+    },
+    "spotifyNotAvailable": "Automatic Spotify import is not currently available for this account. You can still add songs manually, via CSV, or with direct links.",
+    "categoryLabels": {
+      "title": "Song Category Names",
+      "save": "Save Names",
+      "saving": "Saving...",
+      "saved": "Saved",
+      "reception": "Reception",
+      "food": "Dinner",
+      "dancing": "Dance Floor",
+      "ceremony": "Ceremony"
+    },
+    "search": {
+      "placeholder": "Search song, artist, or tag...",
+      "all": "All"
+    },
+    "bulk": {
+      "selected": "{{count}} songs selected",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "deleteConfirm": "Delete {{count}} songs?"
+    },
+    "table": {
+      "song": "Song",
+      "artist": "Artist",
+      "category": "Category",
+      "tags": "Tags",
+      "language": "Language",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "languages": {
+      "hebrew": "Hebrew",
+      "english": "English",
+      "arabic": "Arabic",
+      "other": "Other"
+    },
+    "form": {
+      "editSong": "Edit Song",
+      "newSong": "New Song",
+      "title": "Song Title",
+      "artist": "Artist",
+      "category": "Category",
+      "tags": "Tags",
+      "tagsHint": "Separate with commas",
+      "language": "Language",
+      "spotifyUrl": "Spotify URL",
+      "spotifyUrlHint": "Optional - link to song on Spotify",
+      "isActive": "Active",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "errors": {
+      "updateFailed": "Song update failed",
+      "deleteFailed": "Song deletion failed",
+      "createFailed": "Song creation failed",
+      "categoryLabelsFailed": "Failed to save category names",
+      "emptyFile": "Empty file",
+      "invalidCsv": "CSV must include title and artist columns"
+    },
+    "success": {
+      "deleted": "Selected songs deleted",
+      "imported": "{{count}} songs imported successfully!"
+    },
+    "empty": {
+      "noSongs": "No songs yet",
+      "noSongsDetail": "Start by adding songs manually, importing from CSV, or connecting to Spotify.",
+      "noResults": "No songs found",
+      "noResultsDetail": "Try changing your search or filter."
+    }
   }
 }

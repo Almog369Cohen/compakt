@@ -325,5 +325,92 @@
       "slugRequired": "חובה להגדיר כתובת (slug) כדי לפרסם דף DJ",
       "saveFailed": "שמירה נכשלה"
     }
+  },
+  "songs": {
+    "title": "ספריית שירים",
+    "subtitle": "ספריית השירים של הזוגות ({{count}})",
+    "description": "כאן בונים את מאגר השירים שהזוגות יוכלו לאהוב, לפסול או לסמן כחובה. כדי לעלות לאוויר מומלץ להתחיל עם רשימת בסיס ברורה לפני ששולחים שאלון ראשון.",
+    "actions": {
+      "preview": "תצוגה מקדימה",
+      "spotifyImport": "Spotify",
+      "spotifyImportDisabled": "פיצ'ר Spotify זמין בתוכנית Premium ומעלה או דרך override ב-HQ",
+      "csvTemplate": "תבנית CSV",
+      "csvImport": "ייבוא CSV",
+      "addSong": "הוסף שיר"
+    },
+    "spotifyNotAvailable": "ייבוא אוטומטי מ-Spotify לא זמין כרגע לחשבון הזה. אפשר עדיין להוסיף שירים ידנית, ב-CSV או עם לינק ישיר.",
+    "categoryLabels": {
+      "title": "שמות קטגוריות לשירים",
+      "save": "שמור שמות",
+      "saving": "שומר...",
+      "saved": "נשמר",
+      "reception": "קבלת פנים",
+      "food": "אוכל",
+      "dancing": "רחבה",
+      "ceremony": "חופה / טקס"
+    },
+    "search": {
+      "placeholder": "חפש שיר, אמן או תגית...",
+      "all": "הכל"
+    },
+    "bulk": {
+      "selected": "נבחרו {{count}} שירים",
+      "activate": "הפעל",
+      "deactivate": "השבת",
+      "delete": "מחק",
+      "deleteConfirm": "למחוק {{count}} שירים?"
+    },
+    "table": {
+      "song": "שיר",
+      "artist": "אמן",
+      "category": "קטגוריה",
+      "tags": "תגיות",
+      "language": "שפה",
+      "status": "סטטוס",
+      "actions": "פעולות"
+    },
+    "status": {
+      "active": "פעיל",
+      "inactive": "לא פעיל"
+    },
+    "languages": {
+      "hebrew": "עברית",
+      "english": "אנגלית",
+      "arabic": "ערבית",
+      "other": "אחר"
+    },
+    "form": {
+      "editSong": "ערוך שיר",
+      "newSong": "שיר חדש",
+      "title": "שם השיר",
+      "artist": "אמן",
+      "category": "קטגוריה",
+      "tags": "תגיות",
+      "tagsHint": "הפרד בפסיקים",
+      "language": "שפה",
+      "spotifyUrl": "Spotify URL",
+      "spotifyUrlHint": "אופציונלי - לינק לשיר ב-Spotify",
+      "isActive": "פעיל",
+      "cancel": "ביטול",
+      "save": "שמור"
+    },
+    "errors": {
+      "updateFailed": "עדכון שירים נכשל",
+      "deleteFailed": "מחיקת השירים נכשלה",
+      "createFailed": "יצירת השיר נכשלה",
+      "categoryLabelsFailed": "שמירת שמות הקטגוריות נכשלה",
+      "emptyFile": "קובץ ריק",
+      "invalidCsv": "CSV חייב לכלול עמודות title ו-artist"
+    },
+    "success": {
+      "deleted": "השירים שנבחרו נמחקו",
+      "imported": "{{count}} שירים יובאו בהצלחה!"
+    },
+    "empty": {
+      "noSongs": "עדיין אין שירים",
+      "noSongsDetail": "התחל בהוספת שירים ידנית, ייבוא מ-CSV או חיבור ל-Spotify.",
+      "noResults": "לא נמצאו שירים",
+      "noResultsDetail": "נסה לשנות את החיפוש או הסינון."
+    }
   }
 }

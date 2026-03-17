@@ -32,20 +32,16 @@ import {
   DEFAULT_SONG_CATEGORY_LABELS,
   type SongCategoryLabels,
 } from "@/lib/songCategories";
+import { useTranslation } from "@/lib/i18n";
 
 type AdminAccess = {
   isActive: boolean;
   features: Record<FeatureKey, boolean>;
 };
 
-const languages = [
-  { value: "hebrew", label: "עברית" },
-  { value: "english", label: "אנגלית" },
-  { value: "arabic", label: "ערבית" },
-  { value: "other", label: "אחר" },
-];
 
 export function SongManager() {
+  const { t } = useTranslation("admin");
   const songs = useAdminStore((s) => s.songs);
   const addSong = useAdminStore((s) => s.addSong);
   const updateSong = useAdminStore((s) => s.updateSong);
@@ -101,6 +97,13 @@ export function SongManager() {
     () => getSongCategoryOptions(songCategoryLabels),
     [songCategoryLabels]
   );
+
+  const languages = useMemo(() => [
+    { value: "hebrew", label: t("songs.languages.hebrew") },
+    { value: "english", label: t("songs.languages.english") },
+    { value: "arabic", label: t("songs.languages.arabic") },
+    { value: "other", label: t("songs.languages.other") },
+  ], [t]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
