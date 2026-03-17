@@ -517,7 +517,7 @@ export function ProfileSettings() {
                   type="url"
                   value={coverUrl}
                   onChange={(e) => setProfile({ coverUrl: e.target.value })}
-                  placeholder="או הדבק URL ישיר"
+                  placeholder={t("profile.fields.urlPlaceholder")}
                   className={`${inputClass} mt-2`}
                   dir="ltr"
                 />
@@ -535,13 +535,13 @@ export function ProfileSettings() {
                   type="url"
                   value={logoUrl}
                   onChange={(e) => setProfile({ logoUrl: e.target.value })}
-                  placeholder="או הדבק URL ישיר"
+                  placeholder={t("profile.fields.urlPlaceholder")}
                   className={`${inputClass} mt-2`}
                   dir="ltr"
                 />
                 <div className="mt-3 space-y-3 rounded-2xl border border-glass p-3">
                   <div>
-                    <label className="block text-xs text-muted mb-1.5 font-medium">התאמת לוגו</label>
+                    <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.logoFitLabel")}</label>
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -551,7 +551,7 @@ export function ProfileSettings() {
                           : "border border-glass text-secondary hover:text-primary"
                           }`}
                       >
-                        שמור את כל הלוגו
+                        {t("profile.fields.logoFitCover")}
                       </button>
                       <button
                         type="button"
@@ -561,14 +561,14 @@ export function ProfileSettings() {
                           : "border border-glass text-secondary hover:text-primary"
                           }`}
                       >
-                        מלא את המסגרת
+                        {t("profile.fields.logoFitContain")}
                       </button>
                     </div>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-1.5">
-                      <label className="block text-xs text-muted font-medium">גודל לוגו</label>
+                      <label className="block text-xs text-muted font-medium">{t("profile.fields.logoScaleLabel")}</label>
                       <span className="text-xs text-muted">{logoScale}%</span>
                     </div>
                     <input
@@ -589,7 +589,7 @@ export function ProfileSettings() {
           <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <ImageIcon className="w-4 h-4 text-brand-blue" />
-              גלריית תמונות
+              {t("profile.fields.galleryTitle")}
             </h3>
             {uploaderUserId ? (
               <ImageUploader
@@ -600,12 +600,12 @@ export function ProfileSettings() {
                 folder="gallery"
               />
             ) : (
-              <p className="text-xs text-muted">התחברו עם אימייל כדי להעלות תמונות</p>
+              <p className="text-xs text-muted">{t("profile.fields.galleryLoginRequired")}</p>
             )}
             <div className="flex gap-2">
               <input
                 type="url"
-                placeholder="או הדביקו URL של תמונה"
+                placeholder={t("profile.fields.galleryUrlPlaceholder")}
                 className={inputClass}
                 dir="ltr"
                 id="gallery-url-input"
@@ -637,10 +637,10 @@ export function ProfileSettings() {
           <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <PlayCircle className="w-4 h-4 text-brand-blue" />
-              לינקים מותאמים / showreel
+              {t("profile.fields.customLinksTitle")}
             </h3>
             <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-secondary leading-6">
-              הדבק כאן לינקים ל-YouTube, Vimeo, Instagram Reels או TikTok. כשיש לינק YouTube, ה-preview יציג thumbnail אוטומטי.
+              {t("profile.fields.customLinksHint")}
             </div>
             {customLinks.map((link, i) => (
               <div key={i} className="flex gap-2 items-center">
@@ -652,7 +652,7 @@ export function ProfileSettings() {
                     updated[i] = { ...updated[i], label: e.target.value };
                     setProfile({ customLinks: updated });
                   }}
-                  placeholder="שם הלינק"
+                  placeholder={t("profile.fields.customLinkLabel")}
                   className={`${inputClass} flex-1`}
                 />
                 <input
@@ -684,7 +684,7 @@ export function ProfileSettings() {
               className="btn-secondary text-sm flex items-center gap-2 w-full justify-center"
             >
               <Plus className="w-4 h-4" />
-              הוסף לינק
+              {t("profile.fields.addCustomLink")}
             </button>
           </div>
 
@@ -692,13 +692,13 @@ export function ProfileSettings() {
             <div className="flex items-center justify-between gap-3 mb-4">
               <h3 className="text-sm font-bold flex items-center gap-2">
                 <MessageSquareQuote className="w-4 h-4 text-brand-blue" />
-                ביקורות
+                {t("profile.fields.reviewsTitle")}
               </h3>
               <button
                 onClick={async () => {
                   const slug = djSlugValue.trim();
                   if (!slug) {
-                    alert("חובה להגדיר כתובת (slug) לפני שליחת לינק לזוגות");
+                    alert(t("profile.fields.reviewsSlugRequired"));
                     return;
                   }
                   const reviewLink = `${getSafeOrigin()}/dj/${slug}/review`;
@@ -709,10 +709,10 @@ export function ProfileSettings() {
                   }
                 }}
                 className="inline-flex items-center gap-2 rounded-full border border-dashboard-border bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-secondary hover:text-foreground hover:bg-white/[0.08] hover:border-dashboard-border-hover transition-all"
-                title="העתק לינק לזוגות למילוי ביקורת"
+                title={t("profile.fields.reviewLinkTitle")}
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-brand-green" /> : <Link2 className="w-3.5 h-3.5" />}
-                {copied ? "הועתק!" : "לינק לזוגות"}
+                {copied ? t("profile.fields.reviewLinkCopied") : t("profile.fields.reviewLinkLabel")}
               </button>
             </div>
             {reviews.map((review, i) => (
@@ -762,7 +762,7 @@ export function ProfileSettings() {
                     updated[i] = { ...updated[i], text: e.target.value };
                     setProfile({ reviews: updated });
                   }}
-                  placeholder="תוכן הביקורת..."
+                  placeholder={t("profile.fields.reviewTextPlaceholder")}
                   className={`${inputClass} min-h-[60px] resize-y`}
                   rows={2}
                 />
@@ -773,7 +773,7 @@ export function ProfileSettings() {
               className="btn-secondary text-sm flex items-center gap-2 w-full justify-center"
             >
               <Plus className="w-4 h-4" />
-              הוסף ביקורת
+              {t("profile.fields.addReviewButton")}
             </button>
           </div>
         </div>
@@ -783,7 +783,7 @@ export function ProfileSettings() {
             <div className="bg-white/[0.03] border-b border-glass px-4 py-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-brand-blue" />
-                <span className="text-xs font-medium text-secondary">תצוגה מקדימה</span>
+                <span className="text-xs font-medium text-secondary">{t("profile.fields.previewLabel")}</span>
               </div>
               {selectedStyleMeta && (
                 <span className="text-[11px] rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-muted">
