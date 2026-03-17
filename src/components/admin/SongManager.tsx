@@ -160,7 +160,7 @@ export function SongManager() {
     const failed = results.filter((result) => result.status === "rejected");
     if (failed.length > 0) {
       setSongMutationError(
-        failed[0].reason instanceof Error ? failed[0].reason.message : "עדכון שירים נכשל"
+        failed[0].reason instanceof Error ? failed[0].reason.message : t("songs.errors.updateFailed")
       );
       return;
     }
@@ -170,7 +170,7 @@ export function SongManager() {
 
   const runBulkDelete = async () => {
     if (selectedSongIds.length === 0) return;
-    if (!confirm(`למחוק ${selectedSongIds.length} שירים?`)) return;
+    if (!confirm(t("songs.bulk.deleteConfirm", { count: String(selectedSongIds.length) }))) return;
     setSongMutationError(null);
     const results = await Promise.allSettled(
       selectedSongIds.map((songId) => deleteSong(songId))
@@ -178,12 +178,12 @@ export function SongManager() {
     const failed = results.filter((result) => result.status === "rejected");
     if (failed.length > 0) {
       setSongMutationError(
-        failed[0].reason instanceof Error ? failed[0].reason.message : "מחיקת השירים נכשלה"
+        failed[0].reason instanceof Error ? failed[0].reason.message : t("songs.errors.deleteFailed")
       );
       return;
     }
     setSelectedSongIds([]);
-    showBulkFeedback("השירים שנבחרו נמחקו");
+    showBulkFeedback(t("songs.success.deleted"));
   };
 
   const handleSaveCategoryLabels = async () => {
@@ -194,7 +194,7 @@ export function SongManager() {
       setCategoryLabelsSaved(true);
       setTimeout(() => setCategoryLabelsSaved(false), 1500);
     } catch (e) {
-      setCategoryLabelsError(e instanceof Error ? e.message : "שמירת שמות הקטגוריות נכשלה");
+      setCategoryLabelsError(e instanceof Error ? e.message : t("songs.errors.categoryLabelsFailed"));
     } finally {
       setSavingCategoryLabels(false);
     }
@@ -207,12 +207,12 @@ export function SongManager() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] text-secondary">
               <Music className="w-3.5 h-3.5 text-brand-blue" />
-              ספריית שירים
+              {t("songs.title")}
             </div>
             <div>
-              <h2 className="text-xl font-bold">ספריית השירים של הזוגות ({songs.length})</h2>
+              <h2 className="text-xl font-bold">{t("songs.subtitle", { count: String(songs.length) })}</h2>
               <p className="text-sm text-secondary mt-1 max-w-3xl leading-6">
-                כאן בונים את מאגר השירים שהזוגות יוכלו לאהוב, לפסול או לסמן כחובה. כדי לעלות לאוויר מומלץ להתחיל עם רשימת בסיס ברורה לפני ששולחים שאלון ראשון.
+                {t("songs.description")}
               </p>
             </div>
           </div>
@@ -222,13 +222,13 @@ export function SongManager() {
               className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4"
             >
               <Monitor className="w-4 h-4" />
-              תצוגה מקדימה
+              {t("songs.actions.preview")}
             </button>
             <button
               onClick={() => canUseSpotifyImport && setShowSpotifyImport(true)}
               disabled={!canUseSpotifyImport}
               className={`btn-secondary text-sm flex items-center gap-1.5 py-2 px-4 ${!canUseSpotifyImport ? "opacity-50 cursor-not-allowed" : ""}`}
-              title={canUseSpotifyImport ? "ייבוא שירים מ-Spotify" : "פיצ'ר Spotify זמין בתוכנית Premium ומעלה או דרך override ב-HQ"}
+              title={canUseSpotifyImport ? t("songs.actions.spotifyImport") : t("songs.actions.spotifyImportDisabled")}
             >
               <LinkIcon className="w-4 h-4" />
               Spotify
@@ -238,11 +238,11 @@ export function SongManager() {
               download
               className="text-[10px] text-muted underline hover:text-brand-blue transition-colors"
             >
-              תבנית CSV
+              {t("songs.actions.csvTemplate")}
             </a>
             <label className="btn-secondary text-sm flex items-center gap-1.5 py-2 px-4 cursor-pointer">
               <Upload className="w-4 h-4" />
-              CSV ייבוא
+              {t("songs.actions.csvImport")}
               <input
                 type="file"
                 accept=".csv"
@@ -254,12 +254,12 @@ export function SongManager() {
                   reader.onload = (ev) => {
                     const text = ev.target?.result as string;
                     const lines = text.split("\n").filter((l) => l.trim());
-                    if (lines.length < 2) return alert("קובץ ריק");
+                    if (lines.length < 2) return alert(t("songs.errors.emptyFile"));
                     const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
                     const titleIdx = headers.indexOf("title");
                     const artistIdx = headers.indexOf("artist");
                     if (titleIdx === -1 || artistIdx === -1) {
-                      return alert("CSV חייב לכלול עמודות title ו-artist");
+                      return alert(t("songs.errors.invalidCsv"));
                     }
                     const tagsIdx = headers.indexOf("tags");
                     const categoryIdx = headers.indexOf("category");
