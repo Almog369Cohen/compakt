@@ -517,5 +517,68 @@
     },
     "duplicateSuffix": " (עותק)",
     "moreOptions": "+{{count}} אפשרויות"
+  },
+  "events": {
+    "title": "אירועי DJ",
+    "subtitle": "יומן ותפעול אירועי DJ",
+    "description": "זהו אזור התפעול של הדיג׳יי עצמו: תאריכים, מיקום, הערות עבודה וצילומי מסך. זה נפרד משאלוני הזוגות ומהעדפות המוזיקליות שלהם.",
+    "actions": {
+      "connectGCal": "חבר Google Calendar",
+      "sync": "סנכרן",
+      "syncing": "מסנכרן...",
+      "newEvent": "אירוע חדש",
+      "creating": "יוצר...",
+      "edit": "ערוך",
+      "delete": "מחק",
+      "deleteConfirm": "למחוק את האירוע?"
+    },
+    "status": {
+      "upcoming": "קרוב",
+      "confirmed": "מאושר",
+      "completed": "הושלם",
+      "cancelled": "בוטל"
+    },
+    "fields": {
+      "name": "שם האירוע",
+      "date": "תאריך",
+      "location": "מיקום",
+      "notes": "הערות",
+      "status": "סטטוס",
+      "screenshots": "צילומי מסך"
+    },
+    "gcal": {
+      "success": "Google Calendar חובר בהצלחה",
+      "notAvailable": "Google Calendar לא זמין לחשבון הזה",
+      "notIncluded": "חיבור וסנכרון עם Google Calendar לא כלולים כרגע בגרסת ההשקה של החשבון הזה.",
+      "connectTitle": "חברו את Google Calendar",
+      "syncTitle": "סנכרן עם Google Calendar",
+      "proFeature": "Google Calendar זמין בתוכנית Pro ומעלה או דרך override ב-HQ",
+      "errors": {
+        "missing_params": "חסרים פרמטרים בתהליך החיבור ל-Google Calendar",
+        "not_configured": "Google Calendar עדיין לא מוגדר בפרודקשן",
+        "token_exchange": "נכשל חילוף ה-token מול Google",
+        "save_failed": "שמירת פרטי החיבור ל-Google Calendar נכשלה",
+        "unknown": "אירעה שגיאה לא צפויה בחיבור ל-Google Calendar",
+        "state_mismatch": "אימות החיבור ל-Google Calendar נכשל. נסו להתחבר שוב",
+        "default": "חיבור Google Calendar נכשל",
+        "syncFailed": "סנכרון נכשל",
+        "syncError": "שגיאה בסנכרון"
+      },
+      "syncSuccess": "סונכרן! {{pulled}} נמשכו, {{pushed}} נדחפו"
+    },
+    "uploads": {
+      "notIncluded": "העלאת צילומי מסך לא כלולה כרגע בגרסת ההשקה של החשבון הזה."
+    },
+    "empty": {
+      "noEvents": "עדיין אין אירועי DJ ביומן",
+      "noEventsDetail": "לחצו על \"אירוע חדש\" כדי לנהל כאן את האירועים שאתם מפעילים בפועל.",
+      "needProfile": "צריך לשמור פרופיל קודם כדי לנהל אירועים"
+    },
+    "loading": "טוען אירועים...",
+    "sections": {
+      "upcoming": "אירועים קרובים ({{count}})",
+      "past": "אירועים שהסתיימו ({{count}})"
+    },
+    "dateNotSet": "לא נקבע"
   }
 }

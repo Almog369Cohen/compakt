@@ -517,5 +517,68 @@
     },
     "duplicateSuffix": " (copy)",
     "moreOptions": "+{{count}} options"
+  },
+  "events": {
+    "title": "DJ Events",
+    "subtitle": "DJ Event Calendar & Operations",
+    "description": "This is the DJ's operational area: dates, location, work notes, and screenshots. This is separate from couple questionnaires and their music preferences.",
+    "actions": {
+      "connectGCal": "Connect Google Calendar",
+      "sync": "Sync",
+      "syncing": "Syncing...",
+      "newEvent": "New Event",
+      "creating": "Creating...",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this event?"
+    },
+    "status": {
+      "upcoming": "Upcoming",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "fields": {
+      "name": "Event Name",
+      "date": "Date",
+      "location": "Location",
+      "notes": "Notes",
+      "status": "Status",
+      "screenshots": "Screenshots"
+    },
+    "gcal": {
+      "success": "Google Calendar connected successfully",
+      "notAvailable": "Google Calendar not available for this account",
+      "notIncluded": "Google Calendar connection and sync are not included in the launch version of this account.",
+      "connectTitle": "Connect Google Calendar",
+      "syncTitle": "Sync with Google Calendar",
+      "proFeature": "Google Calendar is available in Pro plan and above or via HQ override",
+      "errors": {
+        "missing_params": "Missing parameters in Google Calendar connection process",
+        "not_configured": "Google Calendar not yet configured in production",
+        "token_exchange": "Token exchange with Google failed",
+        "save_failed": "Saving Google Calendar connection details failed",
+        "unknown": "An unexpected error occurred connecting to Google Calendar",
+        "state_mismatch": "Google Calendar connection verification failed. Try connecting again",
+        "default": "Google Calendar connection failed",
+        "syncFailed": "Sync failed",
+        "syncError": "Sync error"
+      },
+      "syncSuccess": "Synced! {{pulled}} pulled, {{pushed}} pushed"
+    },
+    "uploads": {
+      "notIncluded": "Screenshot uploads are not included in the launch version of this account."
+    },
+    "empty": {
+      "noEvents": "No DJ events in calendar yet",
+      "noEventsDetail": "Click \"New Event\" to manage the events you're actually operating here.",
+      "needProfile": "Need to save profile first to manage events"
+    },
+    "loading": "Loading events...",
+    "sections": {
+      "upcoming": "Upcoming Events ({{count}})",
+      "past": "Past Events ({{count}})"
+    },
+    "dateNotSet": "Not set"
   }
 }

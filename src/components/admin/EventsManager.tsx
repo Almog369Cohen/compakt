@@ -24,22 +24,26 @@ import { useProfileStore } from "@/stores/profileStore";
 import { ImageUploader } from "@/components/ui/ImageUploader";
 import { useAdminStore } from "@/stores/adminStore";
 import type { FeatureKey } from "@/lib/access";
+import { useTranslation } from "@/lib/i18n";
+import { useMemo } from "react";
 
 type AdminAccess = {
   isActive: boolean;
   features: Record<FeatureKey, boolean>;
 };
 
-const STATUS_OPTIONS: { value: DJEvent["status"]; label: string; color: string }[] = [
-  { value: "upcoming", label: "קרוב", color: "#059cc0" },
-  { value: "confirmed", label: "מאושר", color: "#03b28c" },
-  { value: "completed", label: "הושלם", color: "#8b5cf6" },
-  { value: "cancelled", label: "בוטל", color: "#ef4444" },
-];
 
 export function EventsManager() {
+  const { t } = useTranslation("admin");
   const profileId = useProfileStore((s) => s.profileId);
   const userId = useAdminStore((s) => s.userId);
+
+  const STATUS_OPTIONS = useMemo(() => [
+    { value: "upcoming" as const, label: t("events.status.upcoming"), color: "#059cc0" },
+    { value: "confirmed" as const, label: t("events.status.confirmed"), color: "#03b28c" },
+    { value: "completed" as const, label: t("events.status.completed"), color: "#8b5cf6" },
+    { value: "cancelled" as const, label: t("events.status.cancelled"), color: "#ef4444" },
+  ], [t]);
   const router = useRouter();
   const { events, loading, error, loadEvents, createEvent, updateEvent, deleteEvent, addScreenshot, removeScreenshot } =
     useEventsStore();
@@ -90,17 +94,17 @@ export function EventsManager() {
     if (!gcal) return;
 
     if (gcal === "success") {
-      setSyncMsg("Google Calendar חובר בהצלחה");
+      setSyncMsg(t("events.gcal.success"));
     } else {
       const reasonMap: Record<string, string> = {
-        missing_params: "חסרים פרמטרים בתהליך החיבור ל-Google Calendar",
-        not_configured: "Google Calendar עדיין לא מוגדר בפרודקשן",
-        token_exchange: "נכשל חילוף ה-token מול Google",
-        save_failed: "שמירת פרטי החיבור ל-Google Calendar נכשלה",
-        unknown: "אירעה שגיאה לא צפויה בחיבור ל-Google Calendar",
-        state_mismatch: "אימות החיבור ל-Google Calendar נכשל. נסו להתחבר שוב",
+        missing_params: t("events.gcal.errors.missing_params"),
+        not_configured: t("events.gcal.errors.not_configured"),
+        token_exchange: t("events.gcal.errors.token_exchange"),
+        save_failed: t("events.gcal.errors.save_failed"),
+        unknown: t("events.gcal.errors.unknown"),
+        state_mismatch: t("events.gcal.errors.state_mismatch"),
       };
-      setSyncMsg(`שגיאה: ${reasonMap[reason || ""] || "חיבור Google Calendar נכשל"}`);
+      setSyncMsg(`${t("common.error")}: ${reasonMap[reason || ""] || t("events.gcal.errors.default")}`);
     }
 
     params.delete("gcal");
@@ -111,7 +115,7 @@ export function EventsManager() {
 
   const handleSync = async (direction: "pull" | "push" | "both") => {
     if (!canUseGoogleCalendar) {
-      setSyncMsg("Google Calendar לא זמין לחשבון הזה");
+      setSyncMsg(t("events.gcal.notAvailable"));
       return;
     }
 
@@ -125,13 +129,13 @@ export function EventsManager() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setSyncMsg(`שגיאה: ${data.error || "סנכרון נכשל"}`);
+        setSyncMsg(`${t("common.error")}: ${data.error || t("events.gcal.errors.syncFailed")}`);
       } else {
-        setSyncMsg(`סונכרן! ${data.pulled || 0} נמשכו, ${data.pushed || 0} נדחפו`);
+        setSyncMsg(t("events.gcal.syncSuccess", { pulled: String(data.pulled || 0), pushed: String(data.pushed || 0) }));
         if (profileId) loadEvents(profileId);
       }
     } catch {
-      setSyncMsg("שגיאה בסנכרון");
+      setSyncMsg(t("events.gcal.errors.syncError"));
     }
     setSyncing(false);
     setTimeout(() => setSyncMsg(null), 4000);
@@ -139,7 +143,7 @@ export function EventsManager() {
 
   const handleConnectGCal = () => {
     if (!canUseGoogleCalendar) {
-      setSyncMsg("Google Calendar לא זמין לחשבון הזה");
+      setSyncMsg(t("events.gcal.notAvailable"));
       return;
     }
 
@@ -150,7 +154,7 @@ export function EventsManager() {
     if (!profileId) return;
     setCreating(true);
     const newEvent = await createEvent(profileId, {
-      name: "אירוע חדש",
+      name: t("events.actions.newEvent"),
       status: "upcoming",
     });
     setCreating(false);
@@ -192,7 +196,7 @@ export function EventsManager() {
   };
 
   const handleDelete = async (eventId: string) => {
-    if (!confirm("למחוק את האירוע?")) return;
+    if (!confirm(t("events.actions.deleteConfirm"))) return;
     await deleteEvent(eventId);
     if (editingId === eventId) {
       setEditingId(null);
@@ -226,7 +230,7 @@ export function EventsManager() {
     "w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors";
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "לא נקבע";
+    if (!dateStr) return t("events.dateNotSet");
     try {
       return new Date(dateStr).toLocaleDateString("he-IL", {
         day: "numeric",
@@ -250,12 +254,12 @@ export function EventsManager() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] text-secondary">
               <Calendar className="w-3.5 h-3.5 text-brand-blue" />
-              אירועי DJ
+              {t("events.title")}
             </div>
             <div>
-              <h2 className="text-xl font-bold">יומן ותפעול אירועי DJ</h2>
+              <h2 className="text-xl font-bold">{t("events.subtitle")}</h2>
               <p className="text-sm text-secondary mt-1 max-w-3xl leading-6">
-                זהו אזור התפעול של הדיג׳יי עצמו: תאריכים, מיקום, הערות עבודה וצילומי מסך. זה נפרד משאלוני הזוגות ומהעדפות המוזיקליות שלהם.
+                {t("events.description")}
               </p>
             </div>
           </div>
@@ -264,19 +268,19 @@ export function EventsManager() {
               onClick={handleConnectGCal}
               disabled={!userId || !canUseGoogleCalendar}
               className={`btn-secondary text-sm flex items-center gap-2 py-2.5 px-4 ${!canUseGoogleCalendar ? "opacity-50 cursor-not-allowed" : ""}`}
-              title={canUseGoogleCalendar ? "חברו את Google Calendar" : "Google Calendar זמין בתוכנית Pro ומעלה או דרך override ב-HQ"}
+              title={canUseGoogleCalendar ? t("events.gcal.connectTitle") : t("events.gcal.proFeature")}
             >
               <Link className="w-4 h-4" />
-              <span className="hidden sm:inline">חבר Google Calendar</span>
+              <span className="hidden sm:inline">{t("events.actions.connectGCal")}</span>
             </button>
             <button
               onClick={() => handleSync("both")}
               disabled={syncing || !userId || !canUseGoogleCalendar}
               className={`btn-secondary text-sm flex items-center gap-2 py-2.5 px-4 ${syncing || !canUseGoogleCalendar ? "opacity-70" : ""}`}
-              title={canUseGoogleCalendar ? "סנכרן עם Google Calendar" : "Google Calendar זמין בתוכנית Pro ומעלה או דרך override ב-HQ"}
+              title={canUseGoogleCalendar ? t("events.gcal.syncTitle") : t("events.gcal.proFeature")}
             >
               {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              <span className="hidden sm:inline">{syncing ? "מסנכרן..." : "סנכרן"}</span>
+              <span className="hidden sm:inline">{syncing ? t("events.actions.syncing") : t("events.actions.sync")}</span>
             </button>
             <button
               onClick={handleCreate}
@@ -284,7 +288,7 @@ export function EventsManager() {
               className={`btn-primary text-sm flex items-center gap-2 py-2.5 px-5 ${creating ? "opacity-70" : ""}`}
             >
               <Plus className="w-4 h-4" />
-              {creating ? "יוצר..." : "אירוע חדש"}
+              {creating ? t("events.actions.creating") : t("events.actions.newEvent")}
             </button>
           </div>
         </div>
@@ -298,13 +302,13 @@ export function EventsManager() {
 
       {!canUseGoogleCalendar && (
         <div className="glass-card p-3 text-sm text-muted">
-          חיבור וסנכרון עם Google Calendar לא כלולים כרגע בגרסת ההשקה של החשבון הזה.
+          {t("events.gcal.notIncluded")}
         </div>
       )}
 
       {!canUseImageUploads && (
         <div className="glass-card p-3 text-sm text-muted">
-          העלאת צילומי מסך לא כלולה כרגע בגרסת ההשקה של החשבון הזה.
+          {t("events.uploads.notIncluded")}
         </div>
       )}
 
@@ -316,20 +320,20 @@ export function EventsManager() {
 
       {!profileId && (
         <div className="glass-card p-5 text-center text-sm text-muted">
-          צריך לשמור פרופיל קודם כדי לנהל אירועים
+          {t("events.empty.needProfile")}
         </div>
       )}
 
       {loading && (
         <div className="glass-card p-5 text-center text-sm text-muted animate-pulse">
-          טוען אירועים...
+          {t("events.loading")}
         </div>
       )}
 
       {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-secondary">אירועים קרובים ({upcomingEvents.length})</h3>
+          <h3 className="text-sm font-bold text-secondary">{t("events.sections.upcoming", { count: String(upcomingEvents.length) })}</h3>
           {upcomingEvents.map((event) => (
             <EventCard
               key={event.id}
@@ -357,7 +361,7 @@ export function EventsManager() {
       {/* Past Events */}
       {pastEvents.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-secondary">אירועים שהסתיימו ({pastEvents.length})</h3>
+          <h3 className="text-sm font-bold text-secondary">{t("events.sections.past", { count: String(pastEvents.length) })}</h3>
           {pastEvents.map((event) => (
             <EventCard
               key={event.id}
@@ -385,8 +389,8 @@ export function EventsManager() {
       {!loading && profileId && events.length === 0 && (
         <div className="glass-card p-8 text-center space-y-3">
           <Calendar className="w-10 h-10 text-muted mx-auto" />
-          <p className="text-sm text-muted">עדיין אין אירועי DJ ביומן</p>
-          <p className="text-xs text-secondary">לחצו על &quot;אירוע חדש&quot; כדי לנהל כאן את האירועים שאתם מפעילים בפועל.</p>
+          <p className="text-sm text-muted">{t("events.empty.noEvents")}</p>
+          <p className="text-xs text-secondary">{t("events.empty.noEventsDetail")}</p>
         </div>
       )}
     </div>
@@ -482,7 +486,7 @@ function EventCard({
                 onEdit();
               }}
               className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-white/5 transition-colors"
-              title="ערוך"
+              title={t("events.actions.edit")}
             >
               <Edit3 className="w-4 h-4" />
             </button>
