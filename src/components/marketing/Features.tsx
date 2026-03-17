@@ -32,32 +32,27 @@ const features = [
 
 export function Features() {
   return (
-    <section className="py-24 px-6 bg-gray-50">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-20 px-4 bg-white">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-20">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-4xl md:text-5xl font-bold text-[#1f1f21] mb-6"
-          >
-            למה Compakt?
-          </motion.h2>
+        <div className="text-center mb-12">
+          <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-blue-50 to-green-50 border border-[#e5e7eb] mb-4">
+            <span className="text-sm font-medium bg-gradient-to-r from-[#059cc0] to-[#03b28c] bg-clip-text text-transparent">
+              למה Compakt?
+            </span>
+          </div>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="text-xl text-[#4b5563] max-w-2xl mx-auto"
-          >
-            ארבעה סיבות למה DJs בוחרים בנו
-          </motion.p>
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1f1f21] mb-4">
+            הפלטפורמה שתשנה את הדרך שלכם לעבוד
+          </h2>
+
+          <p className="text-lg text-[#4b5563] max-w-2xl mx-auto">
+            כל מה שאתם צריכים במקום אחד, כדי להתמקצע ולחסוך זמן
+          </p>
         </div>
 
-        {/* Features grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Features Grid - Mobile First */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {features.map((feature, index) => (
             <motion.div
               key={index}
@@ -67,22 +62,15 @@ export function Features() {
               transition={{ delay: index * 0.1 }}
               className="group relative"
             >
-              <div className="h-full p-8 rounded-2xl bg-white border border-[#e5e7eb] hover:border-transparent hover:shadow-xl transition-all">
-                {/* Gradient border on hover */}
-                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity -z-10 blur-xl`} />
+              <div className="h-full p-6 rounded-xl bg-white border border-[#e5e7eb] hover:border-transparent hover:shadow-lg transition-all">
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity -z-10 blur-xl" style={{ background: feature.gradient }} />
 
-                {/* Icon */}
-                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6`}>
-                  <feature.icon className="w-7 h-7 text-white" />
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br flex items-center justify-center mb-4" style={{ background: feature.gradient }}>
+                  <feature.icon className="w-6 h-6 text-white" />
                 </div>
 
-                {/* Content */}
-                <h3 className="text-xl font-bold text-[#1f1f21] mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-[#4b5563] leading-relaxed">
-                  {feature.description}
-                </p>
+                <h3 className="text-lg font-bold text-[#1f1f21] mb-2">{feature.title}</h3>
+                <p className="text-[#4b5563] text-sm leading-relaxed">{feature.description}</p>
               </div>
             </motion.div>
           ))}

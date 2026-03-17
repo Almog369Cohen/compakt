@@ -8,13 +8,13 @@ export function MusicSwipeDemo() {
       {/* Card */}
       <div className="relative aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-900 to-gray-800">
         {/* Album art placeholder */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#059cc0] to-[#03b28c] opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-pink-600 opacity-30" />
 
         {/* Content */}
         <div className="relative h-full flex flex-col justify-end p-8 text-white">
           <div className="mb-8">
-            <h3 className="text-3xl font-bold mb-2">Uptown Funk</h3>
-            <p className="text-xl text-white/80">Mark Ronson ft. Bruno Mars</p>
+            <h3 className="text-3xl font-bold mb-2">Shape of You</h3>
+            <p className="text-xl text-white/80">Ed Sheeran</p>
             <div className="mt-3 inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-sm">
               פופ
             </div>

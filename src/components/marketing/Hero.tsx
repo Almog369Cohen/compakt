@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, Heart, X, Star, HelpCircle } from "lucide-react";
+import { ArrowLeft, Play, Heart, X, Star, HelpCircle, ArrowRight, Users, Music2, Sparkles, Music, Volume2, SkipBack, Pause, SkipForward } from "lucide-react";
 
 export function Hero() {
   return (
@@ -121,44 +121,80 @@ export function Hero() {
                 </div>
               </div>
 
-              {/* Content - Music swipe interface */}
+              {/* Content - Music player interface */}
               <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 md:p-12">
                 <div className="max-w-sm mx-auto">
-                  {/* Card */}
+                  {/* Music Player Card */}
                   <div className="relative aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 mb-6">
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#059cc0] to-[#03b28c] opacity-30" />
-                    <div className="relative h-full flex flex-col justify-end p-6 text-white">
-                      <div>
-                        <h3 className="text-2xl font-bold mb-1">Uptown Funk</h3>
-                        <p className="text-lg text-white/80">Mark Ronson</p>
-                        <div className="mt-2 inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-sm">
-                          פופ
+                    {/* Album Art */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#059cc0] to-[#03b28c] opacity-30">
+                      <div className="absolute inset-4 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 opacity-80 flex items-center justify-center">
+                        <Music className="w-20 h-20 text-white/30" />
+                      </div>
+                    </div>
+
+                    {/* Player Controls Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40">
+                      <div className="relative h-full flex flex-col justify-between p-6 text-white">
+                        {/* Top Section */}
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-xs text-white/60 uppercase tracking-wider">עכשיו מנגן</p>
+                            <p className="text-sm text-white/80">מתוך הפלייליסט שלכם</p>
+                          </div>
+                          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                            <Volume2 className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+
+                        {/* Center - Song Info */}
+                        <div className="text-center">
+                          <h3 className="text-2xl font-bold mb-1">Uptown Funk</h3>
+                          <p className="text-lg text-white/80">Mark Ronson ft. Bruno Mars</p>
+                          <div className="mt-2 inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-sm">
+                            פופ
+                          </div>
+                        </div>
+
+                        {/* Bottom - Player Controls */}
+                        <div>
+                          {/* Progress Bar */}
+                          <div className="mb-4">
+                            <div className="flex justify-between text-xs text-white/60 mb-1">
+                              <span>1:23</span>
+                              <span>3:45</span>
+                            </div>
+                            <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
+                              <div className="w-1/3 h-full bg-gradient-to-r from-[#059cc0] to-[#03b28c] rounded-full"></div>
+                            </div>
+                          </div>
+
+                          {/* Control Buttons */}
+                          <div className="flex items-center justify-center gap-4">
+                            <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                              <SkipBack className="w-5 h-5 text-white" />
+                            </button>
+                            <button className="w-12 h-12 rounded-full bg-white flex items-center justify-center">
+                              <Pause className="w-6 h-6 text-gray-900" />
+                            </button>
+                            <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                              <SkipForward className="w-5 h-5 text-white" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="flex items-center justify-center gap-3">
-                    <button className="w-14 h-14 rounded-full bg-white border-2 border-red-200 flex items-center justify-center shadow-lg">
-                      <X className="w-6 h-6 text-red-500" />
-                    </button>
-
-                    <button className="w-14 h-14 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center shadow-lg">
-                      <HelpCircle className="w-6 h-6 text-gray-400" />
-                    </button>
-
-                    <button className="w-16 h-16 rounded-full bg-gradient-to-r from-[#059cc0] to-[#03b28c] flex items-center justify-center shadow-xl">
-                      <Heart className="w-7 h-7 text-white" />
-                    </button>
-
-                    <button className="w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 flex items-center justify-center shadow-lg">
-                      <Star className="w-6 h-6 text-white" />
-                    </button>
-                  </div>
-
-                  <div className="text-center mt-4">
-                    <p className="text-sm text-white/60">5 מתוך 20 שירים</p>
+                  {/* Call to Action */}
+                  <div className="text-center">
+                    <p className="text-white/70 text-sm mb-4">
+                      הזוגות בוחרות מוזיקה בצורה כיפית ואינטואיטיבית
+                    </p>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm">
+                      <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                      <span className="text-white text-sm">נגן פעיל</span>
+                    </div>
                   </div>
                 </div>
               </div>
