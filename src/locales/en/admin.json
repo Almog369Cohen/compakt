@@ -445,5 +445,77 @@
       "noResults": "No songs found",
       "noResultsDetail": "Try changing your search or filter."
     }
+  },
+  "questions": {
+    "title": "Couple Questionnaire",
+    "subtitle": "Couple Questions Bank",
+    "description": "Build the questionnaire that couples will receive. For a smooth launch, it's recommended to prepare at least a few core questions that introduce your style, audience, and event highlights.",
+    "actions": {
+      "addQuestion": "Add Question",
+      "moveUp": "Move Up",
+      "moveDown": "Move Down",
+      "hide": "Hide",
+      "show": "Show",
+      "duplicate": "Duplicate",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this question?",
+      "cannotDeletePinned": "Cannot delete pinned question"
+    },
+    "types": {
+      "single_select": "Single Choice",
+      "single_select_desc": "Couple selects one answer from a list",
+      "multi_select": "Multiple Choice",
+      "multi_select_desc": "Couple can select multiple options",
+      "slider": "Scale",
+      "slider_desc": "Selection on a scale of emotion, intensity, or preference",
+      "text": "Open Text",
+      "text_desc": "Couple writes a free-form answer",
+      "guest_calculator": "Guest Calculator",
+      "guest_calculator_desc": "Built-in question that allows couples to detail guest count by groups"
+    },
+    "eventTypes": {
+      "wedding": "Wedding",
+      "bar_mitzvah": "Bar/Bat Mitzvah",
+      "private": "Private Event",
+      "corporate": "Corporate Event"
+    },
+    "status": {
+      "active": "Active",
+      "hidden": "Hidden",
+      "pinned": "Pinned"
+    },
+    "editor": {
+      "newQuestion": "New Question",
+      "editQuestion": "Edit Question",
+      "questionText": "Question Text",
+      "questionTextPlaceholder": "What music style do you like most?",
+      "questionType": "Question Type",
+      "eventType": "Event Type",
+      "isRequired": "Required Question",
+      "isActive": "Active",
+      "options": "Options",
+      "optionLabel": "Option",
+      "addOption": "Add Option",
+      "sliderMin": "Minimum",
+      "sliderMax": "Maximum",
+      "sliderLabels": "Labels",
+      "sliderLabelsHint": "Separate with commas (e.g.: calm, flowing, bouncy, fire, festival)",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "empty": {
+      "noQuestions": "No questions yet for this event type",
+      "noQuestionsDetail": "Start adding questions to build your questionnaire."
+    },
+    "errors": {
+      "updateFailed": "Question update failed",
+      "deleteFailed": "Question deletion failed",
+      "duplicateFailed": "Question duplication failed",
+      "createFailed": "Question creation failed"
+    },
+    "duplicateSuffix": " (copy)",
+    "moreOptions": "+{{count}} options"
   }
 }

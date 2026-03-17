@@ -20,24 +20,13 @@ import {
 } from "lucide-react";
 import { useAdminStore } from "@/stores/adminStore";
 import type { EventType, Question, QuestionType } from "@/lib/types";
+import { useTranslation } from "@/lib/i18n";
 import {
   GUEST_CALCULATOR_QUESTION_ID,
   guestCalculatorDefaultQuestion,
 } from "@/data/questions";
 
-const questionTypes: { value: QuestionType; label: string; description: string }[] = [
-  { value: "single_select", label: "בחירה אחת", description: "הזוג בוחר תשובה אחת מתוך רשימה" },
-  { value: "multi_select", label: "בחירה מרובה", description: "הזוג יכול לבחור כמה אפשרויות" },
-  { value: "slider", label: "סקאלה", description: "בחירה על ציר של רגש, עוצמה או העדפה" },
-  { value: "text", label: "תשובה פתוחה", description: "הזוג כותב תשובה חופשית" },
-];
 
-const eventTypes: { value: EventType; label: string }[] = [
-  { value: "wedding", label: "חתונה" },
-  { value: "bar_mitzvah", label: "בר/בת מצווה" },
-  { value: "private", label: "אירוע פרטי" },
-  { value: "corporate", label: "אירוע עסקי" },
-];
 
 type EditorOption = {
   id: string;
@@ -85,7 +74,7 @@ function createDefaultState(eventType: EventType): EditorState {
     options: [createOption("", ""), createOption("", "")],
     sliderMin: 1,
     sliderMax: 5,
-    sliderLabels: ["רגוע", "זורם", "מקפיץ", "אש", "פסטיבל"],
+    sliderLabels: ["calm", "flowing", "bouncy", "fire", "festival"],
     isActive: true,
   };
 }
@@ -133,18 +122,9 @@ function mapStateToQuestion(state: EditorState): Omit<Question, "id" | "sortOrde
   };
 }
 
-function getQuestionTypeMeta(value: QuestionType) {
-  if (value === "guest_calculator") {
-    return {
-      value,
-      label: "מחשבון אורחים",
-      description: "שאלה מובנית שמאפשרת לזוג לפרט את כמות האורחים לפי קבוצות",
-    };
-  }
-  return questionTypes.find((type) => type.value === value) ?? questionTypes[0];
-}
 
 export function QuestionManager() {
+  const { t } = useTranslation("admin");
   const questions = useAdminStore((s) => s.questions);
   const addQuestion = useAdminStore((s) => s.addQuestion);
   const updateQuestion = useAdminStore((s) => s.updateQuestion);

@@ -1,0 +1,75 @@
+{
+  "questions": {
+    "title": "שאלון לזוגות",
+    "subtitle": "בנק השאלות של הזוגות",
+    "description": "כאן בונים את השאלון שהזוג יקבל. כדי לעלות לאוויר בצורה חלקה, מומלץ להכין לפחות כמה שאלות ליבה שמכירות אותך עם הסגנון, הקהל והדגשים של האירוע.",
+    "actions": {
+      "addQuestion": "הוסף שאלה",
+      "moveUp": "הזז למעלה",
+      "moveDown": "הזז למטה",
+      "hide": "הסתר",
+      "show": "הצג",
+      "duplicate": "שכפל",
+      "edit": "ערוך",
+      "delete": "מחק",
+      "deleteConfirm": "למחוק את השאלה?",
+      "cannotDeletePinned": "אי אפשר למחוק שאלה נעוצה"
+    },
+    "types": {
+      "single_select": "בחירה אחת",
+      "single_select_desc": "הזוג בוחר תשובה אחת מתוך רשימה",
+      "multi_select": "בחירה מרובה",
+      "multi_select_desc": "הזוג יכול לבחור כמה אפשרויות",
+      "slider": "סקאלה",
+      "slider_desc": "בחירה על ציר של רגש, עוצמה או העדפה",
+      "text": "תשובה פתוחה",
+      "text_desc": "הזוג כותב תשובה חופשית",
+      "guest_calculator": "מחשבון אורחים",
+      "guest_calculator_desc": "שאלה מובנית שמאפשרת לזוג לפרט את כמות האורחים לפי קבוצות"
+    },
+    "eventTypes": {
+      "wedding": "חתונה",
+      "bar_mitzvah": "בר/בת מצווה",
+      "private": "אירוע פרטי",
+      "corporate": "אירוע עסקי"
+    },
+    "status": {
+      "active": "פעיל",
+      "hidden": "מוסתר",
+      "pinned": "נעוץ"
+    },
+    "editor": {
+      "newQuestion": "שאלה חדשה",
+      "editQuestion": "ערוך שאלה",
+      "questionText": "טקסט השאלה",
+      "questionTextPlaceholder": "מה הסגנון המוזיקלי שאתם הכי אוהבים?",
+      "questionType": "סוג שאלה",
+      "eventType": "סוג אירוע",
+      "isRequired": "שאלה חובה",
+      "isActive": "פעיל",
+      "options": "אפשרויות",
+      "optionLabel": "אפשרות",
+      "addOption": "הוסף אפשרות",
+      "sliderMin": "מינימום",
+      "sliderMax": "מקסימום",
+      "sliderLabels": "תוויות",
+      "sliderLabelsHint": "הפרד בפסיקים (לדוגמה: רגוע, זורם, מקפיץ, אש, פסטיבל)",
+      "cancel": "ביטול",
+      "save": "שמור",
+      "saving": "שומר..."
+    },
+    "empty": {
+      "noQuestions": "אין עדיין שאלות לסוג האירוע הזה",
+      "noQuestionsDetail": "התחל בהוספת שאלות כדי לבנות את השאלון."
+    },
+    "errors": {
+      "updateFailed": "עדכון השאלה נכשל",
+      "deleteFailed": "מחיקת השאלה נכשלה",
+      "duplicateFailed": "שכפול השאלה נכשל",
+      "createFailed": "יצירת השאלה נכשלה"
+    },
+    "duplicateSuffix": "(עותק)",
+    "moreOptions": "+{{count}} אפשרויות",
+    "defaultSliderLabels": ["רגוע", "זורם", "מקפיץ", "אש", "פסטיבל"]
+  }
+}
