@@ -158,6 +158,10 @@ export function PricingPreview() {
               </li>
               <li className="flex items-start gap-3">
                 <Check className="w-5 h-5 text-[#03b28c] flex-shrink-0 mt-0.5" />
+                <span className="text-[#4b5563]">גרסאות בטא מתקדמות</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#03b28c] flex-shrink-0 mt-0.5" />
                 <span className="text-[#4b5563]">תמיכה מועדפת</span>
               </li>
             </ul>
