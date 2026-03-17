@@ -353,6 +353,8 @@ export function EventsManager() {
               onScreenshotUpload={(urls) => handleScreenshotUpload(event.id, urls)}
               onScreenshotRemove={(urls) => handleScreenshotRemove(event.id, urls)}
               canUseImageUploads={canUseImageUploads}
+              t={t}
+              STATUS_OPTIONS={STATUS_OPTIONS}
             />
           ))}
         </div>
@@ -381,6 +383,8 @@ export function EventsManager() {
               onScreenshotUpload={(urls) => handleScreenshotUpload(event.id, urls)}
               onScreenshotRemove={(urls) => handleScreenshotRemove(event.id, urls)}
               canUseImageUploads={canUseImageUploads}
+              t={t}
+              STATUS_OPTIONS={STATUS_OPTIONS}
             />
           ))}
         </div>
@@ -416,6 +420,8 @@ interface EventCardProps {
   onScreenshotUpload: (urls: string[]) => void;
   onScreenshotRemove: (urls: string[]) => void;
   canUseImageUploads: boolean;
+  t: (key: string) => string;
+  STATUS_OPTIONS: Array<{ value: DJEvent["status"]; label: string; color: string }>;
 }
 
 function EventCard({
@@ -435,6 +441,8 @@ function EventCard({
   onScreenshotUpload,
   onScreenshotRemove,
   canUseImageUploads,
+  t,
+  STATUS_OPTIONS,
 }: EventCardProps) {
   const statusOption = STATUS_OPTIONS.find((s) => s.value === event.status);
 
