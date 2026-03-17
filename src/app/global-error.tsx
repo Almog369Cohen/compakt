@@ -30,9 +30,12 @@ export default function GlobalError({
                 <RotateCcw className="w-4 h-4" />
                 נסו שוב
               </button>
-              <a href="/" className="btn-secondary flex items-center justify-center gap-2">
+              <a href="/home" className="btn-secondary flex items-center justify-center gap-2">
                 <Home className="w-4 h-4" />
-                חזרה לדף הבית
+                חזרה לאתר
+              </a>
+              <a href="/admin" className="text-sm text-muted hover:text-brand-blue transition-colors">
+                כניסה לחשבון DJ
               </a>
             </div>
           </div>

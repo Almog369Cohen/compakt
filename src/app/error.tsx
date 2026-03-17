@@ -46,11 +46,17 @@ export default function Error({
             נסו שוב
           </button>
           <a
-            href="/"
+            href="/home"
             className="btn-secondary flex items-center justify-center gap-2"
           >
             <Home className="w-4 h-4" />
-            חזרה לדף הבית
+            חזרה לאתר
+          </a>
+          <a
+            href="/admin"
+            className="text-sm text-muted hover:text-brand-blue transition-colors"
+          >
+            כניסה לחשבון DJ
           </a>
         </div>
       </motion.div>

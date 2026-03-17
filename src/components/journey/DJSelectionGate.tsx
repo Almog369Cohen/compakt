@@ -1,8 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Headphones, ChevronLeft, Search, Music2, Sparkles } from "lucide-react";
+import { Headphones, ChevronLeft, Search, Music2, Sparkles, ArrowRight } from "lucide-react";
 
 type PublicDj = {
   id: string;
@@ -19,6 +20,7 @@ type DJSelectionGateProps = {
 };
 
 export function DJSelectionGate({ onSelect }: DJSelectionGateProps) {
+  const router = useRouter();
   const [djs, setDjs] = useState<PublicDj[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +85,18 @@ export function DJSelectionGate({ onSelect }: DJSelectionGateProps) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-xl mx-auto">
+      {/* Back Button */}
+      <div className="mb-4 flex justify-start">
+        <button
+          onClick={() => router.push("/home")}
+          className="glass-card px-4 py-2 rounded-full flex items-center gap-2 text-sm font-medium text-muted hover:text-white hover:scale-105 transition-all"
+          aria-label="חזרה לאתר"
+        >
+          <ArrowRight className="w-4 h-4 rotate-180" />
+          חזרה לאתר
+        </button>
+      </div>
+
       <div className="glass-card p-5 sm:p-7">
         <div className="text-center mb-6">
           <div

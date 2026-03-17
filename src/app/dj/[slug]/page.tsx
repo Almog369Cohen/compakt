@@ -78,8 +78,8 @@ export default function DJPublicPage() {
           <p className="text-secondary text-sm mb-4">
             ה-DJ שחיפשתם עדיין לא הגדיר את הפרופיל שלו
           </p>
-          <a href="/" className="btn-primary inline-block text-sm">
-            חזרה לדף הבית
+          <a href="/home" className="btn-primary inline-block text-sm">
+            חזרה לאתר
           </a>
         </motion.div>
       </div>

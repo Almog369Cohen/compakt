@@ -72,8 +72,40 @@
   --gradient-hero: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 50%, #f5f7fa 100%);
 }
 
+/* Marketing Site - 2026 SaaS Light Theme (Default for public pages) */
+.marketing-theme {
+  /* Brand colors */
+  --brand-blue: #059cc0;
+  --brand-green: #03b28c;
+  --brand-gray: #1f1f21;
+  --brand-white: #ffffff;
+
+  /* Derived colors */
+  --blue-light: rgba(5, 156, 192, 0.1);
+  --green-light: rgba(3, 178, 140, 0.1);
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-600: #4b5563;
+  --gray-900: #1f1f21;
+
+  /* Semantic colors */
+  --marketing-bg: #ffffff;
+  --marketing-text: #1f1f21;
+  --marketing-text-secondary: #4b5563;
+  --marketing-border: #e5e7eb;
+  --marketing-card-bg: #ffffff;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.1);
+}
+
 html {
   direction: rtl;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -86,6 +118,16 @@ body {
   overscroll-behavior: none;
   padding-bottom: env(safe-area-inset-bottom, 0);
   letter-spacing: -0.01em;
+}
+
+/* Marketing pages specific styles */
+.marketing-theme {
+  scroll-behavior: smooth;
+}
+
+.marketing-theme * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,

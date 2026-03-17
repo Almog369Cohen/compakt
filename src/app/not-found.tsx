@@ -36,7 +36,7 @@ export default function NotFound() {
             href="/admin"
             className="text-sm text-muted hover:text-brand-blue transition-colors"
           >
-            כניסת DJ
+            כניסה לחשבון DJ
           </Link>
         </div>
       </motion.div>
