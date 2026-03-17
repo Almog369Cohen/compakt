@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n";
 
 export function MarketingFooter() {
+  const { t } = useTranslation("common");
+
   return (
     <footer className="bg-gray-50 border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-6 py-12">
@@ -13,7 +16,7 @@ export function MarketingFooter() {
               <span className="text-white font-bold text-sm">C</span>
             </div>
             <span className="text-sm text-[#4b5563]">
-              © 2026 Compakt. כל הזכויות שמורות.
+              {t("footer.copyright")}
             </span>
           </div>
 
@@ -23,13 +26,13 @@ export function MarketingFooter() {
               href="/terms"
               className="text-sm text-[#4b5563] hover:text-[#059cc0] transition-colors"
             >
-              תנאי שימוש
+              {t("footer.terms")}
             </Link>
             <Link
               href="/privacy"
               className="text-sm text-[#4b5563] hover:text-[#059cc0] transition-colors"
             >
-              מדיניות פרטיות
+              {t("footer.privacy")}
             </Link>
           </div>
         </div>

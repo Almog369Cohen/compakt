@@ -10,6 +10,7 @@ import { ImageUploader } from "@/components/ui/ImageUploader";
 import { getSafeOrigin } from "@/lib/utils";
 import { safeCopyText } from "@/lib/clipboard";
 import { DJ_PROFILE_STYLE_OPTIONS } from "@/lib/djProfileStyles";
+import { useTranslation } from "@/lib/i18n";
 
 const ACCENT_COLORS = [
   "#059cc0",
@@ -22,12 +23,6 @@ const ACCENT_COLORS = [
   "#06b6d4",
 ];
 
-const BRAND_COLOR_FIELDS = [
-  { key: "primary", label: "ראשי" },
-  { key: "secondary", label: "משני" },
-  { key: "accent", label: "הדגשה" },
-  { key: "surface", label: "משטח" },
-] as const;
 
 const DEFAULT_BRAND_COLORS = {
   primary: "#059cc0",
@@ -37,6 +32,7 @@ const DEFAULT_BRAND_COLORS = {
 };
 
 export function ProfileSettings() {
+  const { t } = useTranslation("admin");
   const profile = useProfileStore((s) => s.profile);
   const setProfile = useProfileStore((s) => s.setProfile);
   const saveProfileToDB = useProfileStore((s) => s.saveProfileToDB);
@@ -75,6 +71,13 @@ export function ProfileSettings() {
 
   const selectedStyleMeta = DJ_PROFILE_STYLE_OPTIONS.find((option) => option.value === profile.profileStyle);
 
+  const BRAND_COLOR_FIELDS = useMemo(() => [
+    { key: "primary" as const, label: t("profile.colors.primary") },
+    { key: "secondary" as const, label: t("profile.colors.secondary") },
+    { key: "accent" as const, label: t("profile.colors.accent") },
+    { key: "surface" as const, label: t("profile.colors.surface") },
+  ], [t]);
+
   const inputClass =
     "w-full px-3 py-2.5 rounded-xl bg-transparent border border-glass text-sm focus:outline-none focus:border-brand-blue transition-colors";
   const sectionClass = "rounded-[28px] border border-glass bg-white/[0.03] p-4 md:p-5 space-y-4";
@@ -83,7 +86,7 @@ export function ProfileSettings() {
     setSaveError(null);
 
     if (!djSlugValue.trim()) {
-      setSaveError("חובה להגדיר כתובת (slug) כדי לפרסם דף DJ");
+      setSaveError(t("profile.errors.slugRequired"));
       return;
     }
 
@@ -105,7 +108,7 @@ export function ProfileSettings() {
       if (errObj && typeof errObj.details === "string" && errObj.details.trim()) extraParts.push(errObj.details);
       if (errObj && typeof errObj.hint === "string" && errObj.hint.trim()) extraParts.push(errObj.hint);
 
-      const message = [baseMessage || "שמירה נכשלה", ...extraParts].join("\n");
+      const message = [baseMessage || t("profile.errors.saveFailed"), ...extraParts].join("\n");
       setSaveError(message);
       setSaving(false);
       return;
@@ -148,10 +151,10 @@ export function ProfileSettings() {
             </div>
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <Settings className="w-5 h-5 text-brand-blue" />
-              עריכת פרופיל DJ
+              {t("profile.title")}
             </h2>
             <p className="text-sm text-secondary max-w-2xl leading-6">
-              בחר template חזק, שייף את המותג, ובדוק בלייב איך הפרופיל הציבורי מבין את ה-DJ שלך בתוך שניות.
+              {t("profile.subtitle")}
             </p>
           </div>
           <button
@@ -160,7 +163,7 @@ export function ProfileSettings() {
             className={`btn-primary text-sm flex items-center gap-2 py-2.5 px-5 ${saving ? "opacity-70 cursor-not-allowed" : ""}`}
           >
             {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            {saving ? "שומר..." : saved ? "נשמר!" : "שמור"}
+            {saving ? t("profile.saving") : saved ? t("profile.saved") : t("profile.save")}
           </button>
         </div>
       </div>
@@ -180,7 +183,7 @@ export function ProfileSettings() {
             }`}
         >
           <Pencil className="w-4 h-4" />
-          עריכה
+          {t("profile.tabs.edit")}
         </button>
         <button
           onClick={() => setMobileTab("preview")}
@@ -190,7 +193,7 @@ export function ProfileSettings() {
             }`}
         >
           <Eye className="w-4 h-4" />
-          תצוגה מקדימה
+          {t("profile.tabs.preview")}
         </button>
       </div>
 
@@ -200,11 +203,11 @@ export function ProfileSettings() {
           <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <User className="w-4 h-4 text-brand-blue" />
-              פרטי עסק
+              {t("profile.sections.business")}
             </h3>
 
             <div>
-              <label className="block text-xs text-muted mb-1.5 font-medium">שם העסק / שם DJ</label>
+              <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.businessName")}</label>
               <input
                 type="text"
                 value={businessName}
@@ -215,12 +218,12 @@ export function ProfileSettings() {
             </div>
 
             <div>
-              <label className="block text-xs text-muted mb-1.5 font-medium">סלוגן</label>
+              <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.tagline")}</label>
               <input
                 type="text"
                 value={tagline}
                 onChange={(e) => setProfile({ tagline: e.target.value })}
-                placeholder="המוזיקה שלכם, הדרך שלכם"
+                placeholder={t("profile.fields.taglinePlaceholder")}
                 className={inputClass}
               />
             </div>
@@ -230,7 +233,7 @@ export function ProfileSettings() {
               <textarea
                 value={bio}
                 onChange={(e) => setProfile({ bio: e.target.value })}
-                placeholder="ספרו קצת על הסגנון, האנרגיה והניסיון שלכם..."
+                placeholder={t("profile.fields.bioPlaceholder")}
                 className={`${inputClass} min-h-[88px] resize-y`}
                 rows={3}
               />
@@ -240,14 +243,14 @@ export function ProfileSettings() {
           <div className={`${sectionClass} space-y-5`}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Palette className="w-4 h-4 text-brand-blue" />
-              מיתוג ו-template
+              {t("profile.sections.branding")}
             </h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-muted mb-1.5 font-medium">סגנון עיצוב</label>
+                <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.designStyle")}</label>
                 <p className="text-xs text-muted">
-                  ה-template קובע מבנה, סדר מקטעים והיררכיית CTA. הצבעים למטה הם רק התאמה מעל המבנה.
+                  {t("profile.fields.designStyleHint")}
                 </p>
               </div>
 
@@ -273,7 +276,7 @@ export function ProfileSettings() {
                           <div className="text-sm font-semibold">{styleOption.shortName}</div>
                           {active && (
                             <span className="text-[11px] px-2 py-1 rounded-full bg-brand-blue/15 text-brand-blue">
-                              פעיל
+                              {t("profile.fields.active")}
                             </span>
                           )}
                         </div>
@@ -291,7 +294,7 @@ export function ProfileSettings() {
               <div className="rounded-[24px] border border-white/10 bg-black/20 p-4 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <GripVertical className="w-4 h-4 text-brand-blue" />
-                  המבנה הפעיל
+                  {t("profile.fields.activeStructure")}
                 </div>
                 <div className="text-xs text-secondary">{selectedStyleMeta.hero}</div>
                 <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3 text-xs text-muted">
@@ -301,8 +304,8 @@ export function ProfileSettings() {
             )}
 
             <div>
-              <label className="block text-xs text-muted mb-2 font-medium">צבעים מתקדמים</label>
-              <p className="text-xs text-muted mb-3">שכבת המיתוג הזאת משפיעה על האווירה, לא על ה-layout.</p>
+              <label className="block text-xs text-muted mb-2 font-medium">{t("profile.fields.advancedColors")}</label>
+              <p className="text-xs text-muted mb-3">{t("profile.fields.advancedColorsHint")}</p>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {BRAND_COLOR_FIELDS.map((field) => (
                   <div key={field.key} className="space-y-2">
@@ -328,7 +331,7 @@ export function ProfileSettings() {
             </div>
 
             <div>
-              <label className="block text-xs text-muted mb-2 font-medium">בחירה מהירה לצבע הראשי</label>
+              <label className="block text-xs text-muted mb-2 font-medium">{t("profile.fields.quickColorPicker")}</label>
               <div className="flex flex-wrap gap-3">
                 {ACCENT_COLORS.map((color) => (
                   <button
@@ -342,7 +345,7 @@ export function ProfileSettings() {
                       background: color,
                       "--tw-ring-color": color,
                     } as CSSProperties}
-                    aria-label={`בחר צבע ${color}`}
+                    aria-label={`${t("profile.fields.selectColor")} ${color}`}
                     title={color}
                   />
                 ))}
@@ -353,11 +356,11 @@ export function ProfileSettings() {
           <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Link2 className="w-4 h-4 text-brand-blue" />
-              כתובת אישית
+              {t("profile.sections.slug")}
             </h3>
 
             <div>
-              <label className="block text-xs text-muted mb-1.5 font-medium">כתובת (באנגלית)</label>
+              <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.slug")}</label>
               <div className="flex items-center gap-0 rounded-xl border border-glass overflow-hidden">
                 <span
                   className="text-xs text-muted px-3 py-3 bg-white/[0.03] border-l border-glass whitespace-nowrap"
@@ -393,16 +396,16 @@ export function ProfileSettings() {
                   className="text-xs text-brand-blue hover:underline flex items-center gap-1"
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  פתח
+                  {t("profile.fields.open")}
                 </a>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(
-                    `היי! הנה הפרופיל שלי 🎵\n${djLink}`
+                    `${t("profile.fields.whatsappMessage")}\n${djLink}`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-1 rounded-md hover:bg-brand-green/10 transition-colors"
-                  title="שלח בוואטסאפ"
+                  title={t("profile.fields.sendWhatsapp")}
                 >
                   <Share2 className="w-3.5 h-3.5 text-brand-green" />
                 </a>
@@ -411,7 +414,7 @@ export function ProfileSettings() {
                   className="text-xs text-brand-blue hover:underline flex items-center gap-1"
                 >
                   {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? "הועתק" : "העתק"}
+                  {copied ? t("profile.fields.copied") : t("profile.fields.copy")}
                 </button>
               </div>
             )}
@@ -420,12 +423,12 @@ export function ProfileSettings() {
           <div className={sectionClass}>
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Link2 className="w-4 h-4 text-brand-blue" />
-              רשתות, קאבר ולוגו
+              {t("profile.sections.visuals")}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-muted mb-1.5 font-medium">אינסטגרם</label>
+                <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.instagram")}</label>
                 <input
                   type="url"
                   value={instagramUrl}
@@ -436,7 +439,7 @@ export function ProfileSettings() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1.5 font-medium">טיקטוק</label>
+                <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.tiktok")}</label>
                 <input
                   type="url"
                   value={tiktokUrl}
@@ -480,7 +483,7 @@ export function ProfileSettings() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1.5 font-medium">אתר</label>
+                <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.website")}</label>
                 <input
                   type="url"
                   value={websiteUrl}
@@ -491,7 +494,7 @@ export function ProfileSettings() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1.5 font-medium">וואטסאפ</label>
+                <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.whatsapp")}</label>
                 <input
                   type="tel"
                   value={whatsappNumber}
@@ -502,7 +505,7 @@ export function ProfileSettings() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1.5 font-medium">תמונת קאבר</label>
+                <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.coverImage")}</label>
                 <ImageUploader
                   images={coverUrl ? [coverUrl] : []}
                   onChange={(imgs) => setProfile({ coverUrl: imgs[0] || "" })}
@@ -520,7 +523,7 @@ export function ProfileSettings() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1.5 font-medium">תמונה קטנה / לוגו</label>
+                <label className="block text-xs text-muted mb-1.5 font-medium">{t("profile.fields.logo")}</label>
                 <ImageUploader
                   images={logoUrl ? [logoUrl] : []}
                   onChange={(imgs) => setProfile({ logoUrl: imgs[0] || "" })}

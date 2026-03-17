@@ -1,0 +1,140 @@
+{
+  "hero": {
+    "badge": "The new way to manage DJ events",
+    "titleLine1": "The new way",
+    "titleLine2": "DJs prepare events",
+    "subtitle": "Instead of endless WhatsApp messages,",
+    "subtitleLine2": "send couples a smart questionnaire and get an organized music brief.",
+    "ctaPrimary": "Open a DJ Account",
+    "ctaSecondary": "See How It Works",
+    "socialProof": "Hundreds of DJs already use Compakt",
+    "playerNowPlaying": "Now Playing",
+    "playerFromPlaylist": "From your playlist",
+    "playerGenre": "Pop",
+    "playerCta": "Couples choose music in a fun and intuitive way",
+    "playerActive": "Player active"
+  },
+  "problem": {
+    "badge": "Tired of the chaos?",
+    "title": "Problems every DJ knows",
+    "subtitle": "Managing events through WhatsApp is a headache. It's time for a better way.",
+    "items": {
+      "whatsapp": {
+        "title": "Dozens of WhatsApp messages",
+        "description": "Communication scattered across multiple chats and groups"
+      },
+      "unclearRequests": {
+        "title": "Unclear requests",
+        "description": "\"Romantic songs\" or \"something energetic\" — what does that mean?"
+      },
+      "scatteredSongs": {
+        "title": "Scattered song lists",
+        "description": "Lists in Notes, Excel, Spotify — no structure"
+      },
+      "lastMinute": {
+        "title": "Last-minute surprises",
+        "description": "\"Oh, we forgot to tell you that...\" right before the event"
+      }
+    }
+  },
+  "solution": {
+    "badge": "The Solution",
+    "title": "3 Simple Steps",
+    "subtitle": "From sending to the ready brief — everything happens automatically",
+    "steps": {
+      "step1": {
+        "title": "Send couples a personal link",
+        "description": "Every DJ gets a unique profile page with a shareable link"
+      },
+      "step2": {
+        "title": "Couples pick music & fill in details",
+        "description": "Swipe-based song selection + a personalized questionnaire"
+      },
+      "step3": {
+        "title": "Get an organized, work-ready brief",
+        "description": "All the info in one place, organized and accessible"
+      }
+    }
+  },
+  "showcase": {
+    "title": "Swipe-Based Music Selection",
+    "subtitle": "Couples swipe right or left on songs and pick what they love — fun and intuitive",
+    "loved": "Loved It",
+    "lovedDesc": "Songs the couple wants to hear",
+    "mustPlay": "Must Play!",
+    "mustPlayDesc": "Songs that must be played",
+    "skip": "Not for us",
+    "skipDesc": "Songs that don't fit"
+  },
+  "features": {
+    "badge": "Why Compakt?",
+    "title": "The platform that changes the way you work",
+    "subtitle": "Everything you need in one place — be more professional, save time",
+    "items": {
+      "lessMess": {
+        "title": "Less mess",
+        "description": "All communication with the couple in one place. No more endless WhatsApp."
+      },
+      "moreProfessional": {
+        "title": "More professional",
+        "description": "An impressive profile that showcases you at your best to new couples."
+      },
+      "coupleExperience": {
+        "title": "Amazing couple experience",
+        "description": "Swipe-based song selection — couples choose music in a fun, intuitive way."
+      },
+      "fullControl": {
+        "title": "Full control",
+        "description": "Manage all events, track progress, and keep all info in one place."
+      }
+    }
+  },
+  "pricing": {
+    "title": "Start free, upgrade when you're ready",
+    "subtitle": "Choose the plan that fits you",
+    "perMonth": "/month",
+    "popularBadge": "Most Popular",
+    "startFree": "Start Free",
+    "startNow": "Get Started",
+    "seeFullPricing": "See full pricing →",
+    "free": {
+      "name": "Free",
+      "price": "₪0",
+      "description": "Perfect to get started",
+      "feature0": "Up to 2 events/month",
+      "feature1": "Basic DJ profile",
+      "feature2": "Music questionnaire",
+      "featureCount": "3"
+    },
+    "basic": {
+      "name": "Basic",
+      "price": "₪55",
+      "description": "For growing DJs",
+      "feature0": "Up to 7 events/month",
+      "feature1": "Advanced DJ profile",
+      "feature2": "Basic song management",
+      "feature3": "Simple briefs",
+      "featureCount": "4"
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "₪99",
+      "description": "For professional DJs",
+      "feature0": "Unlimited events",
+      "feature1": "Advanced DJ profile",
+      "feature2": "Full song management",
+      "feature3": "Organized briefs",
+      "feature4": "Early beta access",
+      "feature5": "Priority support",
+      "featureCount": "6"
+    }
+  },
+  "cta": {
+    "title": "Ready to get started?",
+    "subtitleLine1": "Start with your first couple — for free.",
+    "subtitleLine2": "No credit card required.",
+    "ctaPrimary": "Open a DJ Account",
+    "ctaSecondary": "See How It Works",
+    "socialProof": "Join hundreds of DJs already using Compakt"
+  }
+}

@@ -2,8 +2,11 @@
 
 import { motion } from "framer-motion";
 import { MusicSwipeDemo } from "./demos/MusicSwipeDemo";
+import { useTranslation } from "@/lib/i18n";
 
 export function ProductShowcase() {
+  const { t } = useTranslation("marketing");
+
   return (
     <section className="py-24 px-6 bg-gradient-to-br from-gray-900 to-gray-800 relative overflow-hidden">
       {/* Background pattern */}
@@ -22,7 +25,7 @@ export function ProductShowcase() {
             viewport={{ once: true }}
             className="text-4xl md:text-5xl font-bold text-white mb-6"
           >
-            בחירת מוזיקה בסוויפ
+            {t("showcase.title")}
           </motion.h2>
 
           <motion.p
@@ -32,7 +35,7 @@ export function ProductShowcase() {
             transition={{ delay: 0.1 }}
             className="text-xl text-white/80 max-w-2xl mx-auto"
           >
-            הזוג מחליק ימינה/שמאלה על שירים ובוחר מה הם אוהבים בצורה כיפית ואינטואיטיבית
+            {t("showcase.subtitle")}
           </motion.p>
         </div>
 
@@ -55,9 +58,9 @@ export function ProductShowcase() {
           className="mt-16 grid md:grid-cols-3 gap-6 max-w-4xl mx-auto"
         >
           {[
-            { emoji: "❤️", title: "אהבתי", desc: "שירים שהזוג רוצה לשמוע" },
-            { emoji: "⭐", title: "חובה!", desc: "שירים שחייבים לנגן" },
-            { emoji: "✖️", title: "לא בשבילי", desc: "שירים שלא מתאימים" },
+            { emoji: "❤️", title: t("showcase.loved"), desc: t("showcase.lovedDesc") },
+            { emoji: "⭐", title: t("showcase.mustPlay"), desc: t("showcase.mustPlayDesc") },
+            { emoji: "✖️", title: t("showcase.skip"), desc: t("showcase.skipDesc") },
           ].map((item, i) => (
             <div key={i} className="p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 text-center">
               <div className="text-4xl mb-3">{item.emoji}</div>

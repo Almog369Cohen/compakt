@@ -1,0 +1,209 @@
+{
+  "tabs": {
+    "dashboard": "דשבורד",
+    "couples": "שאלוני זוגות",
+    "events": "אירועי DJ",
+    "profile": "פרופיל",
+    "songs": "שירים",
+    "questions": "שאלות",
+    "upsells": "שדרוגים",
+    "analytics": "אנליטיקות"
+  },
+  "header": {
+    "title": "Compakt Admin",
+    "subtitle": "אזור העבודה של הדיג׳יי לפני עלייה לאוויר",
+    "myProfile": "הפרופיל שלי"
+  },
+  "auth": {
+    "welcomeBack": "ברוכים הבאים בחזרה!",
+    "joinCommunity": "הצטרפו לקהילת הדיג'יים",
+    "resetPassword": "איפוס סיסמה",
+    "chooseNewPassword": "בחרו סיסמה חדשה לחשבון שלכם",
+    "loginSubtitle": "התחברו כדי לנהל את האירועים שלכם",
+    "signupSubtitle": "צרו חשבון בחינם והתחילו לנהל אירועים",
+    "legacySubtitle": "הזינו סיסמה כדי להיכנס",
+    "emailPlaceholder": "אימייל",
+    "passwordPlaceholder": "סיסמה",
+    "newPasswordPlaceholder": "סיסמה חדשה",
+    "confirmPasswordPlaceholder": "אימות סיסמה חדשה",
+    "loginButton": "התחברו לחשבון",
+    "signupButton": "צרו חשבון חינם",
+    "updatePasswordButton": "עדכנו סיסמה",
+    "loggingIn": "מתחברים...",
+    "creatingAccount": "יוצרים את החשבון...",
+    "forgotPassword": "שכחתם את הסיסמה?",
+    "backToLogin": "חזרה למסך הכניסה",
+    "alreadyHaveAccount": "כבר יש לכם חשבון?",
+    "newToPlatform": "דיג'יי חדש ב-Compakt?",
+    "loginHere": "התחברו כאן",
+    "createFreeAccount": "צרו חשבון חינם",
+    "orSignupWith": "או הירשמו באמצעות",
+    "orLoginWith": "או התחברו באמצעות",
+    "legacyLogin": "כניסה עם סיסמת מנהל",
+    "emailLogin": "כניסה עם אימייל",
+    "clerkLogin": "התחברות עם Clerk",
+    "hidePassword": "הסתר סיסמה",
+    "showPassword": "הצג סיסמה",
+    "passwordRequirements": "הסיסמה חייבת להכיל:",
+    "passwordMinLength": "לפחות 8 תווים",
+    "passwordLetter": "אות באנגלית",
+    "passwordNumber": "מספר אחד לפחות",
+    "errors": {
+      "emailRequired": "צריך אימייל כדי להמשיך",
+      "passwordRequired": "הזינו סיסמה כדי להמשיך",
+      "invalidEmail": "נראה שכתובת האימייל לא תקינה",
+      "weakPassword": "הסיסמה צריכה להכיל לפחות 8 תווים, אות באנגלית ומספר",
+      "shortPassword": "הסיסמה צריכה להכיל לפחות 6 תווים",
+      "passwordMismatch": "הסיסמאות לא זהות, נסו שוב",
+      "signupFailed": "לא הצלחנו ליצור חשבון, נסו שוב.",
+      "loginFailed": "לא הצלחנו להתחבר, בדקו את הפרטים.",
+      "signupEmailExists": "לא הצלחנו ליצור את החשבון. ייתכן שהאימייל כבר קיים במערכת",
+      "wrongCredentials": "האימייל או הסיסמה שגויים. נסו שוב או לחצו על 'שכחתם את הסיסמה?'",
+      "enterEmailForReset": "הזינו אימייל כדי לשלוח קישור איפוס"
+    },
+    "success": {
+      "accountCreated": "החשבון נוצר בהצלחה! 🎉\nשלחנו לכם מייל אישור - בדקו את תיבת הדואר ואז התחברו.",
+      "resetEmailSent": "שלחנו מייל עם קישור לאיפוס סיסמה ✓\nבדקו את תיבת הדואר ולחצו על הקישור.",
+      "passwordUpdated": "הסיסמה עודכנה בהצלחה! ✅\nעכשיו תוכלו להתחבר עם הסיסמה החדשה."
+    }
+  },
+  "suspended": {
+    "title": "החשבון מושהה",
+    "description": "הגישה לחשבון הושהתה כרגע. פנו לצוות Compakt כדי להפעיל מחדש את ההרשאות והפיצ'רים.",
+    "logout": "התנתקות"
+  },
+  "loading": {
+    "content": "טוען את התוכן המעודכן של החשבון..."
+  },
+  "dashboard": {
+    "stages": {
+      "0": "עוד לא התחילו",
+      "1": "עונים על שאלון",
+      "2": "בוחרים שירים",
+      "3": "מוסיפים בקשות",
+      "4": "סיימו"
+    },
+    "errors": {
+      "invalidResponse": "תגובת שרת לא תקינה. ה-API החזיר HTML במקום JSON",
+      "invalidServerResponse": "תגובה לא תקינה מהשרת",
+      "loadCouplesFailed": "שגיאה בטעינת נתוני זוגות",
+      "authExpired": "נראה שפג התוקף — רעננו את העמוד והתחברו שוב.",
+      "forbidden": "אין הרשאה לצפות בפעילות הזוגות כרגע.",
+      "defaultError": "לא הצלחנו לטעון את נתוני הזוגות"
+    },
+    "dates": {
+      "notSet": "לא נקבע"
+    },
+    "coupleNames": {
+      "unnamed": "זוג ללא שם"
+    },
+    "profileReadiness": {
+      "businessName": "שם עסק",
+      "djSlug": "לינק אישי",
+      "logoOrCover": "לוגו או קאבר",
+      "contact": "דרך יצירת קשר",
+      "bio": "טקסט היכרות"
+    },
+    "eventReadiness": {
+      "date": "תאריך",
+      "venue": "מקום",
+      "notes": "הערות"
+    },
+    "readinessItems": {
+      "djProfile": "פרופיל DJ",
+      "questionnaire": "שאלון מוכן",
+      "songLibrary": "ספריית שירים",
+      "upcomingEvents": "אירועים קרובים",
+      "completed": "הושלם",
+      "activeQuestions": "שאלות פעילות",
+      "activeSongs": "שירים פעילים",
+      "eventsThisWeek": "אירועים בשבוע הקרוב",
+      "noUpcomingEvents": "עדיין אין אירועים קרובים"
+    }
+  },
+  "profile": {
+    "title": "עריכת פרופיל DJ",
+    "subtitle": "בחר template חזק, שייף את המותג, ובדוק בלייב איך הפרופיל הציבורי מבין את ה-DJ שלך בתוך שניות.",
+    "save": "שמור",
+    "saving": "שומר...",
+    "saved": "נשמר!",
+    "tabs": {
+      "edit": "עריכה",
+      "preview": "תצוגה מקדימה"
+    },
+    "sections": {
+      "business": "פרטי עסק",
+      "branding": "מיתוג ו-template",
+      "slug": "כתובת אישית",
+      "visuals": "ויזואלים",
+      "social": "רשתות חברתיות",
+      "contact": "יצירת קשר",
+      "gallery": "גלריית תמונות",
+      "reviews": "המלצות",
+      "customLinks": "לינקים מותאמים אישית"
+    },
+    "fields": {
+      "businessName": "שם העסק / שם DJ",
+      "tagline": "סלוגן",
+      "taglinePlaceholder": "המוזיקה שלכם, הדרך שלכם",
+      "bio": "טקסט היכרות",
+      "bioPlaceholder": "ספרו קצת על הסגנון, האנרגיה והניסיון שלכם...",
+      "designStyle": "סגנון עיצוב",
+      "designStyleHint": "ה-template קובע מבנה, סדר מקטעים והיררכיית CTA. הצבעים למטה הם רק התאמה מעל המבנה.",
+      "activeStructure": "המבנה הפעיל",
+      "active": "פעיל",
+      "advancedColors": "צבעים מתקדמים",
+      "advancedColorsHint": "שכבת המיתוג הזאת משפיעה על האווירה, לא על ה-layout.",
+      "quickColorPicker": "בחירה מהירה לצבע הראשי",
+      "selectColor": "בחר צבע",
+      "slug": "כתובת (באנגלית)",
+      "slugHint": "רק אותיות באנגלית, מספרים ומקף. ללא רווחים.",
+      "open": "פתח",
+      "sendWhatsapp": "שלח בוואטסאפ",
+      "whatsappMessage": "היי! הנה הפרופיל שלי 🎵",
+      "copy": "העתק",
+      "copied": "הועתק",
+      "coverImage": "תמונת רקע",
+      "coverImageHint": "תמונה רחבה שמופיעה בראש הדף. מומלץ 1920x1080px.",
+      "logo": "לוגו",
+      "logoHint": "לוגו מרכזי או תמונת פרופיל. מומלץ 512x512px.",
+      "logoFit": "התאמת לוגו",
+      "logoFitCover": "מלא (cover)",
+      "logoFitContain": "מכיל (contain)",
+      "logoScale": "גודל לוגו",
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "soundcloud": "SoundCloud",
+      "spotify": "Spotify",
+      "youtube": "YouTube",
+      "website": "אתר אינטרנט",
+      "whatsapp": "WhatsApp",
+      "whatsappHint": "מספר עם קידומת בינלאומית, לדוגמה: +972501234567",
+      "addPhoto": "הוסף תמונה",
+      "photoHint": "תמונות מאירועים, ציוד, או רגעים מיוחדים.",
+      "addReview": "הוסף המלצה",
+      "reviewHint": "המלצות מזוגות או לקוחות מרוצים.",
+      "reviewerName": "שם הממליץ",
+      "reviewText": "טקסט ההמלצה",
+      "reviewRating": "דירוג (1-5)",
+      "addLink": "הוסף לינק",
+      "linkHint": "לינקים נוספים שתרצו לשתף - פלייליסטים, מיקסים, מאמרים וכו'.",
+      "linkTitle": "כותרת הלינק",
+      "linkUrl": "כתובת URL",
+      "linkIcon": "אייקון (אופציונלי)",
+      "delete": "מחק",
+      "moveUp": "הזז למעלה",
+      "moveDown": "הזז למטה"
+    },
+    "colors": {
+      "primary": "ראשי",
+      "secondary": "משני",
+      "accent": "הדגשה",
+      "surface": "משטח"
+    },
+    "errors": {
+      "slugRequired": "חובה להגדיר כתובת (slug) כדי לפרסם דף DJ",
+      "saveFailed": "שמירה נכשלה"
+    }
+  }
+}

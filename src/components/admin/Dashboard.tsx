@@ -24,6 +24,7 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface CoupleEvent {
   id: string;
@@ -54,13 +55,6 @@ type DashboardAction = {
   tab: "couples" | "events" | "profile" | "songs" | "questions";
 };
 
-const STAGE_LABELS: Record<number, string> = {
-  0: "עוד לא התחילו",
-  1: "עונים על שאלון",
-  2: "בוחרים שירים",
-  3: "מוסיפים בקשות",
-  4: "סיימו",
-};
 
 async function parseJsonResponse<T>(res: Response): Promise<T> {
   const text = await res.text();
@@ -69,14 +63,14 @@ async function parseJsonResponse<T>(res: Response): Promise<T> {
   } catch {
     throw new Error(
       text.startsWith("<!DOCTYPE") || text.startsWith("<html")
-        ? "תגובת שרת לא תקינה. ה-API החזיר HTML במקום JSON"
-        : text || "תגובה לא תקינה מהשרת"
+        ? "dashboard.errors.invalidResponse"
+        : text || "dashboard.errors.invalidServerResponse"
     );
   }
 }
 
-function formatDateLabel(value?: string | null): string {
-  if (!value) return "לא נקבע";
+function formatDateLabel(value?: string | null, t?: (key: string) => string): string {
+  if (!value) return t ? t("dashboard.dates.notSet") : "לא נקבע";
   try {
     return new Date(value).toLocaleDateString("he-IL", {
       day: "numeric",
@@ -98,8 +92,8 @@ function daysUntil(value?: string | null): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-function getCoupleNames(event: CoupleEvent): string {
-  return [event.couple_name_a, event.couple_name_b].filter(Boolean).join(" & ") || "זוג ללא שם";
+function getCoupleNames(event: CoupleEvent, t?: (key: string) => string): string {
+  return [event.couple_name_a, event.couple_name_b].filter(Boolean).join(" & ") || (t ? t("dashboard.coupleNames.unnamed") : "זוג ללא שם");
 }
 
 function dispatchAdminTabChange(tab: DashboardAction["tab"]) {
@@ -107,13 +101,13 @@ function dispatchAdminTabChange(tab: DashboardAction["tab"]) {
   window.dispatchEvent(new CustomEvent("compakt-admin-tab-change", { detail: tab }));
 }
 
-function getProfileReadiness(profile: ReturnType<typeof useProfileStore.getState>["profile"]) {
+function getProfileReadiness(profile: ReturnType<typeof useProfileStore.getState>["profile"], t: (key: string) => string) {
   const checks = [
-    { label: "שם עסק", done: Boolean(profile.businessName.trim()) },
-    { label: "לינק אישי", done: Boolean(profile.djSlug.trim()) },
-    { label: "לוגו או קאבר", done: Boolean(profile.logoUrl || profile.coverUrl) },
-    { label: "דרך יצירת קשר", done: Boolean(profile.whatsappNumber || profile.websiteUrl) },
-    { label: "טקסט היכרות", done: Boolean(profile.bio || profile.tagline) },
+    { label: t("dashboard.profileReadiness.businessName"), done: Boolean(profile.businessName.trim()) },
+    { label: t("dashboard.profileReadiness.djSlug"), done: Boolean(profile.djSlug.trim()) },
+    { label: t("dashboard.profileReadiness.logoOrCover"), done: Boolean(profile.logoUrl || profile.coverUrl) },
+    { label: t("dashboard.profileReadiness.contact"), done: Boolean(profile.whatsappNumber || profile.websiteUrl) },
+    { label: t("dashboard.profileReadiness.bio"), done: Boolean(profile.bio || profile.tagline) },
   ];
 
   const completed = checks.filter((item) => item.done).length;
@@ -125,11 +119,11 @@ function getProfileReadiness(profile: ReturnType<typeof useProfileStore.getState
   };
 }
 
-function getEventReadiness(event: DJEvent) {
+function getEventReadiness(event: DJEvent, t: (key: string) => string) {
   const missing: string[] = [];
-  if (!event.date_time) missing.push("תאריך");
-  if (!event.venue) missing.push("מקום");
-  if (!event.notes) missing.push("הערות");
+  if (!event.date_time) missing.push(t("dashboard.eventReadiness.date"));
+  if (!event.venue) missing.push(t("dashboard.eventReadiness.venue"));
+  if (!event.notes) missing.push(t("dashboard.eventReadiness.notes"));
 
   return {
     ready: missing.length === 0,
@@ -137,21 +131,22 @@ function getEventReadiness(event: DJEvent) {
   };
 }
 
-function getDashboardErrorMessage(error: unknown): string {
+function getDashboardErrorMessage(error: unknown, t: (key: string) => string): string {
   const message = error instanceof Error ? error.message : "";
 
   if (message === "Authentication required") {
-    return "נראה שפג התוקף — רעננו את העמוד והתחברו שוב.";
+    return t("dashboard.errors.authExpired");
   }
 
   if (message === "Forbidden" || message === "Forbidden: insufficient role" || message === "Forbidden: profile not found") {
-    return "אין הרשאה לצפות בפעילות הזוגות כרגע.";
+    return t("dashboard.errors.forbidden");
   }
 
-  return message || "לא הצלחנו לטעון את נתוני הזוגות";
+  return message || t("dashboard.errors.defaultError");
 }
 
 export function Dashboard() {
+  const { t } = useTranslation("admin");
   const profileId = useProfileStore((s) => s.profileId);
   const profile = useProfileStore((s) => s.profile);
   const songs = useAdminStore((s) => s.songs);
@@ -171,16 +166,16 @@ export function Dashboard() {
       const res = await fetch("/api/admin/couple-link", { cache: "no-store" });
       const data = await parseJsonResponse<{ events?: CoupleEvent[]; error?: string }>(res);
       if (!res.ok) {
-        throw new Error(data.error || "שגיאה בטעינת נתוני זוגות");
+        throw new Error(data.error || t("dashboard.errors.loadCouplesFailed"));
       }
       setCoupleEvents(Array.isArray(data.events) ? data.events : []);
     } catch (error) {
       setCoupleEvents([]);
-      setCouplesError(getDashboardErrorMessage(error));
+      setCouplesError(getDashboardErrorMessage(error, t));
     } finally {
       setCouplesLoading(false);
     }
-  }, [profileId]);
+  }, [profileId, t]);
 
   useEffect(() => {
     if (!profileId) return;
@@ -193,7 +188,7 @@ export function Dashboard() {
     }
   }, [loadEvents, profileId]);
 
-  const profileReadiness = useMemo(() => getProfileReadiness(profile), [profile]);
+  const profileReadiness = useMemo(() => getProfileReadiness(profile, t), [profile, t]);
   const activeQuestions = useMemo(() => questions.filter((question) => question.isActive).length, [questions]);
   const activeSongs = useMemo(() => songs.filter((song) => song.isActive).length, [songs]);
 
@@ -234,13 +229,13 @@ export function Dashboard() {
       return diff >= 0 && diff <= 1000 * 60 * 60 * 24 * 7;
     });
 
-    const eventsMissingSetup = upcomingEvents.filter((event) => !getEventReadiness(event).ready);
+    const eventsMissingSetup = upcomingEvents.filter((event) => !getEventReadiness(event, t).ready);
 
     const readinessItems = [
-      { label: "פרופיל DJ", done: profileReadiness.score >= 80, detail: `${profileReadiness.score}% הושלם`, tab: "profile" as const },
-      { label: "שאלון מוכן", done: activeQuestions >= 5, detail: `${activeQuestions} שאלות פעילות`, tab: "questions" as const },
-      { label: "ספריית שירים", done: activeSongs >= 10, detail: `${activeSongs} שירים פעילים`, tab: "songs" as const },
-      { label: "אירועים קרובים", done: nextWeekEvents.length > 0, detail: nextWeekEvents.length > 0 ? `${nextWeekEvents.length} אירועים בשבוע הקרוב` : "עדיין אין אירועים קרובים", tab: "events" as const },
+      { label: t("dashboard.readinessItems.djProfile"), done: profileReadiness.score >= 80, detail: `${profileReadiness.score}% ${t("dashboard.readinessItems.completed")}`, tab: "profile" as const },
+      { label: t("dashboard.readinessItems.questionnaire"), done: activeQuestions >= 5, detail: `${activeQuestions} ${t("dashboard.readinessItems.activeQuestions")}`, tab: "questions" as const },
+      { label: t("dashboard.readinessItems.songLibrary"), done: activeSongs >= 10, detail: `${activeSongs} ${t("dashboard.readinessItems.activeSongs")}`, tab: "songs" as const },
+      { label: t("dashboard.readinessItems.upcomingEvents"), done: nextWeekEvents.length > 0, detail: nextWeekEvents.length > 0 ? `${nextWeekEvents.length} ${t("dashboard.readinessItems.eventsThisWeek")}` : t("dashboard.readinessItems.noUpcomingEvents"), tab: "events" as const },
     ];
 
     const attentionItems: DashboardAction[] = [];
@@ -250,7 +245,7 @@ export function Dashboard() {
       attentionItems.push({
         id: "resume-couple",
         title: "זוגות באמצע הדרך — שווה לעקוב",
-        detail: `${getCoupleNames(couple)} כרגע ב-${STAGE_LABELS[couple.current_stage] || "תהליך פעיל"}`,
+        detail: `${getCoupleNames(couple, t)} כרגע ב-${t(`dashboard.stages.${couple.current_stage}`) || t("dashboard.stages.1")}`,
         tone: "warn",
         cta: "פתח שאלונים",
         tab: "couples",
@@ -262,7 +257,7 @@ export function Dashboard() {
       attentionItems.push({
         id: "missing-contact",
         title: "יש זוגות בלי פרטי קשר",
-        detail: `${getCoupleNames(couple)} ללא מייל או מספר טלפון מזוהה`,
+        detail: `${getCoupleNames(couple, t)} ללא מייל או מספר טלפון מזוהה`,
         tone: "danger",
         cta: "בדוק שאלונים",
         tab: "couples",
@@ -271,7 +266,7 @@ export function Dashboard() {
 
     if (eventsMissingSetup.length > 0) {
       const upcoming = eventsMissingSetup[0];
-      const readiness = getEventReadiness(upcoming);
+      const readiness = getEventReadiness(upcoming, t);
       attentionItems.push({
         id: "missing-event-setup",
         title: "אירועים קרובים שחסרים פרטים",
@@ -510,7 +505,7 @@ export function Dashboard() {
           ) : (
             <div className="space-y-3">
               {dashboardData.upcomingEvents.slice(0, 4).map((event) => {
-                const readiness = getEventReadiness(event);
+                const readiness = getEventReadiness(event, t);
                 const days = daysUntil(event.date_time);
                 return (
                   <button
@@ -573,7 +568,7 @@ export function Dashboard() {
                         {formatDateLabel(event.event_date)} · {event.venue || "מקום לא הוגדר"}
                       </p>
                       <p className="text-sm text-muted mt-1.5 leading-relaxed">
-                        {STAGE_LABELS[event.current_stage] || "בתהליך"} · {event.answerCount} תשובות · {event.swipeCount} שירים · {event.requestCount || 0} בקשות
+                        {t(`dashboard.stages.${event.current_stage}`) || t("dashboard.stages.1")} · {event.answerCount} תשובות · {event.swipeCount} שירים · {event.requestCount || 0} בקשות
                       </p>
                     </div>
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-sm font-semibold ${event.isComplete ? "border-accent-success/50 bg-accent-success/15 text-accent-success" : "border-dashboard-border bg-white/[0.05] text-muted"}`}>
@@ -610,7 +605,7 @@ export function Dashboard() {
                     <div className="min-w-0">
                       <p className="text-base font-semibold text-white">{getCoupleNames(event)}</p>
                       <p className="text-sm text-secondary mt-2 leading-relaxed">
-                        {STAGE_LABELS[event.current_stage] || "בתהליך"} · {event.answerCount} תשובות · {event.swipeCount} שירים · {event.requestCount || 0} בקשות
+                        {t(`dashboard.stages.${event.current_stage}`) || t("dashboard.stages.1")} · {event.answerCount} תשובות · {event.swipeCount} שירים · {event.requestCount || 0} בקשות
                       </p>
                       <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted">
                         {event.token ? <span>#{event.token}</span> : null}

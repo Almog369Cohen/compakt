@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
 export function MarketingNav() {
+  const { t } = useTranslation("common");
+
   return (
     <motion.nav
       initial={{ opacity: 0, y: -20 }}
@@ -13,7 +17,7 @@ export function MarketingNav() {
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/home" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#059cc0] to-[#03b28c] flex items-center justify-center">
               <span className="text-white font-bold text-lg">C</span>
             </div>
@@ -26,13 +30,13 @@ export function MarketingNav() {
               href="/how-it-works"
               className="text-sm font-medium text-[#4b5563] hover:text-[#059cc0] transition-colors"
             >
-              איך זה עובד
+              {t("nav.howItWorks")}
             </Link>
             <Link
               href="/pricing"
               className="text-sm font-medium text-[#4b5563] hover:text-[#059cc0] transition-colors"
             >
-              מחירים
+              {t("nav.pricing")}
             </Link>
           </div>
 
@@ -42,14 +46,15 @@ export function MarketingNav() {
               href="/admin"
               className="text-sm font-medium text-[#4b5563] hover:text-[#059cc0] transition-colors"
             >
-              כניסה
+              {t("nav.login")}
             </Link>
             <Link
               href="/admin"
               className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#059cc0] to-[#03b28c] text-white font-semibold text-sm hover:shadow-lg hover:-translate-y-0.5 transition-all"
             >
-              התחילו בחינם
+              {t("nav.getStarted")}
             </Link>
+            <LanguageSwitcher variant="compact" />
           </div>
         </div>
       </div>

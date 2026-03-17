@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Rubik } from "next/font/google";
 import { AppRuntimeGuard } from "@/components/ui/AppRuntimeGuard";
+import { LocaleProvider } from "@/components/providers/LocaleProvider";
 import "./globals.css";
 
 const rubik = Rubik({
@@ -37,7 +38,9 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" data-theme="night" className={rubik.variable}>
       <body className="font-sans antialiased min-h-dvh">
-        <AppRuntimeGuard>{children}</AppRuntimeGuard>
+        <LocaleProvider>
+          <AppRuntimeGuard>{children}</AppRuntimeGuard>
+        </LocaleProvider>
       </body>
     </html>
   );

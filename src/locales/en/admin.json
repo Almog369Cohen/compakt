@@ -1,0 +1,209 @@
+{
+  "tabs": {
+    "dashboard": "Dashboard",
+    "couples": "Couple Briefs",
+    "events": "DJ Events",
+    "profile": "Profile",
+    "songs": "Songs",
+    "questions": "Questions",
+    "upsells": "Upgrades",
+    "analytics": "Analytics"
+  },
+  "header": {
+    "title": "Compakt Admin",
+    "subtitle": "Your DJ workspace before going live",
+    "myProfile": "My Profile"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back!",
+    "joinCommunity": "Join the DJ community",
+    "resetPassword": "Reset Password",
+    "chooseNewPassword": "Choose a new password for your account",
+    "loginSubtitle": "Log in to manage your events",
+    "signupSubtitle": "Create a free account and start managing events",
+    "legacySubtitle": "Enter a password to continue",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "newPasswordPlaceholder": "New password",
+    "confirmPasswordPlaceholder": "Confirm new password",
+    "loginButton": "Log In",
+    "signupButton": "Create Free Account",
+    "updatePasswordButton": "Update Password",
+    "loggingIn": "Logging in...",
+    "creatingAccount": "Creating account...",
+    "forgotPassword": "Forgot your password?",
+    "backToLogin": "Back to login",
+    "alreadyHaveAccount": "Already have an account?",
+    "newToPlatform": "New to Compakt?",
+    "loginHere": "Log in here",
+    "createFreeAccount": "Create a free account",
+    "orSignupWith": "Or sign up with",
+    "orLoginWith": "Or log in with",
+    "legacyLogin": "Admin password login",
+    "emailLogin": "Email login",
+    "clerkLogin": "Log in with Clerk",
+    "hidePassword": "Hide password",
+    "showPassword": "Show password",
+    "passwordRequirements": "Password must contain:",
+    "passwordMinLength": "At least 8 characters",
+    "passwordLetter": "An English letter",
+    "passwordNumber": "At least one number",
+    "errors": {
+      "emailRequired": "Email is required to continue",
+      "passwordRequired": "Enter a password to continue",
+      "invalidEmail": "This email address doesn't look valid",
+      "weakPassword": "Password must be at least 8 characters with a letter and a number",
+      "shortPassword": "Password must be at least 6 characters",
+      "passwordMismatch": "Passwords don't match, try again",
+      "signupFailed": "Couldn't create account, please try again.",
+      "loginFailed": "Couldn't log in, please check your details.",
+      "signupEmailExists": "Couldn't create account. This email may already be registered.",
+      "wrongCredentials": "Wrong email or password. Try again or click 'Forgot password?'",
+      "enterEmailForReset": "Enter your email to send a reset link"
+    },
+    "success": {
+      "accountCreated": "Account created successfully! 🎉\nWe sent you a confirmation email — check your inbox and then log in.",
+      "resetEmailSent": "We sent a password reset link ✓\nCheck your inbox and click the link.",
+      "passwordUpdated": "Password updated successfully! ✅\nYou can now log in with your new password."
+    }
+  },
+  "suspended": {
+    "title": "Account Suspended",
+    "description": "Your account access is currently suspended. Contact the Compakt team to reactivate your permissions and features.",
+    "logout": "Log Out"
+  },
+  "loading": {
+    "content": "Loading account content..."
+  },
+  "dashboard": {
+    "stages": {
+      "0": "Not started yet",
+      "1": "Answering questionnaire",
+      "2": "Choosing songs",
+      "3": "Adding requests",
+      "4": "Completed"
+    },
+    "errors": {
+      "invalidResponse": "Invalid server response. API returned HTML instead of JSON",
+      "invalidServerResponse": "Invalid response from server",
+      "loadCouplesFailed": "Error loading couple data",
+      "authExpired": "Session expired — please refresh and log in again.",
+      "forbidden": "No permission to view couple activity.",
+      "defaultError": "Failed to load couple data"
+    },
+    "dates": {
+      "notSet": "Not set"
+    },
+    "coupleNames": {
+      "unnamed": "Unnamed couple"
+    },
+    "profileReadiness": {
+      "businessName": "Business name",
+      "djSlug": "Personal link",
+      "logoOrCover": "Logo or cover",
+      "contact": "Contact method",
+      "bio": "Bio text"
+    },
+    "eventReadiness": {
+      "date": "Date",
+      "venue": "Venue",
+      "notes": "Notes"
+    },
+    "readinessItems": {
+      "djProfile": "DJ Profile",
+      "questionnaire": "Questionnaire ready",
+      "songLibrary": "Song library",
+      "upcomingEvents": "Upcoming events",
+      "completed": "completed",
+      "activeQuestions": "active questions",
+      "activeSongs": "active songs",
+      "eventsThisWeek": "events this week",
+      "noUpcomingEvents": "No upcoming events yet"
+    }
+  },
+  "profile": {
+    "title": "Edit DJ Profile",
+    "subtitle": "Choose a strong template, refine your brand, and see live how the public profile represents your DJ in seconds.",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved!",
+    "tabs": {
+      "edit": "Edit",
+      "preview": "Preview"
+    },
+    "sections": {
+      "business": "Business Details",
+      "branding": "Branding & Template",
+      "slug": "Personal URL",
+      "visuals": "Visuals",
+      "social": "Social Networks",
+      "contact": "Contact",
+      "gallery": "Photo Gallery",
+      "reviews": "Reviews",
+      "customLinks": "Custom Links"
+    },
+    "fields": {
+      "businessName": "Business Name / DJ Name",
+      "tagline": "Tagline",
+      "taglinePlaceholder": "Your music, your way",
+      "bio": "Bio",
+      "bioPlaceholder": "Tell us about your style, energy, and experience...",
+      "designStyle": "Design Style",
+      "designStyleHint": "The template determines structure, section order, and CTA hierarchy. Colors below are just customization on top.",
+      "activeStructure": "Active Structure",
+      "active": "Active",
+      "advancedColors": "Advanced Colors",
+      "advancedColorsHint": "This branding layer affects the vibe, not the layout.",
+      "quickColorPicker": "Quick Primary Color Picker",
+      "selectColor": "Select color",
+      "slug": "Slug (English)",
+      "slugHint": "Only English letters, numbers, and hyphens. No spaces.",
+      "open": "Open",
+      "sendWhatsapp": "Send via WhatsApp",
+      "whatsappMessage": "Hey! Here's my profile 🎵",
+      "copy": "Copy",
+      "copied": "Copied",
+      "coverImage": "Cover Image",
+      "coverImageHint": "Wide image at the top of the page. Recommended 1920x1080px.",
+      "logo": "Logo",
+      "logoHint": "Main logo or profile picture. Recommended 512x512px.",
+      "logoFit": "Logo Fit",
+      "logoFitCover": "Fill (cover)",
+      "logoFitContain": "Contain",
+      "logoScale": "Logo Size",
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "soundcloud": "SoundCloud",
+      "spotify": "Spotify",
+      "youtube": "YouTube",
+      "website": "Website",
+      "whatsapp": "WhatsApp",
+      "whatsappHint": "Number with international prefix, e.g.: +972501234567",
+      "addPhoto": "Add Photo",
+      "photoHint": "Photos from events, equipment, or special moments.",
+      "addReview": "Add Review",
+      "reviewHint": "Reviews from couples or satisfied clients.",
+      "reviewerName": "Reviewer Name",
+      "reviewText": "Review Text",
+      "reviewRating": "Rating (1-5)",
+      "addLink": "Add Link",
+      "linkHint": "Additional links you want to share - playlists, mixes, articles, etc.",
+      "linkTitle": "Link Title",
+      "linkUrl": "URL",
+      "linkIcon": "Icon (optional)",
+      "delete": "Delete",
+      "moveUp": "Move Up",
+      "moveDown": "Move Down"
+    },
+    "colors": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "accent": "Accent",
+      "surface": "Surface"
+    },
+    "errors": {
+      "slugRequired": "Slug is required to publish DJ page",
+      "saveFailed": "Save failed"
+    }
+  }
+}

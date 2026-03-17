@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, Music, Volume2, SkipBack, Pause, SkipForward } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, Music, Volume2, SkipBack, Pause, SkipForward } from "lucide-react";
+import { useTranslation, useLocaleStore } from "@/lib/i18n";
 
 export function Hero() {
+  const { t } = useTranslation("marketing");
+  const locale = useLocaleStore((s) => s.locale);
+  const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
+
   return (
     <section className="relative pt-32 pb-20 px-6 overflow-hidden bg-white">
       {/* Background gradient */}
@@ -21,7 +26,7 @@ export function Hero() {
           >
             <span className="w-2 h-2 rounded-full bg-gradient-to-r from-[#059cc0] to-[#03b28c] animate-pulse" />
             <span className="text-sm font-medium text-[#4b5563]">
-              הדרך החדשה לניהול אירועי DJ
+              {t("hero.badge")}
             </span>
           </motion.div>
 
@@ -32,10 +37,10 @@ export function Hero() {
             transition={{ delay: 0.2 }}
             className="text-5xl md:text-7xl font-bold text-[#1f1f21] mb-6 leading-[1.1] tracking-tight"
           >
-            הדרך החדשה שבה
+            {t("hero.titleLine1")}
             <br />
             <span className="bg-gradient-to-r from-[#059cc0] to-[#03b28c] bg-clip-text text-transparent">
-              DJs מכינים אירועים
+              {t("hero.titleLine2")}
             </span>
           </motion.h1>
 
@@ -46,9 +51,9 @@ export function Hero() {
             transition={{ delay: 0.3 }}
             className="text-xl md:text-2xl text-[#4b5563] mb-10 leading-relaxed max-w-3xl mx-auto"
           >
-            במקום וואטסאפים אינסופיים,
+            {t("hero.subtitle")}
             <br />
-            שלחו לזוג שאלון חכם וקבלו brief מוזיקלי מסודר.
+            {t("hero.subtitleLine2")}
           </motion.p>
 
           {/* CTAs */}
@@ -62,8 +67,8 @@ export function Hero() {
               href="/admin"
               className="group px-8 py-4 rounded-xl bg-gradient-to-r from-[#059cc0] to-[#03b28c] text-white font-semibold text-lg hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
             >
-              פתחו חשבון DJ
-              <ArrowLeft className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {t("hero.ctaPrimary")}
+              <Arrow className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
 
             <Link
@@ -71,7 +76,7 @@ export function Hero() {
               className="px-8 py-4 rounded-xl bg-white border-2 border-[#e5e7eb] text-[#1f1f21] font-semibold text-lg hover:border-[#059cc0] hover:text-[#059cc0] transition-all flex items-center gap-2"
             >
               <Play className="w-5 h-5" />
-              ראו איך זה עובד
+              {t("hero.ctaSecondary")}
             </Link>
           </motion.div>
 
@@ -91,7 +96,7 @@ export function Hero() {
                   />
                 ))}
               </div>
-              <span>מאות DJs כבר משתמשים</span>
+              <span>{t("hero.socialProof")}</span>
             </div>
           </motion.div>
         </div>
@@ -139,8 +144,8 @@ export function Hero() {
                         {/* Top Section */}
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-xs text-white/60 uppercase tracking-wider">עכשיו מנגן</p>
-                            <p className="text-sm text-white/80">מתוך הפלייליסט שלכם</p>
+                            <p className="text-xs text-white/60 uppercase tracking-wider">{t("hero.playerNowPlaying")}</p>
+                            <p className="text-sm text-white/80">{t("hero.playerFromPlaylist")}</p>
                           </div>
                           <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
                             <Volume2 className="w-4 h-4 text-white" />
@@ -152,7 +157,7 @@ export function Hero() {
                           <h3 className="text-2xl font-bold mb-1">Uptown Funk</h3>
                           <p className="text-lg text-white/80">Mark Ronson ft. Bruno Mars</p>
                           <div className="mt-2 inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-sm">
-                            פופ
+                            {t("hero.playerGenre")}
                           </div>
                         </div>
 
@@ -189,11 +194,11 @@ export function Hero() {
                   {/* Call to Action */}
                   <div className="text-center">
                     <p className="text-white/70 text-sm mb-4">
-                      הזוגות בוחרות מוזיקה בצורה כיפית ואינטואיטיבית
+                      {t("hero.playerCta")}
                     </p>
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm">
                       <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                      <span className="text-white text-sm">נגן פעיל</span>
+                      <span className="text-white text-sm">{t("hero.playerActive")}</span>
                     </div>
                   </div>
                 </div>

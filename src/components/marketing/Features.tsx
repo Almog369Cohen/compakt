@@ -2,35 +2,27 @@
 
 import { motion } from "framer-motion";
 import { Sparkles, Users, Heart, BarChart3 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
-const features = [
-  {
-    icon: Sparkles,
-    title: "פחות בלגן",
-    description: "כל התקשורת עם הזוג במקום אחד. לא עוד וואטסאפים אינסופיים.",
-    gradient: "from-blue-500 to-cyan-500",
-  },
-  {
-    icon: Users,
-    title: "יותר מקצועיות",
-    description: "פרופיל מרשים שמציג אתכם בצורה הכי טובה מול זוגות חדשים.",
-    gradient: "from-purple-500 to-pink-500",
-  },
-  {
-    icon: Heart,
-    title: "חוויית זוג מטורפת",
-    description: "בחירת שירים בסוויפ - הזוג בוחר מוזיקה בצורה כיפית ואינטואיטיבית.",
-    gradient: "from-pink-500 to-rose-500",
-  },
-  {
-    icon: BarChart3,
-    title: "שליטה מלאה",
-    description: "ניהול כל האירועים, מעקב אחר התקדמות, וכל המידע במקום אחד.",
-    gradient: "from-green-500 to-emerald-500",
-  },
+const featureIcons = [Sparkles, Users, Heart, BarChart3];
+const featureGradients = [
+  "from-blue-500 to-cyan-500",
+  "from-purple-500 to-pink-500",
+  "from-pink-500 to-rose-500",
+  "from-green-500 to-emerald-500",
 ];
+const featureKeys = ["lessMess", "moreProfessional", "coupleExperience", "fullControl"];
 
 export function Features() {
+  const { t } = useTranslation("marketing");
+
+  const features = featureKeys.map((key, i) => ({
+    icon: featureIcons[i],
+    title: t(`features.items.${key}.title`),
+    description: t(`features.items.${key}.description`),
+    gradient: featureGradients[i],
+  }));
+
   return (
     <section className="py-20 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
@@ -38,16 +30,16 @@ export function Features() {
         <div className="text-center mb-12">
           <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-blue-50 to-green-50 border border-[#e5e7eb] mb-4">
             <span className="text-sm font-medium bg-gradient-to-r from-[#059cc0] to-[#03b28c] bg-clip-text text-transparent">
-              למה Compakt?
+              {t("features.badge")}
             </span>
           </div>
 
           <h2 className="text-3xl md:text-4xl font-bold text-[#1f1f21] mb-4">
-            הפלטפורמה שתשנה את הדרך שלכם לעבוד
+            {t("features.title")}
           </h2>
 
           <p className="text-lg text-[#4b5563] max-w-2xl mx-auto">
-            כל מה שאתם צריכים במקום אחד, כדי להתמקצע ולחסוך זמן
+            {t("features.subtitle")}
           </p>
         </div>
 

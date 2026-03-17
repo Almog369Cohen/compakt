@@ -2,31 +2,20 @@
 
 import { motion } from "framer-motion";
 import { MessageSquare, FileQuestion, Music, AlertCircle } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
-const problems = [
-  {
-    icon: MessageSquare,
-    title: "עשרות הודעות וואטסאפ",
-    description: "תקשורת מפוזרת בין כמה צ'אטים וקבוצות",
-  },
-  {
-    icon: FileQuestion,
-    title: "בקשות לא ברורות",
-    description: "\"שירים רומנטיים\" או \"משהו אנרגטי\" - מה זה אומר?",
-  },
-  {
-    icon: Music,
-    title: "שירים מפוזרים",
-    description: "רשימות בנוטס, אקסל, ספוטיפיי - בלי סדר",
-  },
-  {
-    icon: AlertCircle,
-    title: "הפתעות לפני האירוע",
-    description: "\"אה, שכחנו לספר לך ש...\" ברגע האחרון",
-  },
-];
+const problemIcons = [MessageSquare, FileQuestion, Music, AlertCircle];
+const problemKeys = ["whatsapp", "unclearRequests", "scatteredSongs", "lastMinute"];
 
 export function Problem() {
+  const { t } = useTranslation("marketing");
+
+  const problems = problemKeys.map((key, i) => ({
+    icon: problemIcons[i],
+    title: t(`problem.items.${key}.title`),
+    description: t(`problem.items.${key}.description`),
+  }));
+
   return (
     <section className="py-24 px-6 bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -38,9 +27,9 @@ export function Problem() {
             viewport={{ once: true }}
             className="inline-block px-4 py-2 rounded-full bg-red-50 border border-red-100 mb-6"
           >
-            <span className="text-sm font-medium text-red-600">נמאס מהבלגן?</span>
+            <span className="text-sm font-medium text-red-600">{t("problem.badge")}</span>
           </motion.div>
-          
+
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -48,9 +37,9 @@ export function Problem() {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-bold text-[#1f1f21] mb-6"
           >
-            הבעיות שכל DJ מכיר
+            {t("problem.title")}
           </motion.h2>
-          
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -58,7 +47,7 @@ export function Problem() {
             transition={{ delay: 0.2 }}
             className="text-xl text-[#4b5563] max-w-2xl mx-auto"
           >
-            ניהול אירועים דרך וואטסאפ זה כאב ראש. הגיע הזמן לשיטה יותר טובה.
+            {t("problem.subtitle")}
           </motion.p>
         </div>
 

@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useTranslation, useLocaleStore } from "@/lib/i18n";
 
 export function FinalCTA() {
+  const { t } = useTranslation("marketing");
+  const locale = useLocaleStore((s) => s.locale);
+  const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
+
   return (
     <section className="py-24 px-6 bg-gradient-to-br from-[#059cc0] to-[#03b28c] relative overflow-hidden">
       {/* Background pattern */}
@@ -22,13 +27,13 @@ export function FinalCTA() {
           viewport={{ once: true }}
         >
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            מוכנים להתחיל?
+            {t("cta.title")}
           </h2>
-          
+
           <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">
-            התחילו עם הזוג הראשון שלכם - בחינם.
+            {t("cta.subtitleLine1")}
             <br />
-            לא צריך כרטיס אשראי.
+            {t("cta.subtitleLine2")}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -36,20 +41,20 @@ export function FinalCTA() {
               href="/admin"
               className="group px-8 py-4 rounded-xl bg-white text-[#059cc0] font-semibold text-lg hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-2"
             >
-              פתחו חשבון DJ
-              <ArrowLeft className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {t("cta.ctaPrimary")}
+              <Arrow className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
-            
+
             <Link
               href="/how-it-works"
               className="px-8 py-4 rounded-xl bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white font-semibold text-lg hover:bg-white/20 transition-all"
             >
-              ראו איך זה עובד
+              {t("cta.ctaSecondary")}
             </Link>
           </div>
 
           <p className="mt-8 text-white/70 text-sm">
-            הצטרפו למאות DJs שכבר משתמשים ב-Compakt
+            {t("cta.socialProof")}
           </p>
         </motion.div>
       </div>

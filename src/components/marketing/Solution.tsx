@@ -2,29 +2,22 @@
 
 import { motion } from "framer-motion";
 import { Send, Music2, FileCheck } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
-const steps = [
-  {
-    number: "01",
-    icon: Send,
-    title: "שלחו לזוג לינק אישי",
-    description: "כל DJ מקבל דף פרופיל ייחודי עם לינק לשיתוף",
-  },
-  {
-    number: "02",
-    icon: Music2,
-    title: "הזוג בוחר מוזיקה וממלא פרטים",
-    description: "בחירת שירים בסוויפ + שאלון מותאם אישית",
-  },
-  {
-    number: "03",
-    icon: FileCheck,
-    title: "קבלו brief מסודר ומוכן לעבודה",
-    description: "כל המידע במקום אחד, מאורגן ונגיש",
-  },
-];
+const stepIcons = [Send, Music2, FileCheck];
+const stepNumbers = ["01", "02", "03"];
+const stepKeys = ["step1", "step2", "step3"];
 
 export function Solution() {
+  const { t } = useTranslation("marketing");
+
+  const steps = stepKeys.map((key, i) => ({
+    number: stepNumbers[i],
+    icon: stepIcons[i],
+    title: t(`solution.steps.${key}.title`),
+    description: t(`solution.steps.${key}.description`),
+  }));
+
   return (
     <section className="py-24 px-6 bg-white">
       <div className="max-w-7xl mx-auto">
@@ -37,7 +30,7 @@ export function Solution() {
             className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-blue-50 to-green-50 border border-[#e5e7eb] mb-6"
           >
             <span className="text-sm font-medium bg-gradient-to-r from-[#059cc0] to-[#03b28c] bg-clip-text text-transparent">
-              הפתרון
+              {t("solution.badge")}
             </span>
           </motion.div>
 
@@ -48,7 +41,7 @@ export function Solution() {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-bold text-[#1f1f21] mb-6"
           >
-            3 צעדים פשוטים
+            {t("solution.title")}
           </motion.h2>
 
           <motion.p
@@ -58,7 +51,7 @@ export function Solution() {
             transition={{ delay: 0.2 }}
             className="text-xl text-[#4b5563] max-w-2xl mx-auto"
           >
-            מהשליחה ועד הבריף המוכן - הכל קורה אוטומטית
+            {t("solution.subtitle")}
           </motion.p>
         </div>
 

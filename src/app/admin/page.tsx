@@ -7,6 +7,8 @@ import { useAdminStore } from "@/stores/adminStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Music, HelpCircle, Sparkles, LogOut, ChevronLeft, BarChart3, Eye, EyeOff, User, Link, CalendarDays } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { useEventStore } from "@/stores/eventStore";
 import { SongManager } from "@/components/admin/SongManager";
 import { QuestionManager } from "@/components/admin/QuestionManager";
@@ -31,15 +33,15 @@ type AdminAccess = {
   features: Record<FeatureKey, boolean>;
 };
 
-const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode; launchReady?: boolean }> = [
-  { id: "dashboard", label: "דשבורד", icon: <BarChart3 className="w-4 h-4" /> },
-  { id: "couples", label: "שאלוני זוגות", icon: <Link className="w-4 h-4" />, launchReady: true },
-  { id: "events", label: "אירועי DJ", icon: <CalendarDays className="w-4 h-4" />, launchReady: true },
-  { id: "profile", label: "פרופיל", icon: <User className="w-4 h-4" /> },
-  { id: "songs", label: "שירים", icon: <Music className="w-4 h-4" /> },
-  { id: "questions", label: "שאלות", icon: <HelpCircle className="w-4 h-4" /> },
-  { id: "upsells", label: "שדרוגים", icon: <Sparkles className="w-4 h-4" />, launchReady: false },
-  { id: "analytics", label: "אנליטיקות", icon: <BarChart3 className="w-4 h-4" />, launchReady: false },
+const tabDefs: Array<{ id: AdminTab; labelKey: string; icon: React.ReactNode; launchReady?: boolean }> = [
+  { id: "dashboard", labelKey: "tabs.dashboard", icon: <BarChart3 className="w-4 h-4" /> },
+  { id: "couples", labelKey: "tabs.couples", icon: <Link className="w-4 h-4" />, launchReady: true },
+  { id: "events", labelKey: "tabs.events", icon: <CalendarDays className="w-4 h-4" />, launchReady: true },
+  { id: "profile", labelKey: "tabs.profile", icon: <User className="w-4 h-4" /> },
+  { id: "songs", labelKey: "tabs.songs", icon: <Music className="w-4 h-4" /> },
+  { id: "questions", labelKey: "tabs.questions", icon: <HelpCircle className="w-4 h-4" /> },
+  { id: "upsells", labelKey: "tabs.upsells", icon: <Sparkles className="w-4 h-4" />, launchReady: false },
+  { id: "analytics", labelKey: "tabs.analytics", icon: <BarChart3 className="w-4 h-4" />, launchReady: false },
 ];
 
 // Clerk is optional - only used when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set
@@ -52,6 +54,9 @@ type AdminPageContentProps = {
 };
 
 function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPageContentProps) {
+  const { t } = useTranslation("admin");
+  const { t: tc } = useTranslation("common");
+  const tabs = tabDefs.map((tab) => ({ ...tab, label: t(tab.labelKey) }));
   const isAuthenticated = useAdminStore((s) => s.isAuthenticated);
   const userId = useAdminStore((s) => s.userId);
   const setAuthState = useAdminStore((s) => s.setAuthState);
@@ -271,26 +276,26 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
     if ((authMode === "email" || bypassClerk) && !normalizedEmail) {
       setResetTone("error");
-      setResetMessage("צריך אימייל כדי להמשיך");
+      setResetMessage(t("auth.errors.emailRequired"));
       return;
     }
 
     if (!isRecoveryMode && !normalizedPassword) {
       setResetTone("error");
-      setResetMessage("הזינו סיסמה כדי להמשיך");
+      setResetMessage(t("auth.errors.passwordRequired"));
       return;
     }
 
     if (isSignUp) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
         setResetTone("error");
-        setResetMessage("נראה שכתובת האימייל לא תקינה");
+        setResetMessage(t("auth.errors.invalidEmail"));
         return;
       }
 
       if (normalizedPassword.length < 8 || !/[A-Za-z]/.test(normalizedPassword) || !/\d/.test(normalizedPassword)) {
         setResetTone("error");
-        setResetMessage("הסיסמה צריכה להכיל לפחות 8 תווים, אות באנגלית ומספר");
+        setResetMessage(t("auth.errors.weakPassword"));
         return;
       }
     }
@@ -312,7 +317,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
     if (isSignUp && result === "pending_confirmation") {
       setResetTone("success");
-      setResetMessage("החשבון נוצר בהצלחה! 🎉\nשלחנו לכם מייל אישור - בדקו את תיבת הדואר ואז התחברו.");
+      setResetMessage(t("auth.success.accountCreated"));
       setIsSignUp(false);
       setPassword("");
       return;
@@ -322,7 +327,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
       const latestAuthError = useAdminStore.getState().authError;
       setResetTone("error");
       setResetMessage(
-        latestAuthError || (isSignUp ? "לא הצלחנו ליצור חשבון, נסו שוב." : "לא הצלחנו להתחבר, בדקו את הפרטים.")
+        latestAuthError || (isSignUp ? t("auth.errors.signupFailed") : t("auth.errors.loginFailed"))
       );
       setError(true);
       setTimeout(() => setError(false), 3000);
@@ -340,7 +345,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
     if (!email.trim()) {
       setResetTone("error");
-      setResetMessage("הזינו אימייל כדי לשלוח קישור איפוס");
+      setResetMessage(t("auth.errors.enterEmailForReset"));
       return;
     }
 
@@ -357,7 +362,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     }
 
     setResetTone("success");
-    setResetMessage("שלחנו מייל עם קישור לאיפוס סיסמה ✓\nבדקו את תיבת הדואר ולחצו על הקישור.");
+    setResetMessage(t("auth.success.resetEmailSent"));
   };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -372,13 +377,13 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
     if (!newPassword || newPassword.length < 6) {
       setResetTone("error");
-      setResetMessage("הסיסמה צריכה להכיל לפחות 6 תווים");
+      setResetMessage(t("auth.errors.shortPassword"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
       setResetTone("error");
-      setResetMessage("הסיסמאות לא זהות, נסו שוב");
+      setResetMessage(t("auth.errors.passwordMismatch"));
       return;
     }
 
@@ -393,7 +398,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     }
 
     setResetTone("success");
-    setResetMessage("הסיסמה עודכנה בהצלחה! ✅\nעכשיו תוכלו להתחבר עם הסיסמה החדשה.");
+    setResetMessage(t("auth.success.passwordUpdated"));
     setIsRecoveryMode(false);
     setNewPassword("");
     setConfirmPassword("");
@@ -425,10 +430,10 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
           <button
             onClick={() => router.push("/home")}
             className="glass-card px-4 py-2 rounded-full flex items-center gap-2 text-sm font-medium text-muted hover:text-white hover:scale-105 transition-all"
-            aria-label="חזרה לאתר"
+            aria-label={tc("nav.backToSite")}
           >
             <ChevronLeft className="w-4 h-4" />
-            חזרה לאתר
+            {tc("nav.backToSite")}
           </button>
         </div>
 
@@ -446,14 +451,14 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
             <Lock className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-xl font-bold mb-1">
-            {isRecoveryMode ? "איפוס סיסמה" : isSignUp ? "הצטרפו לקהילת הדיג'יים" : "ברוכים הבאים בחזרה!"}
+            {isRecoveryMode ? t("auth.resetPassword") : isSignUp ? t("auth.joinCommunity") : t("auth.welcomeBack")}
           </h1>
           <p className="text-sm text-secondary mb-6">
             {isRecoveryMode
-              ? "בחרו סיסמה חדשה לחשבון שלכם"
+              ? t("auth.chooseNewPassword")
               : authMode === "email"
-                ? isSignUp ? "צרו חשבון בחינם והתחילו לנהל אירועים" : "התחברו כדי לנהל את האירועים שלכם"
-                : "הזינו סיסמה כדי להיכנס"}
+                ? isSignUp ? t("auth.signupSubtitle") : t("auth.loginSubtitle")
+                : t("auth.legacySubtitle")}
           </p>
 
           {(authMode === "email" || bypassClerk) && !isRecoveryMode && (
@@ -462,7 +467,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="אימייל"
+                placeholder={t("auth.emailPlaceholder")}
                 dir="ltr"
                 className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors"
                 autoFocus
@@ -478,7 +483,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                   type={showPassword ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="סיסמה חדשה"
+                  placeholder={t("auth.newPasswordPlaceholder")}
                   className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors pr-11"
                   autoFocus
                 />
@@ -486,8 +491,8 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
-                  aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-                  title={showPassword ? "הסתר" : "הצג"}
+                  aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+                  title={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -501,7 +506,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                   type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="אימות סיסמה חדשה"
+                  placeholder={t("auth.confirmPasswordPlaceholder")}
                   className="w-full px-4 py-3 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors"
                 />
               </div>
@@ -513,7 +518,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="סיסמה"
+                  placeholder={t("auth.passwordPlaceholder")}
                   className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm text-foreground placeholder:text-muted focus:outline-none transition-colors pr-11 ${error ? "border-accent-danger" : "border-glass focus:border-brand-blue"
                     }`}
                   autoFocus={authMode === "legacy"}
@@ -523,8 +528,8 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
-                  aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-                  title={showPassword ? "הסתר" : "הצג"}
+                  aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+                  title={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -535,11 +540,11 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
               </div>
               {isSignUp && (
                 <div className="text-xs text-secondary mb-4 text-right bg-white/5 p-3 rounded-lg">
-                  <p className="mb-1 font-medium">הסיסמה חייבת להכיל:</p>
+                  <p className="mb-1 font-medium">{t("auth.passwordRequirements")}</p>
                   <ul className="list-disc list-inside space-y-0.5">
-                    <li>לפחות 8 תווים</li>
-                    <li>אות באנגלית</li>
-                    <li>מספר אחד לפחות</li>
+                    <li>{t("auth.passwordMinLength")}</li>
+                    <li>{t("auth.passwordLetter")}</li>
+                    <li>{t("auth.passwordNumber")}</li>
                   </ul>
                 </div>
               )}
@@ -548,7 +553,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
 
           {(error || authError) && (
             <p className="text-xs mb-3" style={{ color: "var(--accent-danger)" }} data-testid="error-message">
-              {authError || (isSignUp ? "לא הצלחנו ליצור את החשבון. ייתכן שהאימייל כבר קיים במערכת" : "האימייל או הסיסמה שגויים. נסו שוב או לחצו על 'שכחתם את הסיסמה?'")}
+              {authError || (isSignUp ? t("auth.errors.signupEmailExists") : t("auth.errors.wrongCredentials"))}
             </p>
           )}
 
@@ -573,22 +578,22 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="animate-spin">⏳</span>
-                {isSignUp ? "יוצרים את החשבון..." : "מתחברים..."}
+                {isSignUp ? t("auth.creatingAccount") : t("auth.loggingIn")}
               </span>
-            ) : isRecoveryMode ? "עדכנו סיסמה" : isSignUp ? "צרו חשבון חינם" : "התחברו לחשבון"}
+            ) : isRecoveryMode ? t("auth.updatePasswordButton") : isSignUp ? t("auth.signupButton") : t("auth.loginButton")}
           </button>
 
           {authMode === "email" && !isRecoveryMode && (
             <div className="mt-4 text-center space-y-2">
               <p className="text-sm text-secondary">
-                {isSignUp ? "כבר יש לכם חשבון?" : "דיג'יי חדש ב-Compakt?"}
+                {isSignUp ? t("auth.alreadyHaveAccount") : t("auth.newToPlatform")}
               </p>
               <button
                 type="button"
                 onClick={() => setIsSignUp((v) => !v)}
                 className="text-sm text-brand-blue hover:underline font-medium transition-colors"
               >
-                {isSignUp ? "התחברו כאן" : "צרו חשבון חינם"}
+                {isSignUp ? t("auth.loginHere") : t("auth.createFreeAccount")}
               </button>
             </div>
           )}
@@ -599,7 +604,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
               onClick={handleForgotPassword}
               className="text-sm text-brand-blue hover:underline mt-2 transition-colors"
             >
-              שכחתם את הסיסמה?
+              {t("auth.forgotPassword")}
             </button>
           )}
 
@@ -614,13 +619,13 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
               }}
               className="text-xs text-secondary hover:text-brand-blue mt-3 transition-colors"
             >
-              חזרה למסך הכניסה
+              {t("auth.backToLogin")}
             </button>
           )}
 
           {authMode === "email" && !isRecoveryMode && (
             <div className="mt-4 pt-4 border-t border-glass">
-              <p className="text-[11px] text-muted mb-3 text-center">{isSignUp ? "או הירשמו באמצעות" : "או התחברו באמצעות"}</p>
+              <p className="text-[11px] text-muted mb-3 text-center">{isSignUp ? t("auth.orSignupWith") : t("auth.orLoginWith")}</p>
               <button
                 type="button"
                 onClick={() => loginWithOAuth("google")}
@@ -650,7 +655,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                 }}
                 className="text-[11px] text-muted hover:text-secondary transition-colors"
               >
-                {authMode === "email" ? "כניסה עם סיסמת מנהל" : "כניסה עם אימייל"}
+                {authMode === "email" ? t("auth.legacyLogin") : t("auth.emailLogin")}
               </button>
             </div>
           )}
@@ -667,7 +672,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
                 }}
                 className="text-[11px] text-muted hover:text-secondary transition-colors"
               >
-                התחברות עם Clerk
+                {t("auth.clerkLogin")}
               </button>
             </div>
           )}
@@ -680,15 +685,15 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
     return (
       <div className="min-h-dvh gradient-hero flex items-center justify-center px-4">
         <div className="glass-card p-8 w-full max-w-md text-center">
-          <h1 className="text-xl font-bold mb-2">החשבון מושהה</h1>
+          <h1 className="text-xl font-bold mb-2">{t("suspended.title")}</h1>
           <p className="text-sm text-secondary mb-6">
-            הגישה לחשבון הושהתה כרגע. פנו לצוות Compakt כדי להפעיל מחדש את ההרשאות והפיצ&apos;רים.
+            {t("suspended.description")}
           </p>
           <button
             onClick={logout}
             className="btn-primary w-full"
           >
-            התנתקות
+            {t("suspended.logout")}
           </button>
         </div>
       </div>
@@ -713,7 +718,7 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
         </header>
         <main className="max-w-5xl mx-auto px-4 py-10">
           <div className="glass-card p-8 text-center text-sm text-muted">
-            טוען את התוכן המעודכן של החשבון...
+            {t("loading.content")}
           </div>
         </main>
       </div>
@@ -729,14 +734,14 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
             {djSlug ? (
               <a href={`/dj/${djSlug}`} className="text-sm text-secondary hover:text-foreground flex items-center gap-1">
                 <ChevronLeft className="w-4 h-4" />
-                הפרופיל שלי
+                {t("header.myProfile")}
               </a>
             ) : (
               <span className="text-sm text-muted">Compakt</span>
             )}
             <div className="min-w-0">
               <h1 className="font-bold text-lg">Compakt Admin</h1>
-              <p className="text-[11px] text-muted hidden md:block">אזור העבודה של הדיג׳יי לפני עלייה לאוויר</p>
+              <p className="text-[11px] text-muted hidden md:block">{t("header.subtitle")}</p>
             </div>
           </div>
 
@@ -758,11 +763,12 @@ function AdminPageContent({ clerkEnabled, clerkLoaded, clerkSignedIn }: AdminPag
               ))}
             </nav>
 
+            <LanguageSwitcher variant="icon" />
             <ThemeToggle />
             <button
               onClick={logout}
               className="p-2 rounded-lg text-muted hover:text-foreground transition-colors"
-              aria-label="התנתקות"
+              aria-label={tc("actions.logout")}
               data-testid="logout-button"
             >
               <LogOut className="w-4 h-4" />

@@ -1,0 +1,32 @@
+{
+  "nav": {
+    "howItWorks": "How It Works",
+    "pricing": "Pricing",
+    "login": "Log In",
+    "getStarted": "Start Free",
+    "backToSite": "Back to site"
+  },
+  "footer": {
+    "copyright": "© 2026 Compakt. All rights reserved.",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "search": "Search",
+    "logout": "Log Out"
+  },
+  "language": {
+    "switchTo": "עברית",
+    "current": "English"
+  }
+}

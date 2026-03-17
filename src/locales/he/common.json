@@ -1,0 +1,32 @@
+{
+  "nav": {
+    "howItWorks": "איך זה עובד",
+    "pricing": "מחירים",
+    "login": "כניסה",
+    "getStarted": "התחילו בחינם",
+    "backToSite": "חזרה לאתר"
+  },
+  "footer": {
+    "copyright": "© 2026 Compakt. כל הזכויות שמורות.",
+    "terms": "תנאי שימוש",
+    "privacy": "מדיניות פרטיות"
+  },
+  "actions": {
+    "save": "שמירה",
+    "cancel": "ביטול",
+    "delete": "מחיקה",
+    "edit": "עריכה",
+    "add": "הוספה",
+    "close": "סגירה",
+    "back": "חזרה",
+    "next": "הבא",
+    "confirm": "אישור",
+    "loading": "טוען...",
+    "search": "חיפוש",
+    "logout": "התנתקות"
+  },
+  "language": {
+    "switchTo": "English",
+    "current": "עברית"
+  }
+}
