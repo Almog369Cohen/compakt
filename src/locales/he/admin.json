@@ -694,5 +694,48 @@
     },
     "loading": "טוען קישורים...",
     "loadingDetail": "טוען פרטים..."
+  },
+  "upsells": {
+    "title": "שדרוגים / Upsells ({{count}})",
+    "actions": {
+      "add": "הוסף שדרוג",
+      "edit": "ערוך",
+      "delete": "מחק",
+      "deleteConfirm": "למחוק את השדרוג?",
+      "hide": "הסתר",
+      "show": "הצג"
+    },
+    "status": {
+      "active": "פעיל",
+      "hidden": "מוסתר"
+    },
+    "placements": {
+      "stage_4": "שלב בקשות",
+      "post_brief": "אחרי סיכום",
+      "inline": "בתוך הפלואו"
+    },
+    "fields": {
+      "title": "כותרת *",
+      "titlePlaceholder": "רוצים רגע כניסה מדויק?",
+      "description": "תיאור",
+      "descriptionPlaceholder": "עיבוד אישי לשיר הכניסה שלכם...",
+      "priceHint": "רמז מחיר",
+      "priceHintPlaceholder": "החל מ-₪500",
+      "ctaText": "טקסט כפתור",
+      "ctaTextPlaceholder": "לפרטים",
+      "placement": "מיקום הצגה"
+    },
+    "modal": {
+      "titleEdit": "עריכת שדרוג",
+      "titleAdd": "הוספת שדרוג",
+      "save": "שמור שינויים",
+      "add": "הוסף שדרוג",
+      "cancel": "ביטול"
+    },
+    "empty": "אין שדרוגים עדיין"
+  },
+  "analytics": {
+    "title": "אנליטיקס",
+    "comingSoon": "בקרוב"
   }
 }
