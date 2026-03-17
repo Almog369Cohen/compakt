@@ -31,7 +31,7 @@ export function PricingPreview() {
         </div>
 
         {/* Pricing cards */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {/* Free plan */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -52,7 +52,7 @@ export function PricingPreview() {
             <ul className="space-y-4 mb-8">
               <li className="flex items-start gap-3">
                 <Check className="w-5 h-5 text-[#03b28c] flex-shrink-0 mt-0.5" />
-                <span className="text-[#4b5563]">עד 3 אירועים בחודש</span>
+                <span className="text-[#4b5563]">עד 2 אירועים בחודש</span>
               </li>
               <li className="flex items-start gap-3">
                 <Check className="w-5 h-5 text-[#03b28c] flex-shrink-0 mt-0.5" />
@@ -72,13 +72,13 @@ export function PricingPreview() {
             </Link>
           </motion.div>
 
-          {/* Pro plan */}
+          {/* Basic plan */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.3 }}
-            className="relative p-8 rounded-2xl bg-gradient-to-br from-[#059cc0] to-[#03b28c] text-white shadow-xl"
+            transition={{ delay: 0.25 }}
+            className="relative p-8 rounded-2xl bg-gradient-to-br from-[#059cc0] to-[#03b28c] text-white shadow-xl scale-105 lg:scale-100"
           >
             {/* Popular badge */}
             <div className="absolute -top-4 right-8 px-4 py-1 rounded-full bg-white text-[#059cc0] text-sm font-semibold">
@@ -86,18 +86,18 @@ export function PricingPreview() {
             </div>
 
             <div className="mb-6">
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
+              <h3 className="text-2xl font-bold mb-2">Basic</h3>
               <div className="flex items-baseline gap-2 mb-4">
-                <span className="text-5xl font-bold">₪99</span>
+                <span className="text-5xl font-bold">₪55</span>
                 <span className="text-white/80">/חודש</span>
               </div>
-              <p className="text-white/90">לדיג&apos;יים מקצועיים</p>
+              <p className="text-white/90">לדיג&apos;יים צומחים</p>
             </div>
 
             <ul className="space-y-4 mb-8">
               <li className="flex items-start gap-3">
                 <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <span>אירועים ללא הגבלה</span>
+                <span>עד 7 אירועים בחודש</span>
               </li>
               <li className="flex items-start gap-3">
                 <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -105,21 +105,66 @@ export function PricingPreview() {
               </li>
               <li className="flex items-start gap-3">
                 <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <span>ניהול שירים מלא</span>
+                <span>ניהול שירים בסיסי</span>
               </li>
               <li className="flex items-start gap-3">
                 <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <span>בריפים מסודרים</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <span>תמיכה מועדפת</span>
+                <span>בריפים פשוטים</span>
               </li>
             </ul>
 
             <Link
               href="/admin"
               className="group flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl bg-white text-[#059cc0] font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            >
+              התחילו עכשיו
+              <ArrowLeft className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </motion.div>
+
+          {/* Pro plan */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="p-8 rounded-2xl bg-white border-2 border-[#e5e7eb] hover:border-[#059cc0] transition-all"
+          >
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-[#1f1f21] mb-2">Pro</h3>
+              <div className="flex items-baseline gap-2 mb-4">
+                <span className="text-5xl font-bold text-[#1f1f21]">₪99</span>
+                <span className="text-[#4b5563]">/חודש</span>
+              </div>
+              <p className="text-[#4b5563]">לדיג&apos;יים מקצועיים</p>
+            </div>
+
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#03b28c] flex-shrink-0 mt-0.5" />
+                <span className="text-[#4b5563]">אירועים ללא הגבלה</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#03b28c] flex-shrink-0 mt-0.5" />
+                <span className="text-[#4b5563]">פרופיל DJ מתקדם</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#03b28c] flex-shrink-0 mt-0.5" />
+                <span className="text-[#4b5563]">ניהול שירים מלא</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#03b28c] flex-shrink-0 mt-0.5" />
+                <span className="text-[#4b5563]">בריפים מסודרים</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-[#03b28c] flex-shrink-0 mt-0.5" />
+                <span className="text-[#4b5563]">תמיכה מועדפת</span>
+              </li>
+            </ul>
+
+            <Link
+              href="/admin"
+              className="group flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl bg-gradient-to-r from-[#059cc0] to-[#03b28c] text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all"
             >
               התחילו עכשיו
               <ArrowLeft className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

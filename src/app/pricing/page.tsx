@@ -13,7 +13,7 @@ const plans = [
     period: "/חודש",
     description: "מושלם להתחלה",
     features: [
-      "עד 3 אירועים בחודש",
+      "עד 2 אירועים בחודש",
       "פרופיל DJ בסיסי",
       "שאלון מוזיקה",
       "גלריית תמונות",
@@ -21,6 +21,22 @@ const plans = [
     ],
     cta: "התחילו בחינם",
     highlighted: false,
+  },
+  {
+    name: "Basic",
+    price: "₪55",
+    period: "/חודש",
+    description: "לדיג'יים צומחים",
+    features: [
+      "עד 7 אירועים בחודש",
+      "פרופיל DJ מתקדם",
+      "ניהול שירים בסיסי",
+      "בריפים פשוטים",
+      "אנליטיקס בסיסי",
+      "תמיכה במייל",
+    ],
+    cta: "התחילו עכשיו",
+    highlighted: true,
   },
   {
     name: "Pro",
@@ -38,7 +54,7 @@ const plans = [
       "ללא פרסומות",
     ],
     cta: "התחילו עכשיו",
-    highlighted: true,
+    highlighted: false,
   },
 ];
 
@@ -65,7 +81,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-white">
       <MarketingNav />
-      
+
       <main className="pt-32 pb-24 px-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -79,7 +95,7 @@ export default function PricingPage() {
                 מחירים פשוטים ושקופים
               </span>
             </motion.div>
-            
+
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -88,7 +104,7 @@ export default function PricingPage() {
             >
               בחרו את התוכנית שמתאימה לכם
             </motion.h1>
-            
+
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -100,18 +116,17 @@ export default function PricingPage() {
           </div>
 
           {/* Pricing cards */}
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-24">
+          <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-24">
             {plans.map((plan, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + index * 0.1 }}
-                className={`relative p-8 rounded-2xl ${
-                  plan.highlighted
-                    ? "bg-gradient-to-br from-[#059cc0] to-[#03b28c] text-white shadow-2xl scale-105"
-                    : "bg-white border-2 border-[#e5e7eb] hover:border-[#059cc0]"
-                } transition-all`}
+                className={`relative p-8 rounded-2xl ${plan.highlighted
+                  ? "bg-gradient-to-br from-[#059cc0] to-[#03b28c] text-white shadow-2xl scale-105"
+                  : "bg-white border-2 border-[#e5e7eb] hover:border-[#059cc0]"
+                  } transition-all`}
               >
                 {plan.highlighted && (
                   <div className="absolute -top-4 right-8 px-4 py-1 rounded-full bg-white text-[#059cc0] text-sm font-semibold">
@@ -149,11 +164,10 @@ export default function PricingPage() {
 
                 <Link
                   href="/admin"
-                  className={`group flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl font-semibold transition-all ${
-                    plan.highlighted
-                      ? "bg-white text-[#059cc0] hover:shadow-lg hover:-translate-y-0.5"
-                      : "bg-white border-2 border-[#e5e7eb] text-[#1f1f21] hover:border-[#059cc0] hover:text-[#059cc0]"
-                  }`}
+                  className={`group flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl font-semibold transition-all ${plan.highlighted
+                    ? "bg-white text-[#059cc0] hover:shadow-lg hover:-translate-y-0.5"
+                    : "bg-white border-2 border-[#e5e7eb] text-[#1f1f21] hover:border-[#059cc0] hover:text-[#059cc0]"
+                    }`}
                 >
                   {plan.cta}
                   {plan.highlighted && (
