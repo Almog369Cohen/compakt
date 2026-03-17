@@ -580,5 +580,119 @@
       "past": "אירועים שהסתיימו ({{count}})"
     },
     "dateNotSet": "לא נקבע"
+  },
+  "coupleLinks": {
+    "title": "קישורי זוגות",
+    "subtitle": "ניהול שאלונים של זוגות",
+    "description": "כאן רואים את כל הזוגות שמילאו את השאלון, עם סטטוס התקדמות ופרטי האירוע. לחצו על כרטיס כדי לראות את כל התשובות והבקשות.",
+    "eventTypes": {
+      "wedding": "חתונה",
+      "bar_mitzvah": "בר/בת מצווה",
+      "private": "אירוע פרטי",
+      "corporate": "אירוע עסקי",
+      "other": "אחר"
+    },
+    "stages": {
+      "0": "טרם התחיל",
+      "1": "שאלות",
+      "2": "שירים",
+      "3": "בקשות",
+      "4": "סיים"
+    },
+    "swipeActions": {
+      "like": "אהבו",
+      "super_like": "אהבו במיוחד",
+      "dislike": "לא אהבו",
+      "unsure": "לא בטוחים"
+    },
+    "requestTypes": {
+      "do": "כן לעשות",
+      "dont": "לא לעשות",
+      "link": "קישור",
+      "special_moment": "רגע מיוחד",
+      "free_text": "הערה"
+    },
+    "momentTypes": {
+      "ceremony": "טקס",
+      "glass_break": "שבירת כוס",
+      "first_dance": "ריקוד ראשון",
+      "entrance": "כניסה",
+      "parents": "הורים",
+      "other": "אחר"
+    },
+    "actions": {
+      "createLink": "צור קישור חדש",
+      "creating": "יוצר...",
+      "shareWhatsApp": "שתף בוואטסאפ",
+      "copyLink": "העתק קישור",
+      "copied": "הועתק!",
+      "edit": "ערוך",
+      "save": "שמור",
+      "cancel": "ביטול",
+      "delete": "מחק",
+      "deleteConfirm": "למחוק את הקישור?"
+    },
+    "fields": {
+      "eventNumber": "מספר אירוע",
+      "nameA": "שם א׳",
+      "nameB": "שם ב׳",
+      "eventType": "סוג אירוע",
+      "eventDate": "תאריך",
+      "venue": "מקום",
+      "phone": "טלפון",
+      "email": "אימייל"
+    },
+    "stats": {
+      "totalGuests": "סה״כ {{total}} אורחים",
+      "guestBreakdown": "{{adults}} מבוגרים · {{youngAdults}} צעירים · {{children}} ילדים",
+      "completionRate": "{{rate}}% השלימו",
+      "avgSwipes": "ממוצע {{count}} סוויפים",
+      "stuckCouples": "{{count}} זוגות תקועים"
+    },
+    "tips": {
+      "lowCompletion": "רק {{rate}}% מהזוגות סיימו את השאלון — שקלו לשלוח תזכורות",
+      "lowSwipes": "ממוצע {{count}} סוויפים לזוג — אולי כדאי לבדוק את בחירת השירים",
+      "stuckCouples": "{{count}} זוגות תקועים בהתחלה — שלחו להם תזכורת",
+      "highCompletion": "שיעור השלמה גבוה — הזוגות שלך מגיבים טוב לתהליך!"
+    },
+    "tabs": {
+      "overview": "סקירה",
+      "answers": "שאלון",
+      "swipes": "שירים",
+      "requests": "בקשות",
+      "summary": "סיכום"
+    },
+    "overview": {
+      "headline": "פתח את הכרטיס כדי לראות את תמונת הזוג",
+      "importantTo": "מה חשוב להם: {{items}}",
+      "notablesSongs": "שירים בולטים: {{items}}",
+      "mainRequests": "בקשות עיקריות: {{items}}",
+      "noContent": "עדיין אין מספיק תוכן כדי לזהות העדפות"
+    },
+    "whatsapp": {
+      "greeting": "שלום {{names}}!",
+      "greetingDefault": "שלום!",
+      "message": "הכנתי לכם שאלון מוזיקלי לאירוע — מלאו אותו ונדייק את הפלייליסט.",
+      "eventNumber": "מספר האירוע שלכם: {{number}}"
+    },
+    "errors": {
+      "authExpired": "ההתחברות פגה. רענן את העמוד והתחבר מחדש כדי לראות את קישורי הזוגות.",
+      "forbidden": "אין לך הרשאה לצפות בקישורי הזוגות בחשבון הזה.",
+      "loadFailed": "שגיאה בטעינת קישורי שאלון",
+      "loadDetailFailed": "שגיאה בטעינת פרטי אירוע",
+      "createFailed": "שגיאה ביצירת קישור",
+      "updateFailed": "שגיאה בעדכון האירוע",
+      "invalidResponse": "תגובת שרת לא תקינה. ה-API החזיר HTML במקום JSON",
+      "invalidServerResponse": "תגובה לא תקינה מהשרת"
+    },
+    "empty": {
+      "noLinks": "עדיין אין קישורי זוגות",
+      "noLinksDetail": "צור קישור חדש כדי להתחיל לקבל תשובות מזוגות.",
+      "noAnswers": "הזוג עדיין לא ענה על שאלות",
+      "noSwipes": "הזוג עדיין לא דירג שירים",
+      "noRequests": "הזוג עדיין לא הוסיף בקשות"
+    },
+    "loading": "טוען קישורים...",
+    "loadingDetail": "טוען פרטים..."
   }
 }
