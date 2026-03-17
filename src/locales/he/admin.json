@@ -358,7 +358,10 @@
       "activate": "הפעל",
       "deactivate": "השבת",
       "delete": "מחק",
-      "deleteConfirm": "למחוק {{count}} שירים?"
+      "deleteConfirm": "למחוק {{count}} שירים?",
+      "changeCategory": "העבר לקטגוריה",
+      "categoryChanged": "השירים הועברו לקטגוריית {{category}}",
+      "clearSelection": "נקה בחירה"
     },
     "table": {
       "song": "שיר",
@@ -367,7 +370,19 @@
       "tags": "תגיות",
       "language": "שפה",
       "status": "סטטוס",
-      "actions": "פעולות"
+      "actions": "פעולות",
+      "energy": "אנרגיה",
+      "selectAll": "בחר הכל",
+      "deselectAll": "בטל בחירה",
+      "select": "בחר שיר",
+      "deselect": "בטל בחירה",
+      "hide": "הסתר",
+      "show": "הצג",
+      "hideSong": "הסתר שיר",
+      "showSong": "הצג שיר",
+      "edit": "ערוך",
+      "delete": "מחק",
+      "deleteSongConfirm": "למחוק את השיר?"
     },
     "status": {
       "active": "פעיל",

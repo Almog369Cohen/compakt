@@ -287,12 +287,12 @@ export function SongManager() {
                         isActive: true,
                       }).catch((error) => {
                         setSongMutationError(
-                          error instanceof Error ? error.message : "יצירת השיר נכשלה"
+                          error instanceof Error ? error.message : t("songs.errors.createFailed")
                         );
                       });
                       count++;
                     }
-                    alert(`${count} שירים יובאו בהצלחה!`);
+                    alert(t("songs.success.imported", { count: String(count) }));
                   };
                   reader.readAsText(file);
                   e.target.value = "";
@@ -304,20 +304,20 @@ export function SongManager() {
               className="btn-primary text-sm flex items-center gap-1.5 py-2 px-4"
             >
               <Plus className="w-4 h-4" />
-              הוסף שיר
+              {t("songs.actions.addSong")}
             </button>
           </div>
         </div>
 
         {!canUseSpotifyImport && (
           <div className="glass-card p-3 text-sm text-muted">
-            ייבוא אוטומטי מ-Spotify לא זמין כרגע לחשבון הזה. אפשר עדיין להוסיף שירים ידנית, ב-CSV או עם לינק ישיר.
+            {t("songs.spotifyNotAvailable")}
           </div>
         )}
 
         <div className="glass-card p-4 space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h3 className="text-sm font-bold">שמות קטגוריות לשירים</h3>
+            <h3 className="text-sm font-bold">{t("songs.categoryLabels.title")}</h3>
             <button
               type="button"
               onClick={handleSaveCategoryLabels}
@@ -325,20 +325,14 @@ export function SongManager() {
               className={`btn-secondary text-sm flex items-center gap-2 py-2 px-4 ${savingCategoryLabels ? "opacity-60 cursor-not-allowed" : ""}`}
             >
               <Save className="w-4 h-4" />
-              {savingCategoryLabels ? "שומר..." : categoryLabelsSaved ? "נשמר" : "שמור שמות"}
+              {savingCategoryLabels ? t("songs.categoryLabels.saving") : categoryLabelsSaved ? t("songs.categoryLabels.saved") : t("songs.categoryLabels.save")}
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
             {categories.map((category) => (
               <div key={category.value}>
                 <label className="block text-xs text-muted mb-1">
-                  {category.value === "reception"
-                    ? "קבלת פנים"
-                    : category.value === "food"
-                      ? "אוכל"
-                      : category.value === "dancing"
-                        ? "רחבה"
-                        : "חופה / טקס"}
+                  {t(`songs.categoryLabels.${category.value}`)}
                 </label>
                 <input
                   type="text"
@@ -371,7 +365,7 @@ export function SongManager() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="חפש שיר, אמן או תגית..."
+              placeholder={t("songs.search.placeholder")}
               className="w-full pr-9 pl-3 py-2 rounded-xl bg-transparent border border-glass text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-brand-blue transition-colors"
             />
           </div>
@@ -380,7 +374,7 @@ export function SongManager() {
               onClick={() => setFilterCategory("all")}
               className={`chip text-xs ${filterCategory === "all" ? "active" : ""}`}
             >
-              הכל
+              {t("songs.search.all")}
             </button>
             {categories.map((c) => (
               <button
@@ -396,20 +390,20 @@ export function SongManager() {
 
         {selectedCount > 0 && (
           <div className="glass-card p-4 flex flex-wrap items-center gap-2">
-            <div className="text-sm font-medium ml-2">נבחרו {selectedCount} שירים</div>
+            <div className="text-sm font-medium ml-2">{t("songs.bulk.selected", { count: String(selectedCount) })}</div>
             <button
               type="button"
-              onClick={() => runBulkUpdate({ isActive: false }, "השירים סומנו כמוסתרים")}
+              onClick={() => runBulkUpdate({ isActive: false }, t("songs.bulk.deactivate"))}
               className="btn-secondary text-sm py-2 px-3"
             >
-              הסתר
+              {t("songs.bulk.deactivate")}
             </button>
             <button
               type="button"
-              onClick={() => runBulkUpdate({ isActive: true }, "השירים סומנו כפעילים")}
+              onClick={() => runBulkUpdate({ isActive: true }, t("songs.bulk.activate"))}
               className="btn-secondary text-sm py-2 px-3"
             >
-              הצג
+              {t("songs.bulk.activate")}
             </button>
             <select
               value={bulkCategory}
@@ -427,12 +421,12 @@ export function SongManager() {
               onClick={() =>
                 runBulkUpdate(
                   { category: bulkCategory },
-                  `השירים הועברו לקטגוריית ${categories.find((category) => category.value === bulkCategory)?.label || ""}`
+                  t("songs.bulk.categoryChanged", { category: categories.find((category) => category.value === bulkCategory)?.label || "" })
                 )
               }
               className="btn-secondary text-sm py-2 px-3"
             >
-              העבר לקטגוריה
+              {t("songs.bulk.changeCategory")}
             </button>
             <button
               type="button"
@@ -440,14 +434,14 @@ export function SongManager() {
               className="btn-secondary text-sm py-2 px-3"
               style={{ color: "var(--accent-danger)" }}
             >
-              מחק נבחרים
+              {t("songs.bulk.delete")}
             </button>
             <button
               type="button"
               onClick={() => setSelectedSongIds([])}
               className="text-xs text-muted hover:text-foreground transition-colors mr-auto"
             >
-              נקה בחירה
+              {t("songs.bulk.clearSelection")}
             </button>
           </div>
         )}
@@ -475,16 +469,16 @@ export function SongManager() {
                       type="button"
                       onClick={toggleSelectAllFiltered}
                       className="text-muted hover:text-foreground transition-colors"
-                      aria-label={allFilteredSelected ? "בטל בחירה" : "בחר הכל"}
+                      aria-label={allFilteredSelected ? t("songs.table.deselectAll") : t("songs.table.selectAll")}
                     >
                       {allFilteredSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                     </button>
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted">שיר</th>
-                  <th className="px-4 py-3 font-medium text-muted hidden sm:table-cell">קטגוריה</th>
-                  <th className="px-4 py-3 font-medium text-muted hidden md:table-cell">תגיות</th>
-                  <th className="px-4 py-3 font-medium text-muted hidden sm:table-cell">אנרגיה</th>
-                  <th className="px-4 py-3 font-medium text-muted w-24">פעולות</th>
+                  <th className="px-4 py-3 font-medium text-muted">{t("songs.table.song")}</th>
+                  <th className="px-4 py-3 font-medium text-muted hidden sm:table-cell">{t("songs.table.category")}</th>
+                  <th className="px-4 py-3 font-medium text-muted hidden md:table-cell">{t("songs.table.tags")}</th>
+                  <th className="px-4 py-3 font-medium text-muted hidden sm:table-cell">{t("songs.table.energy")}</th>
+                  <th className="px-4 py-3 font-medium text-muted w-24">{t("songs.table.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -498,7 +492,7 @@ export function SongManager() {
                         type="button"
                         onClick={() => toggleSongSelection(song.id)}
                         className="text-muted hover:text-foreground transition-colors"
-                        aria-label={selectedSongIds.includes(song.id) ? "בטל בחירה" : "בחר שיר"}
+                        aria-label={selectedSongIds.includes(song.id) ? t("songs.table.deselect") : t("songs.table.select")}
                       >
                         {selectedSongIds.includes(song.id) ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                       </button>
@@ -545,37 +539,37 @@ export function SongManager() {
                               await updateSong(song.id, { isActive: !song.isActive });
                             } catch (error) {
                               setSongMutationError(
-                                error instanceof Error ? error.message : "עדכון השיר נכשל"
+                                error instanceof Error ? error.message : t("songs.errors.updateFailed")
                               );
                             }
                           }}
                           className={`p-1.5 rounded-lg transition-colors ${song.isActive ? "text-brand-blue hover:text-brand-blue/80" : "text-accent-danger hover:text-accent-danger/80"}`}
-                          aria-label={song.isActive ? "הסתר" : "הצג"}
-                          title={song.isActive ? "הסתר שיר" : "הצג שיר"}
+                          aria-label={song.isActive ? t("songs.table.hide") : t("songs.table.show")}
+                          title={song.isActive ? t("songs.table.hideSong") : t("songs.table.showSong")}
                         >
                           {song.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                         </button>
                         <button
                           onClick={() => setEditingSong(song)}
                           className="p-1.5 rounded-lg text-muted hover:text-brand-blue transition-colors"
-                          aria-label="ערוך"
+                          aria-label={t("songs.table.edit")}
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={async () => {
-                            if (!confirm("למחוק את השיר?")) return;
+                            if (!confirm(t("songs.table.deleteSongConfirm"))) return;
                             setSongMutationError(null);
                             try {
                               await deleteSong(song.id);
                             } catch (error) {
                               setSongMutationError(
-                                error instanceof Error ? error.message : "מחיקת השיר נכשלה"
+                                error instanceof Error ? error.message : t("songs.errors.deleteFailed")
                               );
                             }
                           }}
                           className="p-1.5 rounded-lg text-muted hover:text-accent-danger transition-colors"
-                          aria-label="מחק"
+                          aria-label={t("songs.table.delete")}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -588,11 +582,11 @@ export function SongManager() {
           </div>
           {filtered.length === 0 && (
             <div className="p-8 text-center text-muted text-sm space-y-2">
-              <p>{songs.length === 0 ? "עדיין אין שירים בספרייה" : "לא נמצאו שירים לפי הסינון הנוכחי"}</p>
+              <p>{songs.length === 0 ? t("songs.empty.noSongs") : t("songs.empty.noResults")}</p>
               <p className="text-xs text-secondary">
                 {songs.length === 0
-                  ? "התחל עם 10-20 שירים בסיסיים, או ייבא CSV כדי לתת לזוגות חוויית בחירה מלאה כבר מהיום הראשון."
-                  : "נסה לחפש בשם אחר, להסיר סינון, או להוסיף שירים חדשים לרשימה."}
+                  ? t("songs.empty.noSongsDetail")
+                  : t("songs.empty.noResultsDetail")}
               </p>
             </div>
           )}
@@ -611,7 +605,7 @@ export function SongManager() {
                     await updateSong(editingSong.id, data);
                   } catch (error) {
                     setSongMutationError(
-                      error instanceof Error ? error.message : "עדכון השיר נכשל"
+                      error instanceof Error ? error.message : t("songs.errors.updateFailed")
                     );
                     throw error;
                   }
@@ -620,7 +614,7 @@ export function SongManager() {
                     await addSong(data as Omit<Song, "id" | "sortOrder">);
                   } catch (error) {
                     setSongMutationError(
-                      error instanceof Error ? error.message : "יצירת השיר נכשלה"
+                      error instanceof Error ? error.message : t("songs.errors.createFailed")
                     );
                     throw error;
                   }

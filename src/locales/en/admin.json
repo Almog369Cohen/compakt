@@ -358,7 +358,10 @@
       "activate": "Activate",
       "deactivate": "Deactivate",
       "delete": "Delete",
-      "deleteConfirm": "Delete {{count}} songs?"
+      "deleteConfirm": "Delete {{count}} songs?",
+      "changeCategory": "Change Category",
+      "categoryChanged": "Songs moved to {{category}} category",
+      "clearSelection": "Clear Selection"
     },
     "table": {
       "song": "Song",
@@ -367,7 +370,19 @@
       "tags": "Tags",
       "language": "Language",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "energy": "Energy",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "select": "Select song",
+      "deselect": "Deselect",
+      "hide": "Hide",
+      "show": "Show",
+      "hideSong": "Hide song",
+      "showSong": "Show song",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteSongConfirm": "Delete this song?"
     },
     "status": {
       "active": "Active",
