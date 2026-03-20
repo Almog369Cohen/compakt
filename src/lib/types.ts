@@ -107,7 +107,7 @@ export interface Upsell {
   priceHint?: string;
   ctaTextHe: string;
   imageUrl?: string;
-  placement: "stage_4" | "post_brief" | "inline";
+  placement: "stage_1" | "stage_2" | "stage_3" | "stage_4" | "post_brief" | "inline";
   sortOrder: number;
   isActive: boolean;
 }

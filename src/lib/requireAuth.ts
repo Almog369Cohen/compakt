@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { auth } from "@clerk/nextjs/server";
 import { createRouteClient } from "@/lib/supabase-server";
 import { getServiceSupabase } from "@/lib/supabase";
-import { loadAccessProfileByIdentity } from "@/lib/access";
 
 export type AuthContext = {
   userId: string;
@@ -28,10 +25,13 @@ export async function requireAuth(
 ): Promise<AuthContext | NextResponse> {
   const { allowedRoles } = options;
 
+  console.log("🔐 Auth: Checking authentication...");
+
   let service;
   try {
     service = getServiceSupabase();
   } catch {
+    console.log("❌ Auth: Supabase service error");
     return NextResponse.json(
       { error: "Server configuration error" },
       { status: 500 }
@@ -41,53 +41,34 @@ export async function requireAuth(
   let userId: string | null = null;
   let email: string | null = null;
 
-  // Check for admin bypass cookie (temporary password-based auth)
-  const cookieStore = await cookies();
-  const bypassEmail = cookieStore.get("compakt-admin-bypass")?.value;
-  if (bypassEmail) {
-    userId = `bypass-${bypassEmail}`;
-    email = bypassEmail;
-  }
+  try {
+    const supabase = await createRouteClient();
+    const {
+      data: { user },
+      error: sessionError,
+    } = await supabase.auth.getUser();
 
-  if (!userId) {
-    try {
-      const clerkAuth = await auth();
-      userId = clerkAuth.userId ?? null;
-      email = clerkAuth.sessionClaims?.email as string | null | undefined ?? null;
-    } catch {
-      userId = null;
-    }
-  }
-
-  if (!userId) {
-    try {
-      const supabase = await createRouteClient();
-      const {
-        data: { user },
-        error: sessionError,
-      } = await supabase.auth.getUser();
-
-      if (sessionError || !user) {
-        return NextResponse.json(
-          { error: "Authentication required" },
-          { status: 401 }
-        );
-      }
-
-      userId = user.id;
-      email = user.email ?? null;
-    } catch {
+    if (sessionError || !user) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
+
+    userId = user.id;
+    email = user.email ?? null;
+  } catch {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401 }
+    );
   }
 
-  const profile = await loadAccessProfileByIdentity(service, {
-    userId,
-    email,
-  });
+  const { data: profile } = await service
+    .from("profiles")
+    .select("id, role")
+    .eq("email", email)
+    .single();
 
   if (!profile && allowedRoles && allowedRoles.length > 0) {
     return NextResponse.json(
@@ -98,10 +79,10 @@ export async function requireAuth(
 
   if (!profile && !allowedRoles?.length) {
     return {
-      userId,
-      profileId: "",
-      role: "dj",
-      email,
+      userId: userId!,
+      profileId: "temp",
+      role: "temp",
+      email: email!,
     };
   }
 

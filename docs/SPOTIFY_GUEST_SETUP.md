@@ -10,13 +10,14 @@
 3. הגדרות חשובות:
    - **App Name**: Compakt DJ Platform (או כל שם שתרצה)
    - **App Description**: Music preference collection for wedding DJs
-   - **Redirect URIs**: הוסף את כל אלה:
+   - **Redirect URIs**: הוסף את כל אלה (HTTPS בלבד לפי הדרישות החדשות של Spotify):
      ```
-     http://localhost:3000/api/spotify/callback
-     http://localhost:3000/api/guest/spotify/callback
+     http://127.0.0.1:3003/api/spotify/callback
+     http://127.0.0.1:3003/api/guest/spotify/callback
      https://compakt-453296955394.us-central1.run.app/api/spotify/callback
      https://compakt-453296955394.us-central1.run.app/api/guest/spotify/callback
      ```
+     **חשוב**: Spotify הפסיקה לתמוך ב-HTTP redirect URIs (חוץ מ-localhost). חייב להשתמש ב-127.0.0.1 במקום localhost.
    - **APIs used**: Web API
    - סמן את התיבה: "I understand and agree to Spotify's Developer Terms of Service and Design Guidelines"
 

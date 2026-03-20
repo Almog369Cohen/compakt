@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rateLimit";
 import nodemailer from "nodemailer";
 
 export const runtime = "nodejs";
@@ -57,6 +58,16 @@ async function sendVerificationEmail(email: string, otp: string) {
  */
 export async function POST(req: Request) {
   try {
+    // Rate limit: 5 OTP sends per 5 minutes per IP
+    const ip = getClientIp(req);
+    const rateCheck = checkRateLimit(`otp-send:${ip}`, RATE_LIMITS.otpSend);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "יותר מדי ניסיונות. נסו שוב בעוד מספר דקות." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const email = normalizeEmail(body.email || body.phone || "");
     const eventIdOrToken = String(body.eventId || "").trim();

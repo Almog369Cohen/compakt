@@ -84,8 +84,7 @@ interface AdminStore {
   loadContentFromDB: (profileId: string) => Promise<void>;
 }
 
-const ADMIN_PASSWORD = "compakt2024";
-// LEGACY_LOGIN_ALLOWED env check removed — bypass login always available
+// Legacy password login removed for security
 
 function parseQuestionEventTypes(
   value: Question["eventType"] | string | null | undefined
@@ -217,15 +216,9 @@ export const useAdminStore = create<AdminStore>()(
         set({ songs: [], questions: [], upsells: [], contentLoading: false, contentLoadedProfileId: null });
       },
 
-      login: (email, password) => {
-        if (password === ADMIN_PASSWORD) {
-          set({ isAuthenticated: true, authError: null, userId: `bypass-${email}`, userEmail: email });
-          if (typeof document !== "undefined") {
-            document.cookie = `compakt-admin-bypass=${email}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
-          }
-          return true;
-        }
-        set({ authError: null });
+      login: (_email: string, _password: string) => {
+        // Legacy password login removed — use email auth
+        set({ authError: "יש להתחבר עם אימייל וסיסמה" });
         return false;
       },
 
@@ -281,23 +274,6 @@ export const useAdminStore = create<AdminStore>()(
       },
 
       checkSession: async () => {
-        if (typeof document !== "undefined") {
-          const bypassCookie = document.cookie
-            .split("; ")
-            .find((entry) => entry.startsWith("compakt-admin-bypass="));
-          const bypassEmail = bypassCookie?.split("=")[1];
-
-          if (bypassEmail) {
-            set({
-              isAuthenticated: true,
-              userId: `bypass-${decodeURIComponent(bypassEmail)}`,
-              userEmail: decodeURIComponent(bypassEmail),
-              authError: null,
-            });
-            return;
-          }
-        }
-
         if (!supabase) return;
         const { data } = await supabase.auth.getSession();
         if (data.session?.user) {
@@ -310,9 +286,6 @@ export const useAdminStore = create<AdminStore>()(
       logout: () => {
         if (supabase) {
           supabase.auth.signOut().then(() => { });
-        }
-        if (typeof document !== "undefined") {
-          document.cookie = "compakt-admin-bypass=; path=/; max-age=0; SameSite=Lax";
         }
         set({ isAuthenticated: false, userId: null, userEmail: null, authError: null });
       },

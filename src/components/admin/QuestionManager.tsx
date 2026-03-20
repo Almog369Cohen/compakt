@@ -422,6 +422,9 @@ export function QuestionManager() {
             mode={editorMode}
             question={editingQuestion}
             defaultEventType={filterType}
+            questionTypes={questionTypes}
+            eventTypes={eventTypes}
+            getQuestionTypeMeta={getQuestionTypeMeta}
             onClose={() => {
               setEditorMode(null);
               setEditingQuestion(null);
@@ -457,12 +460,18 @@ function QuestionEditorModal({
   defaultEventType,
   onClose,
   onSave,
+  questionTypes,
+  eventTypes,
+  getQuestionTypeMeta,
 }: {
   mode: "create" | "edit";
   question: Question | null;
   defaultEventType: EventType;
   onClose: () => void;
   onSave: (payload: Partial<Question>) => void;
+  questionTypes: { value: QuestionType; label: string; description: string }[];
+  eventTypes: { value: EventType; label: string }[];
+  getQuestionTypeMeta: (value: QuestionType) => { value: QuestionType; label: string; description: string };
 }) {
   const isPinnedGuestCalculator =
     question?.questionType === "guest_calculator" || question?.id === GUEST_CALCULATOR_QUESTION_ID;

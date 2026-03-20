@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rateLimit";
+import { validateBody, isValidationError } from "@/lib/apiValidation";
+import { z } from "zod";
 import nodemailer from "nodemailer";
+
+const sendOtpSchema = z.object({
+    email: z.string().email("כתובת מייל לא תקינה").transform((v) => v.trim().toLowerCase()),
+    eventId: z.string().min(1, "Missing eventId").transform((v) => v.trim()),
+});
 
 export const runtime = "nodejs";
 
@@ -8,13 +16,6 @@ function generateOTP(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-function normalizeEmail(email: string): string {
-    return email.trim().toLowerCase();
-}
-
-function isValidEmail(email: string): boolean {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
 
 async function sendVerificationEmail(email: string, otp: string) {
     const gmailUser = process.env.GMAIL_USER;
@@ -49,16 +50,19 @@ async function sendVerificationEmail(email: string, otp: string) {
 
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
-        const email = normalizeEmail(body.email || "");
-        const eventIdOrToken = String(body.eventId || "").trim();
+        // Rate limit: 5 OTP sends per 5 minutes per IP
+        const ip = getClientIp(req);
+        const rateCheck = checkRateLimit(`otp-send:${ip}`, RATE_LIMITS.otpSend);
+        if (!rateCheck.allowed) {
+            return NextResponse.json(
+                { error: "יותר מדי ניסיונות. נסו שוב בעוד מספר דקות." },
+                { status: 429 }
+            );
+        }
 
-        if (!email || !isValidEmail(email)) {
-            return NextResponse.json({ error: "כתובת מייל לא תקינה" }, { status: 400 });
-        }
-        if (!eventIdOrToken) {
-            return NextResponse.json({ error: "Missing eventId" }, { status: 400 });
-        }
+        const parsed = await validateBody(req, sendOtpSchema);
+        if (isValidationError(parsed)) return parsed.error;
+        const { email, eventId: eventIdOrToken } = parsed.data;
 
         const supabase = getServiceSupabase();
         const lookup = supabase

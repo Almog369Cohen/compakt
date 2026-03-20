@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, HelpCircle, Sparkles, Check, Lock } from "lucide-react";
-import { useOnboardingStoreV2 } from "@/stores/onboardingStoreV2";
+import { useOnboardingStoreV2 } from "@/stores/onboardingStore";
 import { QUICK_START_QUESTIONS, QUICK_START_QUESTIONS_COUNT } from "@/data/onboarding-questions";
 
 interface OnboardingStepQuestionsV2Props {

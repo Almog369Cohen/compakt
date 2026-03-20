@@ -4,12 +4,14 @@ import { Fragment, useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import { motion } from "framer-motion";
-import { LogOut, Users, Activity, Shield, RefreshCw, Save, History, ChevronDown, ChevronUp, ChevronLeft, Download, BarChart3, Calendar } from "lucide-react";
+import { LogOut, Users, Activity, Shield, RefreshCw, Save, History, ChevronDown, ChevronUp, ChevronLeft, Download, BarChart3, Calendar, Tag } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { FEATURE_KEYS, PLAN_KEYS, ROLE_KEYS, type FeatureKey, type PlanKey, type RoleKey } from "@/lib/access";
 import { UserFilters, type UserFiltersState } from "@/components/hq/UserFilters";
 import { BulkActions, type BulkUpdateData } from "@/components/hq/BulkActions";
 import { DashboardStats } from "@/components/hq/Analytics/DashboardStats";
+import { TrialManager } from "@/components/admin/TrialManager";
+import { CouponManager } from "@/components/admin/CouponManager";
 
 interface ProfileRow {
   id: string;
@@ -61,7 +63,7 @@ interface AccessResult {
   } | null;
 }
 
-type HQTab = "users" | "analytics" | "events" | "health" | "audit";
+type HQTab = "users" | "analytics" | "events" | "trials" | "coupons" | "health" | "audit";
 
 type ProfileDraft = {
   role: RoleKey;
@@ -121,34 +123,68 @@ export default function HQPage() {
   useEffect(() => {
     if (!clerkEnabled) {
       checkSession();
+      return;
     }
+
+    // Using Supabase auth only - Clerk removed
+    checkSession();
   }, [checkSession, clerkEnabled]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    fetch("/api/admin/access")
-      .then((r) => r.json())
-      .then((json: AccessResult) => {
+    const checkAccess = async () => {
+      try {
+        const response = await fetch("/api/admin/access");
+        const json: AccessResult = await response.json();
+
         const userRole = json.access?.role ?? json.profile?.role ?? "dj";
+        console.log("🔐 HQ Access check - Role:", userRole);
         setRole(userRole);
         setAccess(json.access);
-        if (userRole === "dj") {
+
+        // Only staff and owner can access HQ
+        if (userRole !== "staff" && userRole !== "owner") {
+          console.log("❌ Access denied to HQ - redirecting to admin");
+
+          // Try to set bypass cookie for development
+          if (process.env.NODE_ENV === "development") {
+            console.log("🔧 Development mode: Setting bypass cookie...");
+            document.cookie = "compakt-admin-bypass=almog22@gmail.com; path=/; max-age=3600";
+            alert("מגדיר גישת פיתוח - נסה לרענן את העמוד");
+            window.location.reload();
+            return;
+          }
+
+          alert("אין לך הרשאות גישה למערכת צוות. מעביר אותך למערכת DJ...");
           router.replace("/admin");
+        } else {
+          console.log("✅ HQ access granted - Role:", userRole);
         }
-      })
-      .catch(() => {
+      } catch {
+        console.log("❌ Failed to check access - redirecting to admin");
         router.replace("/admin");
-      });
+      }
+    };
+
+    checkAccess();
   }, [isAuthenticated, router]);
 
   const loadProfiles = useCallback(async () => {
     try {
+      console.log("🔍 HQ: Loading profiles...");
       const res = await fetch("/api/hq/profiles");
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load profiles");
+
+      if (!res.ok) {
+        console.log("❌ HQ: Profiles API error:", data.error);
+        throw new Error(data.error || "Failed to load profiles");
+      }
+
       const rows = data.profiles || [];
+      console.log("✅ HQ: Profiles loaded:", rows.length);
       setProfiles(rows);
+
       setDrafts((prev) => {
         const next = { ...prev };
         for (const row of rows) {
@@ -162,8 +198,10 @@ export default function HQPage() {
         }
         return next;
       });
-    } catch {
-      setError("שגיאה בטעינת משתמשים");
+    } catch (error) {
+      console.error("❌ HQ: Profiles load error:", error);
+      // Don't show error to user, just set empty profiles
+      setProfiles([]);
     }
   }, []);
 
@@ -179,14 +217,39 @@ export default function HQPage() {
 
   const loadAudit = useCallback(async () => {
     try {
+      console.log("🔍 HQ: Loading audit logs...");
       const res = await fetch("/api/hq/audit");
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load audit");
+
+      // Always set logs, even if empty
       setAuditLogs(data.logs || []);
-    } catch {
-      setError("שגיאה בטעינת audit log");
+
+      if (!res.ok && data.error) {
+        console.log("⚠️ HQ: Audit API returned error:", data.error);
+        // Don't show error to user, just log it
+      } else {
+        console.log("✅ HQ: Audit logs loaded:", data.logs?.length || 0);
+      }
+
+      // Show warning if logs are temporarily unavailable
+      if (data.message) {
+        console.log("⚠️ HQ:", data.message);
+      }
+    } catch (error) {
+      console.error("❌ HQ: Audit load error:", error);
+      // Don't show error to user, just set empty logs
+      setAuditLogs([]);
     }
   }, []);
+
+  // Development bypass function
+  const enableDevBypass = () => {
+    if (process.env.NODE_ENV === "development") {
+      document.cookie = "compakt-admin-bypass=almog22@gmail.com; path=/; max-age=3600";
+      alert("גישת פיתוח הופעלה - מרענן...");
+      window.location.reload();
+    }
+  };
 
   useEffect(() => {
     if (role === "staff" || role === "owner") {
@@ -355,7 +418,17 @@ export default function HQPage() {
   if (!isAuthenticated || !role || role === "dj") {
     return (
       <div className="min-h-dvh gradient-hero flex items-center justify-center">
-        <div className="text-center text-muted">טוען...</div>
+        <div className="text-center">
+          <div className="text-muted mb-4">טוען...</div>
+          {process.env.NODE_ENV === "development" && (
+            <button
+              onClick={enableDevBypass}
+              className="btn-primary text-sm"
+            >
+              🔧 הפעל גישת פיתוח (פיתוח)
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -408,6 +481,26 @@ export default function HQPage() {
               >
                 <Calendar className="w-4 h-4" />
                 <span>אירועים</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("trials")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "trials"
+                  ? "bg-brand-blue text-white"
+                  : "text-secondary hover:text-foreground"
+                  }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>ניסיונות</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("coupons")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "coupons"
+                  ? "bg-brand-blue text-white"
+                  : "text-secondary hover:text-foreground"
+                  }`}
+              >
+                <Tag className="w-4 h-4" />
+                <span>קופונים</span>
               </button>
               <button
                 onClick={() => setActiveTab("health")}
@@ -638,6 +731,22 @@ export default function HQPage() {
               <p className="text-sm">טאב ניהול אירועים בפיתוח...</p>
               <p className="text-xs mt-2">כאן יוצגו כל האירועים של הזוגות עם אפשרות צפייה, סינון וניהול</p>
             </div>
+          </motion.div>
+        ) : activeTab === "trials" ? (
+          <motion.div
+            key="trials"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <TrialManager />
+          </motion.div>
+        ) : activeTab === "coupons" ? (
+          <motion.div
+            key="coupons"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <CouponManager />
           </motion.div>
         ) : activeTab === "health" ? (
           <motion.div

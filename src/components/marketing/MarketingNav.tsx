@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { Settings } from "lucide-react";
 
 export function MarketingNav() {
   const { t } = useTranslation("common");
@@ -44,8 +45,9 @@ export function MarketingNav() {
           <div className="flex items-center gap-3">
             <Link
               href="/admin"
-              className="text-sm font-medium text-[#4b5563] hover:text-[#059cc0] transition-colors"
+              className="flex items-center gap-2 text-sm font-medium text-[#4b5563] hover:text-[#059cc0] transition-colors"
             >
+              <Settings className="w-4 h-4" />
               {t("nav.login")}
             </Link>
             <Link

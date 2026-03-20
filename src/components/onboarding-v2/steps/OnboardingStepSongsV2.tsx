@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Music, Sparkles, Check, Lock } from "lucide-react";
-import { useOnboardingStoreV2 } from "@/stores/onboardingStoreV2";
+import { useOnboardingStoreV2 } from "@/stores/onboardingStore";
 import { QUICK_START_SONGS, QUICK_START_SONGS_COUNT } from "@/data/onboarding-songs";
 
 interface OnboardingStepSongsV2Props {
@@ -146,8 +146,8 @@ export function OnboardingStepSongsV2({ onComplete, onBack, onSkip, isTrialUser 
                   onClick={handleSpotifyImport}
                   disabled={!isTrialUser}
                   className={`text-sm font-medium ${isTrialUser
-                      ? "text-brand-blue hover:text-brand-blue/80"
-                      : "text-secondary cursor-not-allowed"
+                    ? "text-brand-blue hover:text-brand-blue/80"
+                    : "text-secondary cursor-not-allowed"
                     }`}
                 >
                   {isTrialUser ? "ייבא מ-Spotify →" : "🔒 זמין ב-Premium"}

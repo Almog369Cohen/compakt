@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, Music2, ListMusic, Loader2, Calendar } from "lucide-react";
+import { Users, Music2, ListMusic, Loader2, Calendar, RefreshCw, ExternalLink } from "lucide-react";
 
 type GuestStats = {
   totalGuests: number;
@@ -21,6 +21,7 @@ type GuestStats = {
 export function GuestStats() {
   const [stats, setStats] = useState<GuestStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     loadStats();
@@ -29,15 +30,76 @@ export function GuestStats() {
   const loadStats = async () => {
     setLoading(true);
     try {
+      console.log("📊 Fetching stats from API...");
       const res = await fetch("/api/admin/stats/guests");
+      console.log("📊 API response status:", res.status);
       const data = await res.json();
+      console.log("📊 API response data:", data);
       if (data.stats) {
         setStats(data.stats);
+        console.log("✅ Stats updated:", data.stats);
       }
     } catch (error) {
-      console.error("Failed to load guest stats:", error);
+      console.error("❌ Failed to load guest stats:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSync = async () => {
+    alert("🔄 Sync button clicked! Check console for details.");
+    console.log("🔄 Sync button clicked");
+    console.log("🍪 Checking cookies:", document.cookie);
+    setSyncing(true);
+    try {
+      console.log("🔄 Loading stats...");
+      await loadStats();
+      console.log("✅ Stats loaded successfully");
+    } catch (error) {
+      console.error("❌ Failed to sync stats:", error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleCreateSpotifyPlaylist = async () => {
+    try {
+      // Get the most recent event with guests
+      const res = await fetch("/api/admin/stats/guests");
+      const data = await res.json();
+
+      if (data.stats?.recentGuests?.length > 0) {
+        const firstGuest = data.stats.recentGuests[0];
+        const eventId = firstGuest.eventId;
+
+        if (eventId) {
+          // Create Spotify playlist
+          const playlistRes = await fetch(`/api/admin/event/${eventId}/export-playlist`, {
+            method: "POST",
+          });
+
+          if (playlistRes.ok) {
+            const playlistData = await playlistRes.json();
+            if (playlistData.spotifyUrl) {
+              window.open(playlistData.spotifyUrl, '_blank');
+            }
+          } else {
+            const errorData = await playlistRes.json();
+            if (errorData.needsSpotifyAuth) {
+              alert("דייג'י לא מחובר ל-Spotify. אנא התחבר תחילה.");
+            } else {
+              alert("לא ניתן ליצור פלייליסט ב-Spotify. אנא בדוק שהרשאות מוגדרות כראוי.");
+            }
+          }
+        } else {
+          alert("לא נמצא אירוע עם אורחים מחוברים");
+        }
+      } else {
+        alert("אין אורחים מחוברים ליצירת פלייליסט");
+      }
+    } catch (error) {
+      console.error("Failed to create Spotify playlist:", error);
+      alert("שגיאה ביצירת פלייליסט ב-Spotify");
     }
   };
 
@@ -59,11 +121,31 @@ export function GuestStats() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">סטטיסטיקות אורחים</h2>
-        <p className="text-sm text-gray-600 mt-1">
-          סה&quot;כ אורחים שהתחברו עם Spotify
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">סטטיסטיקות אורחים</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            סה&quot;כ אורחים שהתחברו עם Spotify
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCreateSpotifyPlaylist}
+            disabled={stats.connectedGuests === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            צור פלייליסט Spotify
+          </button>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'מסנכרן...' : 'סנכרן פרופיל Spotify'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

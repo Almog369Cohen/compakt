@@ -26,7 +26,7 @@ export function UpsellManager() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUpsell, setEditingUpsell] = useState<Upsell | null>(null);
 
-  const placements = useMemo(
+  const placements: Array<{ value: Upsell["placement"]; label: string }> = useMemo(
     () => [
       { value: "stage_1", label: t("upsells.placements.stage_1") },
       { value: "stage_2", label: t("upsells.placements.stage_2") },

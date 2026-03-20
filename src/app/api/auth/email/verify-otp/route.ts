@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { validateBody, isValidationError } from "@/lib/apiValidation";
+import { z } from "zod";
 
 export const runtime = "nodejs";
 
+const verifyOtpSchema = z.object({
+    sessionId: z.string().min(1, "חסר מזהה סשן"),
+    otp: z.string().min(1, "חסר קוד").transform((v) => v.trim()),
+    email: z.string().email().transform((v) => v.trim().toLowerCase()).optional(),
+});
+
 export async function POST(req: Request) {
     try {
-        const { sessionId, otp, email } = await req.json();
-        const normalizedIdentity = typeof email === "string"
-            ? email.trim().toLowerCase()
-            : null;
-
-        if (!sessionId || !otp) {
-            return NextResponse.json({ error: "חסר קוד או מזהה סשן" }, { status: 400 });
-        }
+        const parsed = await validateBody(req, verifyOtpSchema);
+        if (isValidationError(parsed)) return parsed.error;
+        const { sessionId, otp, email } = parsed.data;
+        const normalizedIdentity = email ?? null;
 
         const supabase = getServiceSupabase();
 

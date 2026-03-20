@@ -12,8 +12,11 @@ type GuestInput = {
 export async function POST(req: Request) {
   try {
     const { eventToken, guests } = await req.json();
+    console.log("🔍 API: Adding guests with token:", eventToken);
+    console.log("👥 API: Guests array:", guests);
 
     if (!eventToken || !guests || !Array.isArray(guests)) {
+      console.log("❌ API: Missing eventToken or guests array");
       return NextResponse.json(
         { error: "Missing eventToken or guests array" },
         { status: 400 }
@@ -23,13 +26,17 @@ export async function POST(req: Request) {
     const supabase = getServiceSupabase();
 
     // Get event by magic_token
+    console.log("🔍 API: Searching for event with magic_token:", eventToken);
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, dj_id")
+      .select("id, dj_id, magic_token, token")
       .eq("magic_token", eventToken)
       .single();
 
+    console.log("📊 API: Event query result:", { event, eventError });
+
     if (eventError || !event) {
+      console.log("❌ API: Event not found. Error:", eventError);
       return NextResponse.json(
         { error: "Event not found" },
         { status: 404 }

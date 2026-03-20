@@ -8,10 +8,10 @@ import {
   Copy,
   CheckCircle2,
   Clock,
-  Music2,
   Loader2,
   X,
   Send,
+  AlertCircle,
 } from "lucide-react";
 
 type Guest = {
@@ -40,14 +40,21 @@ export function GuestManager({ eventToken }: GuestManagerProps) {
   const [stats, setStats] = useState({ total: 0, connected: 0, pending: 0 });
 
   useEffect(() => {
+    if (!eventToken) {
+      console.log("❌ No eventToken provided to GuestManager");
+      setLoading(false);
+      return;
+    }
     loadGuests();
   }, [eventToken]);
 
   const loadGuests = async () => {
     setLoading(true);
     try {
+      console.log("🔍 Loading guests for token:", eventToken);
       const res = await fetch(`/api/couple/event/${eventToken}/guests`);
       const data = await res.json();
+      console.log("📊 Guests API response:", data);
       if (data.guests) {
         setGuests(data.guests);
         setStats(data.stats);
@@ -65,6 +72,9 @@ export function GuestManager({ eventToken }: GuestManagerProps) {
     setAdding(true);
     try {
       const lines = guestInput.split("\n").filter((line) => line.trim());
+      console.log("🔍 Adding guests with token:", eventToken);
+      console.log("👥 Guests to add:", lines);
+
       const res = await fetch("/api/couple/guests/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,6 +85,7 @@ export function GuestManager({ eventToken }: GuestManagerProps) {
       });
 
       const data = await res.json();
+      console.log("📊 Add guests API response:", data);
       if (data.success) {
         setShowAddModal(false);
         setGuestInput("");
@@ -128,6 +139,24 @@ ${link}
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+      </div>
+    );
+  }
+
+  if (!eventToken) {
+    return (
+      <div className="text-center py-12 bg-red-50 rounded-lg border-2 border-red-200">
+        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+        <h3 className="text-xl font-bold text-red-900 mb-2">שגיאה בטעינת האירוע</h3>
+        <p className="text-red-700 mb-4">
+          לא נמצא אירוע פעיל. אנא צור אירוע חדש או טען אירוע קיים.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          רענן דף
+        </button>
       </div>
     );
   }

@@ -34,8 +34,9 @@ export async function GET(req: Request) {
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    return new NextResponse("Missing SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET", {
-      status: 500,
+    console.warn("🎵 Spotify credentials not configured");
+    return new NextResponse("Spotify integration is not configured. Please contact administrator.", {
+      status: 503,
     });
   }
 

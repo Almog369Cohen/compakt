@@ -5,59 +5,19 @@ import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { motion } from "framer-motion";
 import { Check, ArrowLeft, HelpCircle } from "lucide-react";
+import { PLANS, formatPrice } from "@/lib/pricing";
 
-const plans = [
-  {
-    name: "Free",
-    price: "₪0",
-    period: "/חודש",
-    description: "מושלם להתחלה",
-    features: [
-      "עד 2 אירועים בחודש",
-      "פרופיל DJ בסיסי",
-      "שאלון מוזיקה",
-      "גלריית תמונות",
-      "קישורים לרשתות חברתיות",
-    ],
-    cta: "התחילו בחינם",
-    highlighted: false,
-  },
-  {
-    name: "Basic",
-    price: "₪55",
-    period: "/חודש",
-    description: "לדיג'יים צומחים",
-    features: [
-      "עד 7 אירועים בחודש",
-      "פרופיל DJ מתקדם",
-      "ניהול שירים בסיסי",
-      "בריפים פשוטים",
-      "אנליטיקס בסיסי",
-      "תמיכה במייל",
-    ],
-    cta: "התחילו עכשיו",
-    highlighted: true,
-  },
-  {
-    name: "Pro",
-    price: "₪99",
-    period: "/חודש",
-    description: "לדיג'יים מקצועיים",
-    features: [
-      "אירועים ללא הגבלה",
-      "פרופיל DJ מתקדם",
-      "ניהול שירים מלא",
-      "שאלונים מותאמים אישית",
-      "בריפים מסודרים",
-      "אנליטיקס מתקדם",
-      "גרסאות בטא מתקדמות",
-      "תמיכה מועדפת",
-      "ללא פרסומות",
-    ],
-    cta: "התחילו עכשיו",
-    highlighted: false,
-  },
-];
+const plans = PLANS.map((p) => ({
+  name: p.name,
+  price: formatPrice(p.key),
+  period: "/חודש",
+  description: p.description,
+  features: p.features,
+  cta: p.cta,
+  highlighted: p.popular ?? false,
+  trial: p.trial ?? false,
+  key: p.key,
+}));
 
 const faqs = [
   {
@@ -164,7 +124,7 @@ export default function PricingPage() {
                 </ul>
 
                 <Link
-                  href="/admin"
+                  href={plan.name === 'Free' ? '/admin' : `/signup?plan=${plan.name.toLowerCase()}`}
                   className={`group flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl font-semibold transition-all ${plan.highlighted
                     ? "bg-white text-[#059cc0] hover:shadow-lg hover:-translate-y-0.5"
                     : "bg-white border-2 border-[#e5e7eb] text-[#1f1f21] hover:border-[#059cc0] hover:text-[#059cc0]"

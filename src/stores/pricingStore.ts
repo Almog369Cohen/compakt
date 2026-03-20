@@ -2,88 +2,10 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { supabase } from "@/lib/supabase";
 import type { PlanKey } from "@/lib/access";
+import { PLANS, type PlanDefinition } from "@/lib/pricing";
 
-export interface Plan {
-  key: PlanKey;
-  name: string;
-  price: number;
-  currency: string;
-  interval: "month" | "year";
-  features: string[];
-  limits: {
-    events: number | null; // null = unlimited
-    songs: number | null;
-    questions: number | null;
-  };
-  popular?: boolean;
-}
-
-export const PLANS: Plan[] = [
-  {
-    key: "starter",
-    name: "Starter",
-    price: 0,
-    currency: "₪",
-    interval: "month",
-    features: [
-      "1 אירוע פעיל",
-      "עד 30 שירים",
-      "עד 10 שאלות",
-      "פרופיל בסיסי",
-    ],
-    limits: {
-      events: 1,
-      songs: 30,
-      questions: 10,
-    },
-  },
-  {
-    key: "pro",
-    name: "Pro",
-    price: 99,
-    currency: "₪",
-    interval: "month",
-    features: [
-      "5 אירועים פעילים",
-      "שירים ללא הגבלה",
-      "שאלות ללא הגבלה",
-      "Google Calendar sync",
-      "Analytics מתקדם",
-      "העלאת תמונות",
-      "Upsells לזוגות",
-    ],
-    limits: {
-      events: 5,
-      songs: null,
-      questions: null,
-    },
-    popular: true,
-  },
-  {
-    key: "premium",
-    name: "Premium",
-    price: 149,
-    currency: "₪",
-    interval: "month",
-    features: [
-      "אירועים ללא הגבלה",
-      "שירים ללא הגבלה",
-      "שאלות ללא הגבלה",
-      "Spotify Import",
-      "Google Calendar sync",
-      "Custom Branding",
-      "Analytics מתקדם",
-      "העלאת תמונות",
-      "Upsells לזוגות",
-      "עדיפות בתמיכה",
-    ],
-    limits: {
-      events: null,
-      songs: null,
-      questions: null,
-    },
-  },
-];
+export type Plan = PlanDefinition;
+export { PLANS };
 
 interface PricingState {
   // Current state

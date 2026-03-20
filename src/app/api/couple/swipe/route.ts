@@ -1,23 +1,28 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { validateBody, isValidationError } from "@/lib/apiValidation";
+import { z } from "zod";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const swipeSchema = z.object({
+  id: z.string().min(1),
+  eventId: z.string().min(1),
+  songId: z.string().min(1),
+  action: z.enum(["like", "dislike", "super_like", "unsure"]),
+  reasonChips: z.array(z.string()).default([]),
+});
+
+const deleteSwipeSchema = z.object({
+  id: z.string().min(1, "Missing swipe id"),
+});
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const id = typeof body?.id === "string" ? body.id.trim() : "";
-    const eventId = typeof body?.eventId === "string" ? body.eventId.trim() : "";
-    const songId = typeof body?.songId === "string" ? body.songId.trim() : "";
-    const action = typeof body?.action === "string" ? body.action.trim() : "";
-    const reasonChips = Array.isArray(body?.reasonChips)
-      ? body.reasonChips.filter((chip: unknown): chip is string => typeof chip === "string")
-      : [];
-
-    if (!id || !eventId || !songId || !action) {
-      return NextResponse.json({ error: "Missing swipe payload" }, { status: 400 });
-    }
+    const parsed = await validateBody(req, swipeSchema);
+    if (isValidationError(parsed)) return parsed.error;
+    const { id, eventId, songId, action, reasonChips } = parsed.data;
 
     const supabase = getServiceSupabase();
     const { error } = await supabase.from("swipes").upsert(
@@ -46,12 +51,9 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const body = await req.json();
-    const id = typeof body?.id === "string" ? body.id.trim() : "";
-
-    if (!id) {
-      return NextResponse.json({ error: "Missing swipe id" }, { status: 400 });
-    }
+    const parsed = await validateBody(req, deleteSwipeSchema);
+    if (isValidationError(parsed)) return parsed.error;
+    const { id } = parsed.data;
 
     const supabase = getServiceSupabase();
     const { error } = await supabase.from("swipes").delete().eq("id", id);

@@ -18,8 +18,6 @@ async function handleRequest(req: NextRequest) {
     return res;
   }
 
-  const bypassCookie = req.cookies.get("compakt-admin-bypass")?.value;
-
   let hasSupabaseUser = false;
   let userRole: string | null = null;
   try {
@@ -30,7 +28,7 @@ async function handleRequest(req: NextRequest) {
     hasSupabaseUser = Boolean(user);
 
     // Get user role for /hq access control
-    if (user && pathname.startsWith("/hq")) {
+    if (pathname.startsWith("/hq") && user) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
@@ -42,7 +40,7 @@ async function handleRequest(req: NextRequest) {
     hasSupabaseUser = false;
   }
 
-  const isAuthenticated = Boolean(bypassCookie) || hasSupabaseUser;
+  const isAuthenticated = hasSupabaseUser;
 
   if (pathname.startsWith("/api/admin")) {
     if (!isAuthenticated) {

@@ -42,6 +42,15 @@ export function AppRuntimeGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
+      console.error("🔥 Runtime Error:", {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error,
+        stack: event.error?.stack
+      });
+
       if (isChunkLoadFailure(event.error || event.message) && recoverFromChunkFailure()) {
         return;
       }
@@ -49,6 +58,11 @@ export function AppRuntimeGuard({ children }: { children: React.ReactNode }) {
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error("🔥 Unhandled Promise Rejection:", {
+        reason: event.reason,
+        stack: event.reason?.stack
+      });
+
       if (isChunkLoadFailure(event.reason) && recoverFromChunkFailure()) {
         return;
       }
@@ -79,6 +93,15 @@ export function AppRuntimeGuard({ children }: { children: React.ReactNode }) {
           <h1 className="text-xl font-bold mb-2">המסך לא נטען כמו שצריך</h1>
           <p className="text-secondary text-sm mb-2">זיהינו שגיאת ריצה בצד הלקוח.</p>
           <p className="text-xs text-white/55 mb-6 break-words">{failureMessage}</p>
+          <div className="text-xs text-white/40 mb-4 text-right">
+            <p>💡 פתרונות אפשריים:</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>רענן את הדף (Ctrl+R / Cmd+R)</li>
+              <li>בדוק את חיבור האינטרנט</li>
+              <li>נסה לפתוח בדפדפן אחר</li>
+              <li>נקה את ה-cache של הדפדפן</li>
+            </ul>
+          </div>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => window.location.reload()}

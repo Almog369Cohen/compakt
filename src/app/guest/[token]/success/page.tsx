@@ -70,8 +70,9 @@ export default function GuestSuccessPage() {
             });
           }
         }
-      } catch (err) {
-        setError("שגיאה בשליפת הנתונים");
+      } catch {
+        console.error("Error loading invitation");
+        setError("Failed to load invitation data");
       } finally {
         setFetching(false);
       }

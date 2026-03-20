@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { auth } from "@clerk/nextjs/server";
 import { getServiceSupabase } from "@/lib/supabase";
 import { createRouteClient } from "@/lib/supabase-server";
 import { loadAccessProfileByIdentity } from "@/lib/access";
@@ -21,37 +19,14 @@ function isUuid(value: string) {
  */
 export async function POST() {
   try {
-    let userId: string | null = null;
-    let email: string | null = null;
-
-    // Check for admin bypass cookie
-    const cookieStore = await cookies();
-    const bypassEmail = cookieStore.get("compakt-admin-bypass")?.value;
-    if (bypassEmail) {
-      userId = `bypass-${bypassEmail}`;
-      email = bypassEmail;
+    const routeClient = await createRouteClient();
+    const { data: { user }, error: authErr } = await routeClient.auth.getUser();
+    if (authErr || !user) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    if (!userId) {
-      try {
-        const clerkAuth = await auth();
-        userId = clerkAuth.userId ?? null;
-        email = clerkAuth.sessionClaims?.email as string | null | undefined ?? null;
-      } catch {
-        userId = null;
-      }
-    }
-
-    if (!userId) {
-      const routeClient = await createRouteClient();
-      const { data: { user }, error: authErr } = await routeClient.auth.getUser();
-      if (authErr || !user) {
-        return NextResponse.json({ error: "Authentication required" }, { status: 401 });
-      }
-
-      userId = user.id;
-      email = user.email ?? null;
-    }
+    const userId = user.id;
+    const email = user.email ?? null;
 
     const supabase = getServiceSupabase();
 
@@ -79,7 +54,7 @@ export async function POST() {
           id: existing.id,
           user_id: existing.user_id,
           business_name: existing.business_name,
-          role: existing.role,
+          role: existing.role || "dj",
         },
         created: false,
       });
@@ -88,6 +63,8 @@ export async function POST() {
     const newRow: Record<string, unknown> = {
       business_name: "",
       role: "dj",
+      plan: "starter",
+      is_active: true,
     };
 
     if (email) {

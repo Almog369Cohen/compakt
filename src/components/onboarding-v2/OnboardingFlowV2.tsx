@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useOnboardingStoreV2, type OnboardingStepV2 } from "@/stores/onboardingStoreV2";
+import { useOnboardingStoreV2, type OnboardingStepV2 } from "@/stores/onboardingStore";
 import { usePricingStore } from "@/stores/pricingStore";
 import { useProfileStore } from "@/stores/profileStore";
 import type { PlanKey } from "@/lib/access";

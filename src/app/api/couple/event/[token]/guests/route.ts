@@ -53,8 +53,8 @@ export async function GET(
       ?.filter((inv) => inv.status === "connected")
       .map((inv) => inv.id) || [];
 
-    let playlistCounts: Record<string, number> = {};
-    let trackCounts: Record<string, number> = {};
+    const playlistCounts: Record<string, number> = {};
+    const trackCounts: Record<string, number> = {};
 
     if (connectedIds.length > 0) {
       const { data: playlists } = await supabase

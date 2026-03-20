@@ -91,14 +91,13 @@ export function SongManager() {
     };
   }, []);
 
-  const canUseSpotifyImport = Boolean(access?.isActive && access.features.spotify_import);
+  const canUseSpotifyImport = Boolean(access?.isActive && access?.features?.spotify_import);
   const songCategoryLabels = profile.songCategoryLabels || DEFAULT_SONG_CATEGORY_LABELS;
   const categories = useMemo(
     () => getSongCategoryOptions(songCategoryLabels),
     [songCategoryLabels]
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const languages = useMemo(() => [
     { value: "hebrew", label: t("songs.languages.hebrew") },
     { value: "english", label: t("songs.languages.english") },
@@ -599,6 +598,7 @@ export function SongManager() {
             <SongModal
               song={editingSong}
               categories={categories}
+              languages={languages}
               onSave={async (data) => {
                 setSongMutationError(null);
                 if (editingSong) {
@@ -1157,11 +1157,13 @@ function SpotifyImportModal({
 function SongModal({
   song,
   categories,
+  languages,
   onSave,
   onClose,
 }: {
   song: Song | null;
   categories: { value: SongCategory; label: string }[];
+  languages: { value: string; label: string }[];
   onSave: (data: Partial<Song>) => Promise<void>;
   onClose: () => void;
 }) {

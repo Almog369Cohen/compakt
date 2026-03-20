@@ -5,25 +5,41 @@ import { requireAuth, isAuthError } from "@/lib/requireAuth";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  console.log("📊 API: Loading guest stats...");
   const auth = await requireAuth();
-  if (isAuthError(auth)) return auth;
+  if (isAuthError(auth)) {
+    console.log("❌ API: Authentication failed");
+    return auth;
+  }
 
   const supabase = getServiceSupabase();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("user_id", auth.userId)
-    .single();
+  // For bypass mode, skip profile lookup and use all events
+  let events;
 
-  if (!profile) {
-    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+  if (auth.profileId === "bypass") {
+    console.log("📊 API: Using bypass mode - loading all events");
+    const { data: allEvents } = await supabase
+      .from("events")
+      .select("id");
+    events = allEvents;
+  } else {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", auth.userId)
+      .single();
+
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    const { data: userEvents } = await supabase
+      .from("events")
+      .select("id")
+      .eq("dj_id", profile.id);
+    events = userEvents;
   }
-
-  const { data: events } = await supabase
-    .from("events")
-    .select("id")
-    .eq("dj_id", profile.id);
 
   if (!events || events.length === 0) {
     return NextResponse.json({
@@ -94,6 +110,7 @@ export async function GET() {
         connectedAt: inv.connected_at,
         eventName: coupleNames || "אירוע ללא שם",
         eventDate: event?.event_date || null,
+        eventId: inv.event_id, // Add event ID for playlist creation
       };
     });
 

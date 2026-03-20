@@ -13,6 +13,39 @@ function encodeEventTypes(eventType: EventType, eventTypes?: EventType[]) {
   return normalized.join(",");
 }
 
+export async function GET() {
+  try {
+    const auth = await requireAuth();
+    if (isAuthError(auth)) return auth;
+    if (!auth.profileId) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    const supabase = getServiceSupabase();
+    let query = supabase.from("questions").select("*");
+
+    // For bypass users, load all questions (admin view)
+    if (auth.profileId === "bypass") {
+      query = query.order("sort_order", { ascending: true });
+    } else {
+      query = query.eq("dj_id", auth.profileId).order("sort_order", { ascending: true });
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ questions: data || [] });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed to load questions" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const auth = await requireAuth();

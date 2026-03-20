@@ -65,7 +65,7 @@ export function PilotDashboard({ eventId }: PilotDashboardProps) {
       const analysisData = await analysisRes.json();
 
       if (guestsData.guests) {
-        const guests = guestsData.guests as Array<{ status: string; totalPlaylists: number; totalTracks: number }>;
+        const guests = guestsData.guests as PilotStats["guests"];
         const connected = guests.filter((g) => g.status === "connected");
         const totalPlaylists = guests.reduce((sum: number, g) => sum + g.totalPlaylists, 0);
         const totalTracks = guests.reduce((sum: number, g) => sum + g.totalTracks, 0);

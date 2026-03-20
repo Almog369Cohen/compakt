@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check, Circle, ArrowRight, Sparkles } from "lucide-react";
-import { useOnboardingStoreV2 } from "@/stores/onboardingStoreV2";
+import { useOnboardingStoreV2 } from "@/stores/onboardingStore";
 
 interface ChecklistItem {
   id: string;
@@ -122,19 +122,17 @@ export function ProgressChecklist({ onDismiss }: ProgressChecklistProps) {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
-            className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-              item.completed
+            className={`flex items-center gap-3 p-3 rounded-lg transition-all ${item.completed
                 ? "bg-brand-green/5 border border-brand-green/20"
                 : "bg-white/5 border border-white/10 hover:border-brand-blue/30"
-            }`}
+              }`}
           >
             {/* Checkbox */}
             <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                item.completed
+              className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${item.completed
                   ? "bg-brand-green text-white"
                   : "border-2 border-white/20"
-              }`}
+                }`}
             >
               {item.completed ? (
                 <Check className="w-4 h-4" />

@@ -81,8 +81,8 @@ export function EventsManager() {
     };
   }, []);
 
-  const canUseGoogleCalendar = Boolean(access?.isActive && access.features.google_calendar_sync);
-  const canUseImageUploads = Boolean(access?.isActive && access.features.image_uploads);
+  const canUseGoogleCalendar = Boolean(access?.isActive && access?.features?.google_calendar_sync);
+  const canUseImageUploads = Boolean(access?.isActive && access?.features?.image_uploads);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

@@ -11,6 +11,22 @@ export async function GET() {
     const auth = await requireAuth();
     if (isAuthError(auth)) return auth;
 
+    // For bypass users, return owner access immediately
+    if (auth.profileId === "bypass") {
+      return NextResponse.json({
+        profile: { role: "owner", is_active: true },
+        access: {
+          role: "owner",
+          plan: "premium",
+          isActive: true,
+          capabilities: {
+            canManageFeatureOverrides: true,
+            canPromoteOwner: true,
+          },
+        },
+      });
+    }
+
     const supabase = getServiceSupabase();
     const profile = await loadAccessProfileByIdentity(supabase, {
       profileId: auth.profileId,
